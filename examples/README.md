@@ -1,3 +1,11 @@
+<!--
+  The logo is an absolute URL on purpose, exactly as in the repository README: nuget.org refuses to
+  render relative image paths, and the same file is packed into every package.
+-->
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MPCoreDeveloper/SharpCorePDF/main/Logo.jpg" alt="SharpCorePDF" width="220" />
+</p>
+
 # SharpCorePDF examples
 
 Eight runnable examples that show how the library is used, and the console app that runs them. Everything

@@ -40,4 +40,23 @@
     <PackageTags>pdf;merge;combine;pdf-merge;concatenate;ddd;dependency-injection;dotnet;net10;net11</PackageTags>
   </PropertyGroup>
 
+  <!--
+    The logo and this repository's README travel inside every package: the README is the page a feed
+    shows for the package, and the icon is what a search result shows. Logo.jpg is the 2048 x 2048
+    source; the icon is the 256 x 256 Logo-256.png, because nuget.org caps a package icon at 1 MB
+    and the source JPEG is 1.49 MB.
+
+    The paths are resolved from this file, so they work for every project under src/ without each
+    project file having to repeat them.
+  -->
+  <PropertyGroup>
+    <PackageIcon>Logo-256.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\Logo-256.png" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
 </Project>

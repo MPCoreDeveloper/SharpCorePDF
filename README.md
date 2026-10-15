@@ -1,5 +1,10 @@
+<!--
+  The logo is referenced by absolute URL on purpose: nuget.org refuses to render relative image paths,
+  and this README is packed into every package (PackageReadmeFile in src/Directory.Build.props).
+  Logo.jpg is the 2048 x 2048 source; Logo-256.png is the icon the packages carry.
+-->
 <p align="center">
-  <img src="Logo.jpg" alt="SharpCorePDF" width="260" />
+  <img src="https://raw.githubusercontent.com/MPCoreDeveloper/SharpCorePDF/main/Logo.jpg" alt="SharpCorePDF" width="260" />
 </p>
 
 # SharpCorePDF
@@ -75,9 +80,13 @@ dotnet nuget add source $env:TEMP\SharpCorePDF-feed --name SharpCorePDF
 dotnet add package SharpCorePDF.DependencyInjection --prerelease
 ```
 
+Every package carries the logo as its package icon and embeds this README, so the page a feed shows for
+it is the introduction you are reading. nuget.org renders images only from a list of trusted hosts and
+cannot resolve relative paths, which is why the logo and the links in this file are absolute URLs.
+
 ## Examples
 
-[`examples/SharpCorePDF.Examples`](examples/SharpCorePDF.Examples) is a console app with eight runnable
+[`examples/SharpCorePDF.Examples`](https://github.com/MPCoreDeveloper/SharpCorePDF/tree/main/examples/SharpCorePDF.Examples) is a console app with eight runnable
 examples. Every snippet on this page is code that compiles and executes there:
 
 ```powershell
@@ -98,7 +107,8 @@ dotnet run --project .\examples\SharpCorePDF.Examples -- errors options  # sever
 | `errors` | Every refusal a caller can meet, with the exception type and the message the library produces. |
 
 The examples generate the documents they merge, so nothing else is needed to run them, and they leave the
-results in a folder under the temporary directory for you to open. [`examples/README.md`](examples/README.md)
+results in a folder under the temporary directory for you to open.
+[`examples/README.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/examples/README.md)
 walks through each one.
 
 ## How it is put together
@@ -179,7 +189,7 @@ the input, throughput, the heap still held after a full collection, and the byte
 last column is a fingerprint, because two runs that write the same bytes ran the same merge.
 `--single <all|large|one|half>` samples the managed heap during one isolated merge, which is what "peak"
 means. The recorded numbers, and what they say about the performance and memory budgets, are in
-[`docs/measurements.md`](docs/measurements.md).
+[`docs/measurements.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/measurements.md).
 
 ### Validating the output with an independent implementation
 
