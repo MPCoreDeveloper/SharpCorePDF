@@ -83,7 +83,11 @@ internal sealed partial class PdfCrossReferenceReader
                 continue;
             }
 
-            table.AddOrReplace(new XrefEntry(objectNumber, cursor + 1, (int)generation, XrefEntryType.Uncompressed));
+            // The cursor rests on the first digit of the object number, which is where the object header
+            // begins: the parser behind these offsets starts reading at the byte it is given, so an offset
+            // that pointed behind that digit would find a header without an object number and resolve
+            // nothing at all.
+            table.AddOrReplace(new XrefEntry(objectNumber, cursor, (int)generation, XrefEntryType.Uncompressed));
             found++;
         }
 

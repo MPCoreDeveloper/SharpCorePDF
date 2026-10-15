@@ -79,4 +79,109 @@ public sealed class MergePlanTests
 
         Assert.Throws<MergePlanValidationException>(() => plan.AddSource(source));
     }
+
+    /// <summary>A plan can be built from a set of sources at once, and the default options apply.</summary>
+    [Fact]
+    public void Builds_a_plan_from_a_set_of_sources()
+    {
+        var plan = MergePlan.For(PdfSource.Create(new PdfFileSource(TestAssets.Modern)));
+
+        Assert.Equal(1, plan.SourceCount);
+        Assert.False(plan.IsEmpty);
+        Assert.Equal(MergeOutputOptions.Default, plan.Output);
+        Assert.Equal("Modern.pdf", plan.PrimarySource.DisplayName);
+        Assert.True(MergePlan.For().IsEmpty);
+    }
+
+    /// <summary>Several sources are appended in the order they are handed in.</summary>
+    [Fact]
+    public void Appends_several_sources_at_once()
+    {
+        var plan = MergePlan.Create().AddSources(
+        [
+            PdfSource.Create(new PdfFileSource(TestAssets.Modern)),
+            PdfSource.Create(new PdfFileSource(TestAssets.Outlined)),
+        ]);
+
+        Assert.Equal(2, plan.SourceCount);
+        Assert.Equal(["Modern.pdf", "Outlined.pdf"], plan.Sources.Select(source => source.DisplayName).ToArray());
+        Assert.Throws<ArgumentNullException>(() => plan.AddSources(null!));
+    }
+
+    /// <summary>A source can be taken out of a plan again, by the identity it carries.</summary>
+    [Fact]
+    public void Removes_a_source_by_its_identity()
+    {
+        var source = PdfSource.Create(new PdfFileSource(TestAssets.Modern));
+        var plan = MergePlan.Create().AddSource(source).AddFile(TestAssets.Outlined);
+        var removed = plan.RemoveSource(source.Id);
+
+        Assert.Equal(2, plan.SourceCount);
+        Assert.Equal(1, removed.SourceCount);
+        Assert.Equal("Outlined.pdf", removed.PrimarySource.DisplayName);
+        Assert.Same(removed, removed.RemoveSource(source.Id));
+    }
+
+    /// <summary>The options of a plan can be replaced or adjusted, and its sources stay where they are.</summary>
+    [Fact]
+    public void Replaces_and_adjusts_the_output_options()
+    {
+        var plan = MergePlan.Create().AddFile(TestAssets.Modern);
+        var replaced = plan.WithOutput(MergeOutputOptions.Default with { TargetVersion = PdfVersion.V2_0 });
+        var adjusted = plan.WithOutput(options => options with { OutlinePolicy = OutlinePolicy.Drop });
+        var primary = plan.WithPrimarySource(plan.PrimarySource.Id);
+
+        Assert.Equal(PdfVersion.V2_0, replaced.Output.TargetVersion);
+        Assert.Equal(PdfVersion.V1_7, plan.Output.TargetVersion);
+        Assert.Equal(OutlinePolicy.Drop, adjusted.Output.OutlinePolicy);
+        Assert.Equal(plan.PrimarySource.Id, primary.Output.PrimarySourceId);
+        Assert.Equal(plan.PrimarySource.Id, primary.PrimarySource.Id);
+        Assert.Equal(1, replaced.SourceCount);
+        Assert.Throws<ArgumentNullException>(() => plan.WithOutput((MergeOutputOptions)null!));
+        Assert.Throws<ArgumentNullException>(() => plan.WithOutput((Func<MergeOutputOptions, MergeOutputOptions>)null!));
+    }
+
+    /// <summary>A source is found by the identity it carries.</summary>
+    [Fact]
+    public void Finds_a_source_by_its_identity()
+    {
+        var source = PdfSource.Create(new PdfFileSource(TestAssets.Modern));
+        var plan = MergePlan.Create().AddSource(source);
+
+        Assert.Same(source, plan.FindSource(source.Id));
+        Assert.Null(plan.FindSource(new PdfSourceId("absent")));
+    }
+
+    /// <summary>A primary source that is not part of the plan is reported before anything is merged.</summary>
+    [Fact]
+    public void Reports_a_primary_source_that_is_not_part_of_the_plan()
+    {
+        var plan = MergePlan.Create().AddFile(TestAssets.Modern).WithPrimarySource(new PdfSourceId("absent"));
+
+        Assert.Contains(plan.Validate(), error => error.Contains("not part of the plan", StringComparison.Ordinal));
+        Assert.Throws<MergePlanValidationException>(() => plan.PrimarySource);
+        Assert.Throws<MergePlanValidationException>(() => plan.EnsureValid());
+    }
+
+    /// <summary>A plan without sources has no primary source to lead the merge.</summary>
+    [Fact]
+    public void Refuses_a_primary_source_of_an_empty_plan() =>
+        Assert.Throws<MergePlanValidationException>(() => MergePlan.Create().PrimarySource);
+
+    /// <summary>Two plans are equal when they carry the same sources and the same options.</summary>
+    [Fact]
+    public void Compares_plans_by_their_sources_and_options()
+    {
+        var source = PdfSource.Create(new PdfFileSource(TestAssets.Modern));
+        var left = MergePlan.Create().AddSource(source);
+        var right = MergePlan.Create().AddSource(source);
+
+        Assert.Equal(left, right);
+        Assert.Equal(left.GetHashCode(), right.GetHashCode());
+        Assert.NotEqual(left, right.WithOutput(MergeOutputOptions.Default with { TargetVersion = PdfVersion.V2_0 }));
+        Assert.NotEqual(left, MergePlan.Create());
+        Assert.False(left.Equals((MergePlan?)null));
+        Assert.Contains("1 source(s) to PDF 1.7", left.ToString(), StringComparison.Ordinal);
+        Assert.Contains("0 source(s) to PDF 1.7", MergePlan.Create().ToString(), StringComparison.Ordinal);
+    }
 }
