@@ -8,6 +8,10 @@ TestResults/
 *.trx
 coverage*.xml
 
+# SonarScanner work: .sonarqube/ is written by the scan, .tools/ holds the tools the CI workflow installs
+.sonarqube/
+.tools/
+
 # Visual Studio, Rider, VS Code
 .vs/
 .idea/

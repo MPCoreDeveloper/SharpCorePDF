@@ -3,8 +3,18 @@
   path, and this README is packed into every package (PackageReadmeFile in src/Directory.Build.props).
   Logo.jpg is the 2048 x 2048 source; Logo-256.png is the icon the packages carry. Both image hosts
   are on nuget.org's trusted list (raw.githubusercontent.com and img.shields.io), and its renderer
-  keeps <p align>, the <img> tag and the align/width/src/alt attributes. The version badge asks for
-  vpre, so it reads 1.0.0-preview.1 now and 1.0.0 once that ships.
+  keeps <p align>, the <img> tag and the align/width/src/alt attributes.
+
+  Every badge is an img.shields.io URL for that same reason: a workflow badge served from
+  github.com/.../badge.svg is not on nuget.org's trusted list, while shields.io answers the same
+  question from a host that is. Read them as:
+
+    nuget.org version  the vpre endpoint, so it reads 1.0.0-preview.1 now and 1.0.0 once that ships
+    tests              the ci.yml runs: the build, both test legs and the SonarCloud analysis
+    quality gate       the SonarCloud project MPCoreDeveloper_SharpCorePDF. It reads "unknown" until
+                       the first analysis lands, the way the version badge did before the first push
+    licence            LICENSE, MIT
+    Sponsor            the funding page, which .github/FUNDING.yml puts on the repository page too
 -->
 <p align="center">
   <img src="https://raw.githubusercontent.com/MPCoreDeveloper/SharpCorePDF/main/Logo.jpg" alt="SharpCorePDF" width="260" />
@@ -13,8 +23,17 @@
   <a href="https://www.nuget.org/packages/SharpCorePDF.DependencyInjection">
     <img src="https://img.shields.io/nuget/vpre/SharpCorePDF.DependencyInjection?label=nuget.org" alt="nuget.org version" />
   </a>
+  <a href="https://github.com/MPCoreDeveloper/SharpCorePDF/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/MPCoreDeveloper/SharpCorePDF/ci.yml?label=tests&amp;logo=githubactions&amp;logoColor=white" alt="tests" />
+  </a>
+  <a href="https://sonarcloud.io/dashboard?id=MPCoreDeveloper_SharpCorePDF">
+    <img src="https://img.shields.io/sonar/quality_gate/MPCoreDeveloper_SharpCorePDF?server=https%3A%2F%2Fsonarcloud.io&amp;logo=sonarcloud&amp;logoColor=white" alt="SonarCloud quality gate" />
+  </a>
   <a href="https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/licence-MIT-blue" alt="licence: MIT" />
+  </a>
+  <a href="https://github.com/sponsors/MPCoreDeveloper">
+    <img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-ff69b4" alt="Sponsor" />
   </a>
 </p>
 
@@ -231,6 +250,45 @@ uv run --with pikepdf python .\docs\tools\make-fixtures.py .\tests\SharpCorePDF.
 `validate-pdf.py` runs `qpdf --check`, decodes every stream in the file, and prints the geometry,
 rotation and annotations of every page. It is the check that caught the one bug this library has had so
 far: a hexadecimal string written with name escapes, which `qpdf` rejected as damage.
+
+## Continuous integration
+
+[`ci.yml`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/.github/workflows/ci.yml) runs on
+every push to `main` and on every pull request: it builds the solution, runs both test legs, and sends
+the result to SonarCloud. It is deliberately not the publishing workflow, so a pull request is checked
+without anything reaching a feed.
+
+| What | Workflow | When |
+| --- | --- | --- |
+| Build, both test legs, coverage, static analysis | `ci.yml` | a push to `main`, a pull request, a manual dispatch |
+| Pack, the package check, the push to nuget.org | `publish.yml` | a `v*` tag, a manual dispatch with `publish: true` |
+
+The analysis runs in the runner rather than on SonarCloud's side, which is what lets it carry coverage:
+the scanner session opens before the build, both test legs run inside it, and it closes after them, so the
+report describes the assemblies that run produced. Coverage comes from `dotnet-coverage collect`, because
+`global.json` pins Microsoft.Testing.Platform as the test runner and the VSTest-only switches
+(`--collect "XPlat Code Coverage"`) are rejected there; the collector's Visual Studio XML is what Sonar
+reads, and a cobertura copy of the same measurement is attached to the run as an artifact.
+
+What the analysis reports on is `src/` and `tests/`. The BMad Method bundle (`_bmad`, `_bmad-output`,
+`.cline`), the Python tooling under `docs/`, the examples and the measurement harness are excluded,
+because the gate is about what the packages ship rather than about everything in the tree.
+
+Two things switch the scan on, and both live outside this repository:
+
+1. **A project on SonarCloud** under the key `MPCoreDeveloper_SharpCorePDF` in the organisation
+   `mpcoredeveloper`, analysed through CI rather than by Automatic Analysis. A repository cannot be
+   analysed both ways at once, and Automatic Analysis cannot import coverage.
+2. **The repository secret `SONAR_TOKEN`** (settings → Secrets and variables → Actions), a token from
+   that SonarCloud account.
+
+Until the secret exists the scan steps are skipped and the workflow still builds and tests, because the
+gate is a small job that checks the secret — a job-level `if` cannot read one itself. That is what keeps a
+fork, or this repository before the SonarCloud project was created, from showing a red run that says
+nothing about the code.
+
+The quality gate is reported rather than enforced: nothing in the workflow waits for it, so a failing gate
+colours the badge and appears on SonarCloud without failing a build whose tests passed.
 
 ## Publishing
 

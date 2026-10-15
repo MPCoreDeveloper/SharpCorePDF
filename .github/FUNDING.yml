@@ -1,0 +1,8 @@
+# Funding sources -- adds the "Sponsor" button on the repository page and on every issue and pull
+# request. GitHub renders this file and does nothing else with it; the Sponsor badge in README.md links
+# to the same page.
+#
+# The account is the organisation rather than a personal one, so a sponsorship funds the project. Change
+# the entry below, or delete this file, to hide the button.
+# https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+github: [MPCoreDeveloper]
