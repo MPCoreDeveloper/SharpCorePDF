@@ -1,0 +1,43 @@
+<Project>
+
+  <!--
+    Shared build defaults for every library under src/.
+
+    Scoped to src/ on purpose: MSBuild stops walking upward at the first
+    Directory.Build.props it finds, so the repository's other projects (for example
+    the SharpCorePDF/ web sample) keep their own settings untouched.
+
+    Multi-targeting mirrors Posseth.Global.UlidFactory: net10.0 (C# 14) plus
+    net11.0 (C# 15, runtime-async).
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <LangVersion Condition="'$(TargetFramework)' == 'net11.0'">preview</LangVersion>
+    <LangVersion Condition="'$(TargetFramework)' != 'net11.0'">14.0</LangVersion>
+    <Features Condition="'$(TargetFramework)' == 'net11.0'">$(Features);runtime-async=on</Features>
+
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <Deterministic>true</Deterministic>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+
+    <Version>1.0.0-preview.1</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Authors>MPCoreDeveloper</Authors>
+    <Company>SharpCorePDF</Company>
+    <Product>SharpCorePDF</Product>
+    <Copyright>Free to use , distribute and modify </Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/MPCoreDeveloper/SharpCorePDF</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/MPCoreDeveloper/SharpCorePDF</PackageProjectUrl>
+    <PackageTags>pdf;merge;combine;pdf-merge;concatenate;ddd;dependency-injection;dotnet;net10;net11</PackageTags>
+  </PropertyGroup>
+
+</Project>

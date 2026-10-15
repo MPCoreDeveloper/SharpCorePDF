@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SharpCorePDF.Infrastructure</RootNamespace>
+    <AssemblyName>SharpCorePDF.Infrastructure</AssemblyName>
+    <Title>SharpCorePDF.Infrastructure</Title>
+    <Description>Self-contained PDF engine for SharpCorePDF: reader (classic cross-reference tables, cross-reference streams and object streams), writer and the merging engine. Depends on nothing but the .NET base class library.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpCorePDF.Domain\SharpCorePDF.Domain.csproj" />
+    <ProjectReference Include="..\SharpCorePDF.Application\SharpCorePDF.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SharpCorePDF.Tests" />
+  </ItemGroup>
+
+</Project>

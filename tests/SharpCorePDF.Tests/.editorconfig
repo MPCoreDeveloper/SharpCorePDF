@@ -1,0 +1,16 @@
+root = true
+
+# Applies to the test project only: MSBuild stops at the first Directory.Build.props it finds, and
+# the src/ folder carries its own .editorconfig.
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+
+# CA1707: a test name reads as a sentence — Merges_every_page_of_both_sources — because that is the
+# most useful thing a failing test can show. The library under src/ has no such names.
+dotnet_diagnostic.CA1707.severity = none

@@ -1,0 +1,32 @@
+<Solution>
+
+  <!--
+    One entry point for everything that builds in this repository.
+
+    src/    the four packages: Domain, Application, Infrastructure, DependencyInjection (net10.0;net11.0)
+    tests/  the test project, which is the only caller of all four (net10.0;net11.0)
+    tools/  the measurement harness behind docs/measurements.md (net11.0, never packed)
+    app/    the SharpCorePDF web host at the repository root (net11.0)
+
+    Use the .slnx directly:
+
+      dotnet build .\SharpCorePDF.slnx -c Release
+      dotnet sln .\SharpCorePDF.slnx list
+  -->
+
+  <Folder Name="/app/">
+    <Project Path="SharpCorePDF/SharpCorePDF.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/SharpCorePDF.Application/SharpCorePDF.Application.csproj" />
+    <Project Path="src/SharpCorePDF.DependencyInjection/SharpCorePDF.DependencyInjection.csproj" />
+    <Project Path="src/SharpCorePDF.Domain/SharpCorePDF.Domain.csproj" />
+    <Project Path="src/SharpCorePDF.Infrastructure/SharpCorePDF.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SharpCorePDF.Tests/SharpCorePDF.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/SharpCorePDF.Measure/SharpCorePDF.Measure.csproj" />
+  </Folder>
+</Solution>

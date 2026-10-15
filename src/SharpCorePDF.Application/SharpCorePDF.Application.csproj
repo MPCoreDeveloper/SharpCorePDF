@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SharpCorePDF.Application</RootNamespace>
+    <AssemblyName>SharpCorePDF.Application</AssemblyName>
+    <Title>SharpCorePDF.Application</Title>
+    <Description>Application layer for SharpCorePDF: the merging and inspection use cases that orchestrate the domain model against the PDF engine ports.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpCorePDF.Domain\SharpCorePDF.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

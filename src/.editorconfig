@@ -1,0 +1,28 @@
+root = true
+
+# Applies to every project under src/ (MSBuild stops at src/Directory.Build.props, so the
+# repository's other projects are unaffected).
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+csharp_style_namespace_declarations = file_scoped:warning
+dotnet_sort_system_directives_first = true
+
+# Naming heuristics that fight the PDF vocabulary this API is built on. Disabled per file, with the
+# rule and the reason, rather than globally.
+[**/ValueObjects/PdfVersion.cs]
+# CA1707: V1_4 .. V2_0 spell the version notation exactly as it appears in a PDF header.
+dotnet_diagnostic.CA1707.severity = none
+
+[**/ValueObjects/PageRange.cs]
+# CA1720: Single is the natural name for "exactly one page", matching Enumerable.Single.
+dotnet_diagnostic.CA1720.severity = none
+
+[**/ValueObjects/PageSelection.cs]
+# CA1720: Single is the natural name for "exactly one page", matching Enumerable.Single.
+dotnet_diagnostic.CA1720.severity = none

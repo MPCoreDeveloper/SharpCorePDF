@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SharpCorePDF.Domain</RootNamespace>
+    <AssemblyName>SharpCorePDF.Domain</AssemblyName>
+    <Title>SharpCorePDF.Domain</Title>
+    <Description>Domain model and contracts for composing PDF documents: the immutable MergePlan aggregate, page selection value objects, document metadata and the merging/inspection ports. Contains no third-party dependencies and performs no I/O.</Description>
+  </PropertyGroup>
+
+</Project>

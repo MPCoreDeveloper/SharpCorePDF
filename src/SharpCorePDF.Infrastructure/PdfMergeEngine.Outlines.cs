@@ -1,0 +1,309 @@
+using SharpCorePDF.Domain.ValueObjects;
+using SharpCorePDF.Infrastructure.Pdf;
+
+namespace SharpCorePDF.Infrastructure;
+
+/// <summary>
+/// The bookmark half of <see cref="PdfMergeEngine"/>.
+/// </summary>
+/// <remarks>
+/// The outline trees of all sources are merged into one tree whose top level items follow the source
+/// order. A destination that points at a page is carried over automatically, because the page object
+/// it refers to is remapped while it is copied; a named destination survives only for the primary
+/// source, whose name trees are carried over as well.
+/// </remarks>
+public sealed partial class PdfMergeEngine
+{
+    /// <summary>The largest number of outline items that is copied, as a guard against damaged trees.</summary>
+    private const int MaxOutlineItems = 100_000;
+
+    /// <summary>Copies the outline trees of every source into one merged outline.</summary>
+    /// <param name="context">The merge context.</param>
+    /// <returns>The reference to the root of the merged outline, or <see langword="null"/>.</returns>
+    private static PdfReference? MergeOutlines(PdfMergeContext context)
+    {
+        if (context.Output.OutlinePolicy != OutlinePolicy.Preserve)
+        {
+            foreach (var source in context.Sources.Where(source => source.Resolved.Info.HasOutlines))
+            {
+                context.Warnings.Add(
+                    $"'{source.DisplayName}': its {source.Resolved.Info.OutlineItemCount} bookmark(s) were dropped by the configured outline policy.");
+            }
+
+            return null;
+        }
+
+        var parent = new OutlineParent();
+        var sections = new List<OutlineChain>();
+        var linkages = new List<OutlineLinkage>();
+
+        foreach (var source in context.Sources)
+        {
+            var outline = source.Reader.ResolveDictionary(source.Reader.Catalog?.Get("Outlines"));
+
+            if (outline is null)
+            {
+                continue;
+            }
+
+            var linkage = new OutlineLinkage();
+            var nodes = ReadChain(source.Reader, outline.Get("First"), context, source);
+            var chain = CopyChain(context, source, nodes, parent, linkage);
+
+            if (!chain.IsEmpty)
+            {
+                sections.Add(chain);
+                linkages.Add(linkage);
+            }
+        }
+
+        if (sections.Count == 0)
+        {
+            return null;
+        }
+
+        // The top level bookmarks of every source form one chain, in source order.
+        for (var index = 0; index < sections.Count; index++)
+        {
+            if (index > 0)
+            {
+                linkages[index].Previous = sections[index - 1].LastTarget;
+            }
+
+            if (index + 1 < sections.Count)
+            {
+                linkages[index].Next = sections[index + 1].FirstTarget;
+            }
+        }
+
+        var rootTarget = context.Writer.AllocateObject();
+        parent.Target = rootTarget;
+
+        var root = new PdfDictionary();
+        root.Set("Type", new PdfName("Outlines"));
+        root.Set("First", new PdfReference(sections[0].FirstTarget, 0));
+        root.Set("Last", new PdfReference(sections[^1].LastTarget, 0));
+        root.SetInteger("Count", sections.Sum(section => section.TotalItems));
+
+        context.Writer.WriteObject(rootTarget, root);
+
+        return new PdfReference(rootTarget, 0);
+    }
+
+    /// <summary>Reads a chain of sibling bookmarks, starting at <paramref name="first"/>.</summary>
+    /// <param name="reader">The document being read.</param>
+    /// <param name="first">The <c>/First</c> entry of the parent, or the <c>/Next</c> chain start.</param>
+    /// <param name="context">The merge context.</param>
+    /// <param name="source">The source being read.</param>
+    /// <returns>The items of the chain, in document order.</returns>
+    private static List<OutlineNode> ReadChain(
+        PdfFileReader reader,
+        PdfObject? first,
+        PdfMergeContext context,
+        MergeSource source)
+    {
+        var nodes = new List<OutlineNode>();
+
+        if (first is null)
+        {
+            return nodes;
+        }
+
+        PdfReference? reference = first as PdfReference;
+
+        if (reference is null)
+        {
+            context.Warnings.Add(
+                $"'{source.DisplayName}': a bookmark that is not stored as an indirect object was skipped.");
+            return nodes;
+        }
+
+        while (nodes.Count < MaxOutlineItems && reference is not null)
+        {
+            var dictionary = reader.ResolveDictionary(reference);
+
+            if (dictionary is null)
+            {
+                break;
+            }
+
+            nodes.Add(new OutlineNode(reference.ObjectNumber, dictionary));
+            reference = dictionary.GetReference("Next");
+        }
+
+        if (nodes.Count >= MaxOutlineItems)
+        {
+            context.Warnings.Add(
+                $"'{source.DisplayName}': more than {MaxOutlineItems} bookmarks were found; the rest was skipped.");
+        }
+
+        return nodes;
+    }
+
+    /// <summary>Copies a chain of sibling bookmarks and everything below it.</summary>
+    /// <param name="context">The merge context.</param>
+    /// <param name="source">The source the bookmarks come from.</param>
+    /// <param name="nodes">The bookmarks of this level, in document order.</param>
+    /// <param name="parent">The object number the bookmarks must point at as their parent.</param>
+    /// <param name="linkage">The chain this level belongs to, used for links to the sibling level.</param>
+    /// <returns>What was copied.</returns>
+    private static OutlineChain CopyChain(
+        PdfMergeContext context,
+        MergeSource source,
+        List<OutlineNode> nodes,
+        OutlineParent parent,
+        OutlineLinkage linkage)
+    {
+        if (nodes.Count == 0)
+        {
+            return default;
+        }
+
+        var targets = new int[nodes.Count];
+
+        for (var index = 0; index < nodes.Count; index++)
+        {
+            targets[index] = source.Copier.Reserve(nodes[index].ObjectNumber);
+        }
+
+        var descendants = 0;
+
+        for (var index = 0; index < nodes.Count; index++)
+        {
+            var position = index;
+            var node = nodes[position];
+            var itemParent = new OutlineParent { Target = targets[position] };
+            var children = CopyChain(
+                context,
+                source,
+                ReadChain(source.Reader, node.Dictionary.Get("First"), context, source),
+                itemParent,
+                new OutlineLinkage());
+
+            descendants += children.TotalItems;
+
+            var isOpen = (node.Dictionary.GetInteger("Count") ?? 0) >= 0;
+            var count = children.FirstTarget > 0 ? (isOpen ? children.TotalItems : -children.TotalItems) : 0;
+            var isPrimary = source.Resolved.Source.Id == context.Request.PrimarySourceId;
+
+            source.Copier.Override(node.ObjectNumber, body => RewriteBookmark(
+                context,
+                source,
+                body,
+                parent,
+                children,
+                targets,
+                position,
+                linkage,
+                count,
+                isPrimary));
+        }
+
+        return new OutlineChain(targets[0], targets[^1], nodes.Count, descendants);
+    }
+
+    /// <summary>A parent object number that is filled in after the outline has been walked.</summary>
+    private sealed class OutlineParent
+    {
+        /// <summary>Gets or sets the object number of the parent.</summary>
+        public int Target { get; set; }
+    }
+
+    /// <summary>The links of a chain of sibling bookmarks to the levels around it.</summary>
+    private sealed class OutlineLinkage
+    {
+        /// <summary>Gets or sets the object number of the last bookmark of the previous chain.</summary>
+        public int Previous { get; set; }
+
+        /// <summary>Gets or sets the object number of the first bookmark of the next chain.</summary>
+        public int Next { get; set; }
+    }
+
+    /// <summary>Rewrites a copied bookmark into its place in the merged outline.</summary>
+    /// <param name="context">The merge context.</param>
+    /// <param name="source">The source the bookmark comes from.</param>
+    /// <param name="body">The copied bookmark dictionary.</param>
+    /// <param name="parent">The parent the bookmark must point at.</param>
+    /// <param name="children">What was copied below the bookmark.</param>
+    /// <param name="targets">The target object numbers of the chain the bookmark belongs to.</param>
+    /// <param name="position">The position of the bookmark inside its chain.</param>
+    /// <param name="linkage">The links to the sibling chains.</param>
+    /// <param name="count">The value for the <c>/Count</c> entry, or zero.</param>
+    /// <param name="isPrimary">Whether the bookmark comes from the primary source.</param>
+    /// <returns>The rewritten bookmark.</returns>
+    private static PdfDictionary RewriteBookmark(
+        PdfMergeContext context,
+        MergeSource source,
+        PdfObject body,
+        OutlineParent parent,
+        OutlineChain children,
+        int[] targets,
+        int position,
+        OutlineLinkage linkage,
+        int count,
+        bool isPrimary)
+    {
+        var bookmark = body as PdfDictionary ?? new PdfDictionary();
+
+        SetReference(bookmark, "Parent", parent.Target);
+        SetReference(bookmark, "First", children.FirstTarget);
+        SetReference(bookmark, "Last", children.LastTarget);
+        SetReference(bookmark, "Prev", position > 0 ? targets[position - 1] : linkage.Previous);
+        SetReference(bookmark, "Next", position + 1 < targets.Length ? targets[position + 1] : linkage.Next);
+
+        if (count != 0)
+        {
+            bookmark.SetInteger("Count", count);
+        }
+        else
+        {
+            bookmark.Remove("Count");
+        }
+
+        // A named destination points into the name tree of a document; only the tree of the primary
+        // source is carried over, so a bookmark of any other source must not keep pointing into a
+        // tree that no longer exists.
+        if (!isPrimary && bookmark.Get("Dest") is PdfName or PdfString)
+        {
+            bookmark.Remove("Dest");
+            context.Warnings.Add(
+                $"'{source.DisplayName}': a bookmark that used a named destination was kept without its destination, because named destinations are merged from the primary source only.");
+        }
+
+        return bookmark;
+    }
+
+    /// <summary>Sets an entry to a reference, or removes it when there is nothing to point at.</summary>
+    /// <param name="dictionary">The dictionary to change.</param>
+    /// <param name="key">The entry to set.</param>
+    /// <param name="target">The object number to point at, or zero.</param>
+    private static void SetReference(PdfDictionary dictionary, string key, int target)
+    {
+        if (target > 0)
+        {
+            dictionary.Set(key, new PdfReference(target, 0));
+            return;
+        }
+
+        dictionary.Remove(key);
+    }
+
+    /// <summary>One bookmark of a source document.</summary>
+    /// <param name="ObjectNumber">The object number of the bookmark.</param>
+    /// <param name="Dictionary">The bookmark dictionary.</param>
+    private sealed record OutlineNode(long ObjectNumber, PdfDictionary Dictionary);
+
+    /// <summary>A copied chain of sibling bookmarks.</summary>
+    /// <param name="FirstTarget">The target object number of the first sibling, or zero.</param>
+    /// <param name="LastTarget">The target object number of the last sibling, or zero.</param>
+    /// <param name="ItemCount">The number of siblings in the chain.</param>
+    /// <param name="DescendantCount">The number of bookmarks below the chain.</param>
+    private readonly record struct OutlineChain(int FirstTarget, int LastTarget, int ItemCount, int DescendantCount)
+    {
+        /// <summary>Gets the number of bookmarks in the chain including everything below it.</summary>
+        public int TotalItems => ItemCount + DescendantCount;
+
+        /// <summary>Gets a value indicating whether the chain contains no bookmark.</summary>
+        public bool IsEmpty => ItemCount == 0;
+    }
+}

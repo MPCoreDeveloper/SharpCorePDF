@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The measurement harness of addendum A7 (the numbers behind NFR §7.1 and §7.2).
+
+    It is a plain console app on purpose: the budgets are bounds with a measurement method, so the
+    harness has to be part of the repository and has to be runnable against a release build without a
+    benchmarking framework in the way. It is not packed and not referenced by anything.
+
+    GC mode is part of the measurement, not an implementation detail (§7.4 states the envelope for
+    server mode): run the same command again with DOTNET_gcServer=1 for the server-mode legs.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+
+    <!-- Workstation GC by default; the server-mode legs are the same command under DOTNET_gcServer=1. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpCorePDF.Domain\SharpCorePDF.Domain.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.Application\SharpCorePDF.Application.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.Infrastructure\SharpCorePDF.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
