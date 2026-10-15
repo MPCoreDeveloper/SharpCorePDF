@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The examples that back the "Examples" section of README.md and examples/README.md.
+
+    A plain console app that runs against the packages, so every snippet in the documentation is code
+    that compiles and executes. Running it with the project path executes all of the examples; examples
+    can also be named on the command line, see Program.cs.
+
+    The four packages multi-target net10.0;net11.0; this app pins net11.0 (the newest target) so that
+    running it needs no framework argument. Changing TargetFramework to net10.0 runs exactly the same
+    examples on the older target.
+
+    It is not packed: nothing references it, and it exists to be read.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <RootNamespace>SharpCorePDF.Examples</RootNamespace>
+    <AssemblyName>SharpCorePDF.Examples</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpCorePDF.Domain\SharpCorePDF.Domain.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.Application\SharpCorePDF.Application.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.Infrastructure\SharpCorePDF.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.DependencyInjection\SharpCorePDF.DependencyInjection.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The engine options of the examples are read from this file, next to the app. -->
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,17 @@
+root = true
+
+# Applies to the examples only: MSBuild stops at the first Directory.Build.props it finds, and both
+# src/ and tests/ carry their own .editorconfig.
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+dotnet_sort_system_directives_first = true
+
+# The example methods are named after the scenario they demonstrate, which reads better in the output
+# of the runner than an XML-doc name would.
+dotnet_diagnostic.CA1707.severity = none

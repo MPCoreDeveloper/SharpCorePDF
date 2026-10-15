@@ -65,6 +65,42 @@ var inspector = provider.GetRequiredService<IPdfInspector>();
 bookmarks, embedded files, form presence, warnings — and reports an encrypted document instead of
 throwing, so a caller can decide what to do before merging anything.
 
+The packages are not on nuget.org yet. Until they are, reference the projects
+(`dotnet add reference .\src\SharpCorePDF.DependencyInjection\SharpCorePDF.DependencyInjection.csproj`), or
+pack all four into a local feed and install them from there:
+
+```powershell
+dotnet pack .\SharpCorePDF.slnx -c Release -o $env:TEMP\SharpCorePDF-feed
+dotnet nuget add source $env:TEMP\SharpCorePDF-feed --name SharpCorePDF
+dotnet add package SharpCorePDF.DependencyInjection --prerelease
+```
+
+## Examples
+
+[`examples/SharpCorePDF.Examples`](examples/SharpCorePDF.Examples) is a console app with eight runnable
+examples. Every snippet on this page is code that compiles and executes there:
+
+```powershell
+dotnet run --project .\examples\SharpCorePDF.Examples -c Release          # all of them
+dotnet run --project .\examples\SharpCorePDF.Examples -- select-pages    # one of them
+dotnet run --project .\examples\SharpCorePDF.Examples -- errors options  # several, in this order
+```
+
+| Example | Shows |
+| --- | --- |
+| `merge-files` | Three documents from disk into one file, and what each source contributed. |
+| `select-pages` | `3,1`, `2-`, `-2` and `2,2,1`: a selection is an order rather than a set, and it can be built in code too. |
+| `merge-streams` | A source that is an upload stream, and one that is already a `byte[]`. |
+| `no-container` | The same merge without a container, and the proof that both routes write the same bytes. |
+| `inspect-first` | Describing a folder of documents before merging: an encrypted or unusable file is reported, not thrown. |
+| `options` | Metadata policy and override, outline and page-label policy, the target version, reproducible output. |
+| `warnings` | What inspection reports about a document, versus what a merge reports about its own work. |
+| `errors` | Every refusal a caller can meet, with the exception type and the message the library produces. |
+
+The examples generate the documents they merge, so nothing else is needed to run them, and they leave the
+results in a folder under the temporary directory for you to open. [`examples/README.md`](examples/README.md)
+walks through each one.
+
 ## How it is put together
 
 | Project | Contents |
@@ -110,9 +146,10 @@ engine be swapped in.
 
 ```powershell
 # Everything at once, through the solution: the four packages, the tests,
-# the measurement harness and the web host.
+# the examples, the measurement harness and the web host.
 dotnet build .\SharpCorePDF.slnx -c Release
 dotnet test  .\SharpCorePDF.slnx                      # 52 tests on net10.0, 52 on net11.0
+dotnet run --project .\examples\SharpCorePDF.Examples -c Release
 
 # Or one project at a time:
 dotnet build .\src\SharpCorePDF.DependencyInjection\SharpCorePDF.DependencyInjection.csproj
