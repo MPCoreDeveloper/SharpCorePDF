@@ -118,13 +118,16 @@ jobs:
           }
 
       # A manual run without publish: true stops here. Pushing into a folder feed needs no key, and
-      # it proves the packages survive a real feed handshake.
+      # it proves the packages survive a real feed handshake. The folder has to be named by absolute
+      # path: dotnet nuget push reads a --source value that is not rooted as the name of a source in
+      # nuget.config, so "./localfeed" is refused with "The specified source './localfeed' is invalid".
       - name: Handshake against a local feed (dry run)
         if: ${{ github.event_name == 'workflow_dispatch' && !inputs.publish }}
         run: |
-          mkdir -p ./localfeed
-          dotnet nuget push ./artifacts/*.nupkg --source ./localfeed
-          ls -l ./localfeed
+          feed="$RUNNER_TEMP/scp-feed"
+          mkdir -p "$feed"
+          dotnet nuget push ./artifacts/*.nupkg --source "$feed"
+          ls -l "$feed"
 
       # Exchanges this workflow's OIDC token for a temporary API key (valid for 1 hour) that
       # nuget.org matched against the trusted publishing policy. The username is the nuget.org
