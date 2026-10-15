@@ -53,13 +53,18 @@ jobs:
       - name: Check out
         uses: actions/checkout@v7
 
-      # net11.0 needs the .NET 11 SDK, which hosted images do not carry yet. The "11.0.x" form takes
-      # the latest patch on that channel, prereleases included, so it follows the RC to GA on its own
-      # once .NET 11 ships. global.json pins no SDK version, so nothing has to match exactly.
-      - name: Install the .NET SDK
+      # The .NET 11 SDK is not on the hosted images yet. The "11.0.x" form takes the latest patch on
+      # that channel, prereleases included, so it follows the RC to GA on its own once .NET 11 ships.
+      # The .NET 10 SDK is installed with it because the SDK layout is what carries a net10.0 host
+      # pack and runtime: with the 11.0 SDK alone, the solution's RID-less net10.0 leg dies with
+      # MSB3030 (obj/Release/net10.0/apphost not found) and the net10.0 test run has nothing to start
+      # on. global.json pins no SDK version, so the newest SDK still does the building.
+      - name: Install the .NET SDKs
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '11.0.x'
+          dotnet-version: |
+            11.0.x
+            10.0.x
 
       - name: Build
         run: dotnet build ./SharpCorePDF.slnx -c Release
