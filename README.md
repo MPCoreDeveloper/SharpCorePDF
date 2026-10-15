@@ -1,10 +1,21 @@
 <!--
-  The logo is referenced by absolute URL on purpose: nuget.org refuses to render relative image paths,
-  and this README is packed into every package (PackageReadmeFile in src/Directory.Build.props).
-  Logo.jpg is the 2048 x 2048 source; Logo-256.png is the icon the packages carry.
+  The logo and the badges are absolute URLs on purpose: nuget.org refuses to render a relative image
+  path, and this README is packed into every package (PackageReadmeFile in src/Directory.Build.props).
+  Logo.jpg is the 2048 x 2048 source; Logo-256.png is the icon the packages carry. Both image hosts
+  are on nuget.org's trusted list (raw.githubusercontent.com and img.shields.io), and its renderer
+  keeps <p align>, the <img> tag and the align/width/src/alt attributes. The version badge asks for
+  vpre, so it reads 1.0.0-preview.1 now and 1.0.0 once that ships.
 -->
 <p align="center">
   <img src="https://raw.githubusercontent.com/MPCoreDeveloper/SharpCorePDF/main/Logo.jpg" alt="SharpCorePDF" width="260" />
+</p>
+<p align="center">
+  <a href="https://www.nuget.org/packages/SharpCorePDF.DependencyInjection">
+    <img src="https://img.shields.io/nuget/vpre/SharpCorePDF.DependencyInjection?label=nuget.org" alt="nuget.org version" />
+  </a>
+  <a href="https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/licence-MIT-blue" alt="licence: MIT" />
+  </a>
 </p>
 
 # SharpCorePDF
@@ -66,13 +77,29 @@ var merger = provider.GetRequiredService<IPdfMerger>();
 var inspector = provider.GetRequiredService<IPdfInspector>();
 ```
 
+Every package targets `net10.0` and `net11.0` and carries both legs: NuGet hands a `net10.0` app the
+`lib/net10.0` assembly and a `net11.0` app the `lib/net11.0` one, with exactly the same API on both.
+Nothing else is supported yet — there is no `netstandard2.0` or `net8.0` leg, so a project that targets
+.NET 8 or .NET 9 cannot install these packages.
+
 `IPdfInspector.InspectAsync` describes a document — version, page count and sizes, rotation, metadata,
 bookmarks, embedded files, form presence, warnings — and reports an encrypted document instead of
 throwing, so a caller can decide what to do before merging anything.
 
-The packages are not on nuget.org yet. Until they are, reference the projects
-(`dotnet add reference .\src\SharpCorePDF.DependencyInjection\SharpCorePDF.DependencyInjection.csproj`), or
-pack all four into a local feed and install them from there:
+The package to install is `SharpCorePDF.DependencyInjection`: it depends on the other three, and its
+`AddSharpCorePDF()` call is the whole wiring. The version is still a preview, so `--prerelease` is
+required until 1.0.0 ships:
+
+```powershell
+dotnet add package SharpCorePDF.DependencyInjection --prerelease
+```
+
+The XML documentation ships inside the packages, so every public type and member is described in
+IntelliSense without leaving the editor.
+
+To work against this source tree instead of the feed, reference the project
+(`dotnet add reference .\src\SharpCorePDF.DependencyInjection\SharpCorePDF.DependencyInjection.csproj`),
+or pack all four into a local feed and install them from there:
 
 ```powershell
 dotnet pack .\SharpCorePDF.slnx -c Release -o $env:TEMP\SharpCorePDF-feed
@@ -114,12 +141,14 @@ walks through each one.
 
 ## How it is put together
 
-| Project | Contents |
+Four packages, one per layer. Each name links to its page on nuget.org.
+
+| Package | Contents |
 | --- | --- |
-| `SharpCorePDF.Domain` | The `MergePlan` aggregate, the `PdfSource` entity, value objects (`PageSelection`, `PageRange`, `PdfMetadata`, `PdfVersion`, `PdfPageSize`, `PageRotation`, the policies), the read models and the ports (`IPdfMerger`, `IPdfInspector`, `IPdfContentSource`). No I/O, no third-party code. |
-| `SharpCorePDF.Application` | The use cases: `PdfMergerService` (validate, open, inspect, resolve selections, hand over to the engine, release every stream) and `PdfInspectorService`, plus the extension methods callers use. |
-| `SharpCorePDF.Infrastructure` | The engine: the object model, the lexer, the object parser, the filter decoders, cross-reference tables, cross-reference streams, object streams, the page tree walk, the object copier, `PdfMergeEngine`, `PdfDocumentReader`, the writer and the content sources. |
-| `SharpCorePDF.DependencyInjection` | `AddSharpCorePDF()` registration. |
+| [`SharpCorePDF.Domain`](https://www.nuget.org/packages/SharpCorePDF.Domain) | The `MergePlan` aggregate, the `PdfSource` entity, value objects (`PageSelection`, `PageRange`, `PdfMetadata`, `PdfVersion`, `PdfPageSize`, `PageRotation`, the policies), the read models and the ports (`IPdfMerger`, `IPdfInspector`, `IPdfContentSource`). No I/O, no third-party code. |
+| [`SharpCorePDF.Application`](https://www.nuget.org/packages/SharpCorePDF.Application) | The use cases: `PdfMergerService` (validate, open, inspect, resolve selections, hand over to the engine, release every stream) and `PdfInspectorService`, plus the extension methods callers use. |
+| [`SharpCorePDF.Infrastructure`](https://www.nuget.org/packages/SharpCorePDF.Infrastructure) | The engine: the object model, the lexer, the object parser, the filter decoders, cross-reference tables, cross-reference streams, object streams, the page tree walk, the object copier, `PdfMergeEngine`, `PdfDocumentReader`, the writer and the content sources. |
+| [`SharpCorePDF.DependencyInjection`](https://www.nuget.org/packages/SharpCorePDF.DependencyInjection) | `AddSharpCorePDF()` registration. |
 
 The domain and the application layer know nothing about PDF syntax; the engine implements their ports.
 That is what keeps the merge rules testable without a single PDF file, and what would let a different
@@ -202,4 +231,70 @@ uv run --with pikepdf python .\docs\tools\make-fixtures.py .\tests\SharpCorePDF.
 `validate-pdf.py` runs `qpdf --check`, decodes every stream in the file, and prints the geometry,
 rotation and annotations of every page. It is the check that caught the one bug this library has had so
 far: a hexadecimal string written with name escapes, which `qpdf` rejected as damage.
+
+## Publishing
+
+Packages go to nuget.org from
+[`.github/workflows/publish.yml`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/.github/workflows/publish.yml),
+and no API key is stored anywhere. The workflow asks GitHub for an OIDC token, exchanges it with
+nuget.org for a temporary API key that lives for one hour, and pushes. nuget.org performs that
+exchange only when the token matches a **trusted publishing policy** for this repository, so the
+workflow can publish nothing until that policy exists.
+
+The policy lives at nuget.org → your username → **Trusted Publishing**, and its fields are the ones
+the workflow's header comment records:
+
+| Field | Value |
+| --- | --- |
+| Repository Owner | `MPCoreDeveloper` |
+| Repository | `SharpCorePDF` |
+| Workflow File | `publish.yml` — the file name only, not the `.github/workflows/` path |
+| Environment | empty, because the job declares no environment |
+
+The Create form then asks which scopes the policy grants — pushing new packages, pushing new versions
+of existing packages and unlisting are offered separately — and which packages those scopes apply to.
+That box is the one the portal labels *Glob Patterns and Packages (Separate by a new line)*, and it
+takes one glob or exact package ID per line:
+
+```
+SharpCorePDF.*
+```
+
+An empty box is refused with *At least one valid glob pattern or package must be specified*. A line may
+hold only `*`, letters, digits, `_`, `.` and `-`, which is why `SharpCorePDF.*` is accepted and why it
+covers all four packages here; four lines holding the four IDs cover the same ground. The temporary API
+key is scoped to the subjects written there, so a package that no subject matches cannot be pushed.
+
+The policy is owned by a nuget.org user or organization and applies to every package that owner owns;
+its scopes decide whether it may publish new packages, new versions of existing ones, or both. The
+`user:` input the workflow passes to `NuGet/login` is that account's username, kept as the repository
+secret `NUGET_USERNAME` (settings → Secrets and variables → Actions).
+
+Publishing then happens one of two ways:
+
+* **Actions → publish → Run workflow.** With `publish` left false it stops after packing: both test
+  legs run, every package is checked, and the packages are pushed into a throwaway local feed as a
+  handshake. Set `publish` to true to carry on to nuget.org.
+* **Push a `v*` tag** —
+  `git tag v1.0.0-preview.1 && git push origin v1.0.0-preview.1`. The tag is a `v` followed by the
+  exact `<Version>` in
+  [`src/Directory.Build.props`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/src/Directory.Build.props),
+  prerelease suffix included, because a tagged run refuses to publish a version the tag does not name:
+  `v1.0.0` against the current `1.0.0-preview.1` fails the check instead of publishing.
+
+Nothing reaches a feed until the packages pass that check: every `.nupkg` must carry both `lib/net10.0`
+and `lib/net11.0`, which is the promise made in `src/Directory.Build.props`.
+
+A version on nuget.org is immutable, so bump `<Version>` before publishing; `--skip-duplicate` makes a
+re-run of an already-published version a no-op instead of an error. Publishing from a workstation still
+means a long-lived API key, because the temporary ones exist only inside a CI run. GitHub Packages is a
+separate mechanism that does not use any of this: it wants a token with `packages: write`, either
+`GITHUB_TOKEN` inside a workflow or a personal access token from a workstation.
+
+## Feedback
+
+Bugs, questions and feature requests go to the
+[issue tracker](https://github.com/MPCoreDeveloper/SharpCorePDF/issues). The most valuable report of
+all is a merge that produced a file something else cannot open: attach the sources if you can, and the
+warning list the merge returned, and it becomes a test.
 

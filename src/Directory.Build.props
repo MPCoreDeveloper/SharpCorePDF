@@ -9,6 +9,13 @@
 
     Multi-targeting mirrors Posseth.Global.UlidFactory: net10.0 (C# 14) plus
     net11.0 (C# 15, runtime-async).
+
+    Both legs are supported and both ship in every package, so a .NET 10 caller
+    loads lib/net10.0 and a .NET 11 caller loads lib/net11.0. net10.0 is a
+    first-class target rather than a leftover: it is what keeps the packages
+    installable by apps that have not moved to .NET 11 yet. Because there is no
+    netstandard2.0 or net8.0 leg, an application on .NET 8 or .NET 9 cannot
+    install these packages; adding that reach is a separate, deliberate change.
   -->
   <PropertyGroup>
     <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
@@ -32,7 +39,7 @@
     <Authors>MPCoreDeveloper</Authors>
     <Company>SharpCorePDF</Company>
     <Product>SharpCorePDF</Product>
-    <Copyright>Free to use , distribute and modify </Copyright>
+    <Copyright>Copyright (c) 2026 MPCoreDeveloper</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/MPCoreDeveloper/SharpCorePDF</RepositoryUrl>

@@ -1,0 +1,140 @@
+# Publishing through trusted publishing: no API key is stored anywhere.
+#
+# nuget.org issues a temporary API key (valid for 1 hour) in exchange for the OIDC token GitHub
+# mints for this workflow. The exchange is only allowed because the repository, workflow and
+# owner below match a trusted publishing policy on nuget.org:
+#
+#   Repository Owner: MPCoreDeveloper
+#   Repository:       SharpCorePDF
+#   Workflow File:    publish.yml        (the file name only, not .github/workflows/publish.yml)
+#   Environment:      (leave empty, unless this job declares one and the policy names it)
+#
+# The policy also needs at least one scope, and every scope needs at least one subject in its
+# "Glob Patterns and Packages" box (one glob or exact package id per line, e.g. SharpCorePDF.*).
+# Only *, letters, digits, underscore, dot and dash are accepted on a line, and the temporary API
+# key is scoped to exactly the subjects listed there.
+#
+# The policy is owned by a nuget.org user or organization, and it applies to every package that
+# owner owns, so the account named for the policy owns what this workflow publishes.
+#
+# Nothing is published without a policy in place, and nothing is published from a manual run
+# unless the "publish" input is set to true.
+
+name: publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Push the packages to nuget.org (a trusted publishing policy must exist)
+        type: boolean
+        default: false
+
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    # Optional: gate publishing behind a protected environment (create it in repository settings,
+    # add required reviewers, then set the policy's Environment field to the same name).
+    # environment: release
+
+    permissions:
+      contents: read
+      id-token: write # lets this job ask GitHub for the OIDC token nuget.org exchanges for a key
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      # net11.0 needs the .NET 11 SDK, which hosted images do not carry yet. The "11.0.x" form takes
+      # the latest patch on that channel, prereleases included, so it follows the RC to GA on its own
+      # once .NET 11 ships. global.json pins no SDK version, so nothing has to match exactly.
+      - name: Install the .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '11.0.x'
+
+      - name: Build
+        run: dotnet build ./SharpCorePDF.slnx -c Release
+
+      # Both legs, per README: the RID-less net10.0 leg of some SDK builds skips the app host that
+      # the test project needs, so the net10.0 run names a runtime.
+      - name: Test on net11.0
+        run: dotnet test ./tests/SharpCorePDF.Tests/SharpCorePDF.Tests.csproj -c Release -p:TargetFramework=net11.0
+
+      - name: Test on net10.0
+        run: dotnet test ./tests/SharpCorePDF.Tests/SharpCorePDF.Tests.csproj -c Release -p:TargetFramework=net10.0 -r linux-x64
+
+      - name: Pack
+        run: dotnet pack ./SharpCorePDF.slnx -c Release -o ./artifacts
+
+      # Guards the promise recorded in src/Directory.Build.props: every package ships both legs, and
+      # a tagged run may only publish the version the tag names.
+      - name: Check the packages before they go anywhere
+        shell: pwsh
+        run: |
+          $failures = @()
+          $packages = @(Get-ChildItem ./artifacts/*.nupkg)
+          if ($packages.Count -eq 0) { throw 'nothing was packed' }
+
+          $version = (Select-String -Path ./src/Directory.Build.props -Pattern '<Version>(.*?)</Version>').Matches[0].Groups[1].Value
+
+          if ('${{ github.ref_type }}' -eq 'tag') {
+            $tag = '${{ github.ref_name }}' -replace '^v', ''
+            if ($tag -ne $version) { $failures += "tag ${{ github.ref_name }} does not match <Version> $version" }
+          }
+
+          foreach ($package in $packages) {
+            $zip = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
+            try {
+              $entries = @($zip.Entries | ForEach-Object { $_.FullName })
+              foreach ($leg in 'lib/net10.0', 'lib/net11.0') {
+                if (-not ($entries | Where-Object { $_ -like "$leg/*.dll" })) {
+                  $failures += "$($package.Name) carries no $leg assembly"
+                }
+              }
+              Write-Host "$($package.Name): $($entries -join ', ')"
+            }
+            finally {
+              $zip.Dispose()
+            }
+          }
+
+          if ($failures.Count -gt 0) {
+            $failures | ForEach-Object { Write-Host "::error::$_" }
+            throw "$($failures.Count) problem(s) with the packages"
+          }
+
+      # A manual run without publish: true stops here. Pushing into a folder feed needs no key, and
+      # it proves the packages survive a real feed handshake.
+      - name: Handshake against a local feed (dry run)
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.publish }}
+        run: |
+          mkdir -p ./localfeed
+          dotnet nuget push ./artifacts/*.nupkg --source ./localfeed
+          ls -l ./localfeed
+
+      # Exchanges this workflow's OIDC token for a temporary API key (valid for 1 hour) that
+      # nuget.org matched against the trusted publishing policy. The username is the nuget.org
+      # account the policy is owned by.
+      - name: NuGet login (OIDC to temporary API key)
+        if: ${{ github.event_name == 'push' || inputs.publish }}
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USERNAME }}
+
+      - name: Push to nuget.org
+        if: ${{ github.event_name == 'push' || inputs.publish }}
+        run: |
+          dotnet nuget push ./artifacts/*.nupkg \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+            --skip-duplicate
