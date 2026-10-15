@@ -86,8 +86,9 @@ cannot resolve relative paths, which is why the logo and the links in this file 
 
 ## Examples
 
-[`examples/SharpCorePDF.Examples`](https://github.com/MPCoreDeveloper/SharpCorePDF/tree/main/examples/SharpCorePDF.Examples) is a console app with eight runnable
-examples. Every snippet on this page is code that compiles and executes there:
+[`examples/SharpCorePDF.Examples`](https://github.com/MPCoreDeveloper/SharpCorePDF/tree/main/examples/SharpCorePDF.Examples)
+is a console app with eight runnable examples. Every snippet on this page is code that compiles and
+executes there:
 
 ```powershell
 dotnet run --project .\examples\SharpCorePDF.Examples -c Release          # all of them
