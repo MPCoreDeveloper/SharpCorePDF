@@ -7,7 +7,6 @@
     tests/    the test project, which is the only caller of all four (net10.0;net11.0)
     examples/ the runnable examples behind README.md and examples/README.md (net11.0)
     tools/    the measurement harness behind docs/measurements.md (net11.0, never packed)
-    app/      the SharpCorePDF web host at the repository root (net11.0)
 
     Use the .slnx directly:
 
@@ -15,9 +14,6 @@
       dotnet sln .\SharpCorePDF.slnx list
   -->
 
-  <Folder Name="/app/">
-    <Project Path="SharpCorePDF/SharpCorePDF.csproj" />
-  </Folder>
   <Folder Name="/examples/">
     <Project Path="examples/SharpCorePDF.Examples/SharpCorePDF.Examples.csproj" />
   </Folder>
