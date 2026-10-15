@@ -44,6 +44,43 @@ public sealed partial class PdfMergeEngineTests
         Assert.EndsWith("%%EOF\n", System.Text.Encoding.Latin1.GetString(merged.Raw), StringComparison.Ordinal);
     }
 
+    /// <summary>Three sources of three kinds merge into one document, in the order the plan lists them.</summary>
+    [Fact]
+    public async Task Merges_three_sources_of_three_kinds_in_plan_order()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var outlined = await File.ReadAllBytesAsync(TestAssets.Outlined, cancellationToken);
+        var modern = await File.ReadAllBytesAsync(TestAssets.Modern, cancellationToken);
+
+        // One source is a file, one is caller-supplied bytes and one is a stream: where the content comes from
+        // makes no difference to the merge, only the order in the plan does.
+        var merged = await MergeAsync(
+            MergePlan.Create()
+                .AddFile(TestAssets.SafeWebCore, pages: "1")
+                .AddBytes(outlined, "outlined", pages: "3")
+                .AddStream(new MemoryStream(modern, writable: false), "modern", pages: "2"));
+
+        Assert.Equal(3, merged.Result.SourceCount);
+        Assert.Equal(3, merged.Result.PageCount);
+        Assert.Equal(3, merged.Document.PageCount);
+        Assert.Equal(
+            ["SafeWebCore.pdf", "outlined", "modern"],
+            merged.Result.Sources.Select(source => source.SourceName).ToArray());
+        Assert.Equal([1, 1, 1], merged.Result.Sources.Select(source => source.PagesContributed).ToArray());
+        Assert.Equal([6, 3, 2], merged.Result.Sources.Select(source => source.SourcePageCount).ToArray());
+        Assert.False(merged.Result.Sources[0].IsComplete);
+
+        // Each page of the result is told apart by the page it came from: US Letter as stored, US Letter
+        // rotated a half turn, then A4 rotated a quarter turn. That sequence is the order of the plan.
+        Assert.Equal(PdfPageSize.Letter, merged.Document.Pages[0].Size);
+        Assert.Equal(PageRotation.None, merged.Document.Pages[0].Rotation);
+        Assert.Equal(PdfPageSize.Letter, merged.Document.Pages[1].Size);
+        Assert.Equal(PageRotation.Clockwise180, merged.Document.Pages[1].Rotation);
+        Assert.Equal(595.276d, merged.Document.Pages[2].Size.WidthPoints, 0.01d);
+        Assert.Equal(841.89d, merged.Document.Pages[2].Size.HeightPoints, 0.01d);
+        Assert.Equal(PageRotation.Clockwise90, merged.Document.Pages[2].Rotation);
+    }
+
     /// <summary>A page selection decides both which pages are taken and in which order they appear.</summary>
     [Fact]
     public async Task Merges_the_selected_pages_in_the_selected_order()
