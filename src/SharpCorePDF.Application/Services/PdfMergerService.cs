@@ -65,8 +65,11 @@ public sealed class PdfMergerService : IPdfMerger
                     .ReadAsync(source.DisplayName, content, source.Password, cancellationToken)
                     .ConfigureAwait(false);
 
-                if (info.IsEncrypted)
+                if (!info.IsReadable)
                 {
+                    // An encrypted document the reader could not open is described rather than thrown
+                    // from, so the decision to stop is made here: either a password is what stands in
+                    // the way and the caller can ask for one, or nothing would help.
                     throw new PdfEncryptionException(source.DisplayName, info.RequiresPassword);
                 }
 

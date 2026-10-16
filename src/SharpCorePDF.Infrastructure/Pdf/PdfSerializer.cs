@@ -13,7 +13,11 @@ internal static partial class PdfSerializer
     /// <summary>Writes an object.</summary>
     /// <param name="value">The object to write.</param>
     /// <param name="output">The buffer to write to.</param>
-    public static void Write(PdfObject? value, PdfOutputBuffer output)
+    /// <param name="encryption">The encryption of the object being written; nothing is encrypted by default.</param>
+    public static void Write(
+        PdfObject? value,
+        PdfOutputBuffer output,
+        PdfObjectEncryption encryption = default)
     {
         ArgumentNullException.ThrowIfNull(output);
 
@@ -41,19 +45,19 @@ internal static partial class PdfSerializer
                 break;
 
             case PdfString text:
-                WriteString(text, output);
+                WriteString(text, output, encryption);
                 break;
 
             case PdfArray array:
-                WriteArray(array, output);
+                WriteArray(array, output, encryption);
                 break;
 
             case PdfDictionary dictionary:
-                WriteDictionary(dictionary, output);
+                WriteDictionary(dictionary, output, encryption);
                 break;
 
             case PdfStream stream:
-                WriteStream(stream, output);
+                WriteStream(stream, output, encryption);
                 break;
 
             case PdfReference reference:
@@ -110,15 +114,27 @@ internal static partial class PdfSerializer
         output.WriteByte((byte)digits[value & 0x0F]);
     }
 
-    private static void WriteString(PdfString text, PdfOutputBuffer output)
+    /// <summary>Writes a string.</summary>
+    /// <param name="text">The string to write.</param>
+    /// <param name="output">The buffer to write to.</param>
+    /// <param name="encryption">The encryption of the object being written.</param>
+    /// <remarks>
+    /// An encrypted string keeps the form it came in — a literal one stays literal and a hexadecimal
+    /// one stays hexadecimal — because the ciphertext is escaped the same way the plain bytes were.
+    /// </remarks>
+    private static void WriteString(PdfString text, PdfOutputBuffer output, PdfObjectEncryption encryption)
     {
+        // A string that is written into an encrypted document holds its ciphertext, which is what the
+        // escaping below is applied to.
+        var bytes = encryption.IsActive ? encryption.EncryptString(text.Bytes) : text.Bytes;
+
         if (text.IsHexadecimal)
         {
             // A hexadecimal string holds its bytes as pairs of hex digits; the '#' escapes that names
             // use would turn it into a different string entirely.
             output.WriteByte((byte)'<');
 
-            foreach (var value in text.Bytes)
+            foreach (var value in bytes)
             {
                 WriteByteAsHex(value, output);
             }
@@ -129,7 +145,7 @@ internal static partial class PdfSerializer
 
         output.WriteByte((byte)'(');
 
-        foreach (var value in text.Bytes)
+        foreach (var value in bytes)
         {
             switch (value)
             {
@@ -188,7 +204,11 @@ internal static partial class PdfSerializer
         output.WriteByte((byte)('0' + (value & 0x07)));
     }
 
-    private static void WriteArray(PdfArray array, PdfOutputBuffer output)
+    /// <summary>Writes an array.</summary>
+    /// <param name="array">The array to write.</param>
+    /// <param name="output">The buffer to write to.</param>
+    /// <param name="encryption">The encryption of the object being written.</param>
+    private static void WriteArray(PdfArray array, PdfOutputBuffer output, PdfObjectEncryption encryption)
     {
         output.WriteByte((byte)'[');
 
@@ -199,7 +219,7 @@ internal static partial class PdfSerializer
                 output.WriteByte((byte)' ');
             }
 
-            Write(array.Items[index], output);
+            Write(array.Items[index], output, encryption);
         }
 
         output.WriteByte((byte)']');

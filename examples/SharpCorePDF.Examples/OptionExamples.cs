@@ -77,6 +77,59 @@ internal static class OptionExamples
         Report.Item("producer without metadata", bareInfo.Metadata.Producer);
     }
 
+    /// <summary>
+    /// Writes an encrypted result, shows that the passwords are what decides who gets in, and merges an
+    /// encrypted source into a document that is sealed again under new passwords.
+    /// </summary>
+    /// <param name="context">The documents to merge and the ports to merge them with.</param>
+    /// <param name="cancellationToken">A token to cancel the merge.</param>
+    public static async Task ProtectResultAsync(ExampleContext context, CancellationToken cancellationToken)
+    {
+        // A merge writes in the clear unless it is told otherwise, and the encryption is one more output
+        // option. The result has its own passwords and permissions: nothing a source declared is carried
+        // into it, so a document that was only protected against editing can be merged and re-protected in
+        // one step.
+        var plan = MergePlan.Create()
+            .AddFile(context.Summary)
+            .AddFile(context.Appendix, pages: "1")
+            .WithOutput(output => output with
+            {
+                Encryption = new PdfEncryptionOptions
+                {
+                    Algorithm = PdfEncryptionAlgorithm.AesWith256BitKey,  // the default, spelled out
+                    UserPassword = "opens-it",                            // what a reader is asked for
+                    OwnerPassword = "owns-it",                            // what opens it with every permission
+                    Permissions = PdfPermissions.PrintOnly,               // printing, but no copying or editing
+                },
+            });
+
+        var destination = context.OutputPath("protected.pdf");
+        var bytes = await context.Merger.MergeToBytesAsync(plan, cancellationToken);
+        await File.WriteAllBytesAsync(destination, bytes, cancellationToken);
+
+        Report.Item("wrote", destination);
+        Report.Item("bytes", bytes.Length);
+
+        // What a viewer asks for — and what it lets a reader do — is decided by the two entries of the
+        // encryption dictionary, and by nothing else: without the password there is no page tree to read.
+        var locked = await context.Inspector.InspectAsync(
+            PdfFileSource.From(destination),
+            cancellationToken: cancellationToken);
+
+        Report.Item("encrypted", locked.IsEncrypted);
+        Report.Item("readable without a password", locked.IsReadable);
+        Report.Item("needs a password", locked.RequiresPassword);
+
+        var opened = await context.Inspector.InspectAsync(
+            PdfFileSource.From(destination),
+            password: "opens-it",
+            cancellationToken: cancellationToken);
+
+        Report.Item("readable with the user password", opened.IsReadable);
+        Report.Item("pages", opened.PageCount);
+        Report.Item("title", opened.Metadata.Title ?? "(none)");
+    }
+
     /// <summary>Prints what the inspection and the merge report about a document that is awkward in two ways.</summary>
     /// <param name="context">The documents to merge and the ports to merge them with.</param>
     /// <param name="cancellationToken">A token to cancel the merge.</param>

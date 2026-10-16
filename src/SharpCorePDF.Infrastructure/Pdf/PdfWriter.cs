@@ -13,6 +13,7 @@ namespace SharpCorePDF.Infrastructure.Pdf;
 internal sealed class PdfWriter
 {
     private readonly PdfOutputBuffer output;
+    private readonly PdfSecurityWriter? security;
     private readonly Dictionary<int, long> offsets = [];
     private int lastObjectNumber;
 
@@ -20,10 +21,17 @@ internal sealed class PdfWriter
     /// <param name="destination">The stream to write to.</param>
     /// <param name="version">The version to put in the file header.</param>
     /// <param name="options">The engine options.</param>
-    public PdfWriter(Stream destination, PdfVersion version, PdfEngineOptions options)
+    /// <param name="security">The encryption of the document, or <see langword="null"/> for one that is written in the clear.</param>
+    public PdfWriter(
+        Stream destination,
+        PdfVersion version,
+        PdfEngineOptions options,
+        PdfSecurityWriter? security = null)
     {
         ArgumentNullException.ThrowIfNull(destination);
         ArgumentNullException.ThrowIfNull(options);
+
+        this.security = security;
 
         // The version and the options are written into the header and the binary marker here and are not
         // needed afterwards: the header is the only thing a writer puts in the file from either of them.
@@ -61,8 +69,33 @@ internal sealed class PdfWriter
         offsets[objectNumber] = output.Length;
         output.WriteInteger(objectNumber);
         output.Write(" 0 obj\n"u8);
-        PdfSerializer.Write(body, output);
+
+        // The number of the object is what the key of every string and stream of it is derived from, so
+        // it is what the serializer is handed here rather than anything the object carries itself.
+        PdfSerializer.Write(body, output, PdfObjectEncryption.For(security, objectNumber));
         output.Write("\nendobj\n"u8);
+    }
+
+    /// <summary>Writes the encryption dictionary and returns the object number it was written as.</summary>
+    /// <param name="security">The encryption of the document.</param>
+    /// <returns>The object number to reference from the trailer.</returns>
+    /// <remarks>
+    /// This deliberately does not go through <see cref="WriteObject"/>: the encryption dictionary is the
+    /// one object a PDF keeps in the clear, because a reader must be able to read the salts and the file
+    /// key out of it before it has a key at all.
+    /// </remarks>
+    public int WriteEncryptionDictionary(PdfSecurityWriter security)
+    {
+        ArgumentNullException.ThrowIfNull(security);
+
+        var objectNumber = AllocateObject();
+        offsets[objectNumber] = output.Length;
+        output.WriteInteger(objectNumber);
+        output.Write(" 0 obj\n"u8);
+        PdfSerializer.WriteDictionary(security.Dictionary, output);
+        output.Write("\nendobj\n"u8);
+
+        return objectNumber;
     }
 
     /// <summary>Writes the cross-reference table, trailer and the closing <c>startxref</c>.</summary>

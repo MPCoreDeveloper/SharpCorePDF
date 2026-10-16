@@ -18,6 +18,7 @@ internal static class Scenarios
         new("no-container", "use the packages without a dependency injection container", SourceExamples.WithoutContainerAsync),
         new("inspect-first", "describe documents before merging them", InspectionExamples.InspectFirstAsync),
         new("options", "control metadata, bookmarks, the version and reproducibility", OptionExamples.MetadataAndVersionAsync),
+        new("protect-result", "write a result that needs a password, with the permissions you choose", OptionExamples.ProtectResultAsync),
         new("warnings", "read what the merge reports about what it had to change", OptionExamples.WarningsAsync),
         new("errors", "recognise the ways a merge can be refused", ErrorHandlingExamples.HandleRefusalsAsync),
     ];

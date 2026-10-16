@@ -8,7 +8,7 @@
 
 # SharpCorePDF examples
 
-Eight runnable examples that show how the library is used, and the console app that runs them. Everything
+Nine runnable examples that show how the library is used, and the console app that runs them. Everything
 here is code that compiles and executes against the four packages, so nothing in the documentation is a
 snippet that was never run.
 
@@ -36,10 +36,11 @@ example ran and `1` when one failed.
 | `select-pages` | The page selection notation (`3,1`, `2-`, `-2`, `2,2,1`), that it is an order and not a set, and how to build a selection in code. |
 | `merge-streams` | A source that is an upload stream and a source that is already a `byte[]`, with the merged document handed back as bytes. |
 | `no-container` | The same merge without a dependency injection container, and the proof that the result is the same. |
-| `inspect-first` | Describing a folder of documents before merging, which is how an encrypted or unusable file is found without an exception. |
+| `inspect-first` | Describing a folder of documents before merging, which is how a file that is unusable, or encrypted and waiting for its password, is found without an exception. |
 | `options` | Metadata policy and override, outline and page-label policy, the target version, and a reproducible result (byte for byte). |
+| `protect-result` | A result written with AES-256, a user and an owner password and a permission set: what a reader is asked for, what it is allowed to do, and how an encrypted source is merged into a document that is sealed again under new passwords. |
 | `warnings` | The two channels: what inspection reports about a document, and what the merge reports about its own work. |
-| `errors` | Every refusal a caller can meet, with the exception type and the message the library produces. |
+| `errors` | Every refusal a caller can meet, with the exception type and the message the library produces, and the merge that succeeds once the encrypted sample is given its password. |
 
 ## The documents the examples merge
 
@@ -53,8 +54,15 @@ They are not part of the library; they exist so that running the examples has so
 | `Appendix.pdf` | Three landscape pages (842 x 595 pt), an author and a creation date. |
 | `Annex.pdf` | One portrait page. |
 | `Broken.pdf` | A text file that someone renamed to `.pdf`. |
-| `Encrypted.pdf` | A document whose trailer declares `/Encrypt`. |
+| `Encrypted.pdf` | One page, encrypted with the standard security handler (AES-128, revision 4) and the user password `user-password`. |
 | `NamedDests.pdf` | A first page with no declared page size, and named destinations in its catalog. |
+
+`Encrypted.pdf` is the one sample that is not generated: writing it would mean implementing a security
+handler inside an example, and what the example has to show is that the library opens a document somebody
+else encrypted. Its bytes are the base64 of the fixture that
+[`docs/tools/make-fixtures.py`](../docs/tools/make-fixtures.py) writes with `pikepdf`. Without the password
+the library reports that one is needed; with it, the document is described and merged like any other, and
+the merged page is in the clear.
 
 Every page of a document is ten points narrower than the one before it. That is what lets an example name a
 page by printing its size, which is how `select-pages` shows that `3,1` really did put page 3 first:
@@ -78,10 +86,14 @@ var plan = MergePlan.Create()
 var result = await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
 var bytes  = await merger.MergeToBytesAsync(plan);
 
-// 3. Find out what a document contains before merging it. An encrypted document is reported, not thrown.
+// 3. Find out what a document contains before merging it. A document that cannot be read is reported, not thrown:
+//    IsReadable is false, and RequiresPassword says whether a password is what stands in the way.
 var info = await inspector.InspectAsync(PdfFileSource.From(path));
 
-if (info.IsEncrypted) { /* impossible to merge, and the merge would say so too */ }
+if (!info.IsReadable) { /* unusable as it stands, and the merge would say so too */ }
+
+// An encrypted document is opened with its user or owner password, and merged in the clear.
+plan = plan.AddFile(@"C:\reports\sealed.pdf", password: "user-password");
 
 // 4. Control what the result carries besides the pages.
 var report = plan.WithOutput(options => options with
@@ -91,6 +103,18 @@ var report = plan.WithOutput(options => options with
     MetadataOverride = new PdfMetadata { Title = "Quarterly report 2026" },
     OutlinePolicy = OutlinePolicy.Drop,
     ModificationDate = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero),   // reproducible output
+});
+
+// ... including whether it needs a password at all, which it does not unless you ask for one.
+var sealed = plan.WithOutput(options => options with
+{
+    Encryption = new PdfEncryptionOptions
+    {
+        Algorithm = PdfEncryptionAlgorithm.AesWith256BitKey,   // RC4-40, RC4-128, AES-128 or AES-256
+        UserPassword = "opens-it",
+        OwnerPassword = "owns-it",
+        Permissions = PdfPermissions.PrintOnly,
+    },
 });
 
 // 5. Register it once, in a container, and inject the two ports.
@@ -109,7 +133,7 @@ services.AddSharpCorePDF(config);    // or from the "SharpCorePDF" configuration
 | `MergeExamples.cs` | `merge-files`, `select-pages`. |
 | `SourceExamples.cs` | `merge-streams`, `no-container`. |
 | `InspectionExamples.cs` | `inspect-first`. |
-| `OptionExamples.cs` | `options`, `warnings`. |
+| `OptionExamples.cs` | `options`, `protect-result`, `warnings`. |
 | `ErrorHandlingExamples.cs` | `errors`. |
 | `appsettings.json` | The engine options the container binds, including `VerifyOutput`, so every example also proves its output can be read back. |
 

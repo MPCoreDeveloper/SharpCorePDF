@@ -81,14 +81,28 @@ public sealed partial class PdfMergeEngine
     /// <summary>Writes the cross-reference table, the trailer and the closing bytes of the document.</summary>
     /// <param name="context">The merge context.</param>
     /// <param name="infoNumber">The object number of the document information dictionary.</param>
-    private static void WriteTrailer(PdfMergeContext context, int infoNumber)
+    /// <param name="identifier">The identifier written as both elements of the <c>ID</c> entry.</param>
+    /// <param name="security">The encryption of the document, or <see langword="null"/> when it is written in the clear.</param>
+    private static void WriteTrailer(
+        PdfMergeContext context,
+        int infoNumber,
+        PdfString identifier,
+        PdfSecurityWriter? security)
     {
-        var identifier = BuildFileIdentifier(context);
         var trailer = new PdfDictionary();
 
         trailer.Set("Root", new PdfReference(context.CatalogNumber, 0));
         trailer.Set("Info", new PdfReference(infoNumber, 0));
         trailer.Set("ID", new PdfArray(new PdfObject[] { identifier, identifier }));
+
+        if (security is not null)
+        {
+            // The trailer is written in the clear, which is why its strings are never encrypted: the
+            // identifier is part of the key derivation of the legacy revisions, so a reader has to be
+            // able to read it before it has a key. The encryption dictionary it points at is the other
+            // value that is deliberately in the clear, and the writer writes it as such.
+            trailer.Set("Encrypt", new PdfReference(context.Writer.WriteEncryptionDictionary(security), 0));
+        }
 
         context.Writer.Complete(trailer);
     }

@@ -61,7 +61,7 @@ internal static class ErrorHandlingExamples
 
         Report.Item("plan problems", string.Join(" | ", tooOld.Validate()));
 
-        // The input's fault: an encrypted document, and a file that is not a PDF.
+        // The input's fault: an encrypted document whose password was not given, and a file that is not a PDF.
         Report.Heading("a source the engine cannot read");
 
         var encrypted = MergePlan.Create().AddFile(Path.Combine(context.InputFolder, "Encrypted.pdf"));
@@ -69,6 +69,21 @@ internal static class ErrorHandlingExamples
 
         await ExpectAsync(async () => await context.Merger.MergeToBytesAsync(encrypted, cancellationToken));
         await ExpectAsync(async () => await context.Merger.MergeToBytesAsync(notAPdf, cancellationToken));
+
+        // With the password the engine opens the document, and the merge it was refused for runs.
+        Report.Heading("the same source, merged with its password");
+
+        var unlocked = MergePlan.Create()
+            .AddFile(Path.Combine(context.InputFolder, "Encrypted.pdf"), password: SampleDocuments.EncryptedPassword);
+
+        var result = await context.Merger.MergeToFileAsync(
+            unlocked,
+            context.OutputPath("unlocked.pdf"),
+            cancellationToken);
+
+        Report.Item("pages", result.PageCount);
+        Report.Item("bytes", result.OutputBytes);
+        Report.Item("warnings", string.Join(" | ", result.Warnings));
 
         // A destination that cannot be written is the caller's fault too, and reported as such.
         Report.Heading("a destination that cannot be written");
@@ -88,7 +103,7 @@ internal static class ErrorHandlingExamples
         Report.Heading("the two families of error");
         Report.Line("ArgumentNullException, ArgumentException and FormatException: the caller built it wrong.");
         Report.Line("MergePlanValidationException: the plan does not describe a merge that can be executed.");
-        Report.Line("PdfSourceFormatException, PdfEncryptionException: the input cannot be merged.");
+        Report.Line("PdfSourceFormatException, PdfEncryptionException: the input cannot be merged. A file that is not a PDF, or an encrypted document whose password was not given.");
         Report.Line("All of the last three derive from PdfException, so one catch block sees them all.");
     }
 

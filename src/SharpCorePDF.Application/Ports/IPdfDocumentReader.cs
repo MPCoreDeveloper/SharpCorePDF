@@ -14,7 +14,7 @@ public interface IPdfDocumentReader
     /// <summary>Reads the structure of a document.</summary>
     /// <param name="sourceName">The name of the source, used in diagnostics.</param>
     /// <param name="content">A readable stream positioned at the start of the document.</param>
-    /// <param name="password">The user password, when known.</param>
+    /// <param name="password">The user or owner password, when the document is encrypted.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>What the document contains.</returns>
     Task<PdfDocumentInfo> ReadAsync(

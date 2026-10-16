@@ -9,7 +9,7 @@
   github.com/.../badge.svg is not on nuget.org's trusted list, while shields.io answers the same
   question from a host that is. Read them as:
 
-    nuget.org version  the vpre endpoint, so it reads 1.0.0-preview.1 now and 1.0.0 once that ships
+    nuget.org version  the vpre endpoint, so it reads 1.0.0-preview.3 now and 1.0.0 once that ships
     tests              the ci.yml runs: the build, both test legs and the SonarCloud analysis
     quality gate       the SonarCloud project MPCoreDeveloper_SharpCorePDF. It reads "unknown" until
                        the first analysis lands, the way the version badge did before the first push
@@ -75,6 +75,34 @@ await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
   because they cannot sensibly exist twice in one document.
 * **Document information** is taken from the primary source, merged from all sources, or suppressed;
   an explicit override always wins. Fix `ModificationDate` and the output is reproducible byte for byte.
+* **Encrypted sources are opened, not refused.** The standard security handler is implemented for
+  revisions 2 to 6 — RC4, AES-128 and AES-256, including the hardened hash revision 6 introduced — so a
+  source is merged with its user or owner password and every string and stream of it is read in the
+  clear. A document that opens with no password at all, which is the shape of a file that is only
+  protected against editing, needs to be told nothing.
+* **The result can be encrypted, and is written in the clear unless you ask otherwise.** Supplying
+  `MergeOutputOptions.Encryption` protects the merged document under passwords you choose — RC4-40,
+  RC4-128, AES-128 or AES-256 (the default), with the permission bits the format defines — and the
+  strings and streams of the result are sealed as they are written:
+
+  ```csharp
+  var plan = MergePlan.Create()
+      .AddFile(@"C:\reports\summary.pdf")
+      .AddFile(@"C:\reports\appendix.pdf")
+      .WithOutput(options => options with
+      {
+          Encryption = new PdfEncryptionOptions
+          {
+              Algorithm = PdfEncryptionAlgorithm.AesWith256BitKey,
+              UserPassword = "opens-it",
+              OwnerPassword = "owns-it",
+              Permissions = PdfPermissions.PrintOnly,
+          },
+      });
+  ```
+
+  A merge of encrypted sources under new passwords needs nothing from the old ones, and a source that was
+  only protected against editing can be merged and re-protected in one step.
 * **Diagnostics instead of surprises**: damaged cross-reference tables are rebuilt by scanning the
   file, unselected pages that something still points at are folded onto a page that exists, and
   anything the merge had to change is reported in `MergeResult.Warnings`.
@@ -102,8 +130,10 @@ Nothing else is supported yet — there is no `netstandard2.0` or `net8.0` leg, 
 .NET 8 or .NET 9 cannot install these packages.
 
 `IPdfInspector.InspectAsync` describes a document — version, page count and sizes, rotation, metadata,
-bookmarks, embedded files, form presence, warnings — and reports an encrypted document instead of
-throwing, so a caller can decide what to do before merging anything.
+bookmarks, embedded files, form presence, warnings — and opens an encrypted one with the password it is
+given instead of throwing. A document whose encryption stays closed is reported with
+`PdfDocumentInfo.IsReadable` cleared and `PdfDocumentInfo.RequiresPassword` set when a password is what
+stands in the way, so a caller can ask for one instead of being told the document is simply unusable.
 
 The package to install is `SharpCorePDF.DependencyInjection`: it depends on the other three, and its
 `AddSharpCorePDF()` call is the whole wiring. The version is still a preview, so `--prerelease` is
@@ -133,7 +163,7 @@ cannot resolve relative paths, which is why the logo and the links in this file 
 ## Examples
 
 [`examples/SharpCorePDF.Examples`](https://github.com/MPCoreDeveloper/SharpCorePDF/tree/main/examples/SharpCorePDF.Examples)
-is a console app with eight runnable examples. Every snippet on this page is code that compiles and
+is a console app with nine runnable examples. Every snippet on this page is code that compiles and
 executes there:
 
 ```powershell
@@ -148,8 +178,9 @@ dotnet run --project .\examples\SharpCorePDF.Examples -- errors options  # sever
 | `select-pages` | `3,1`, `2-`, `-2` and `2,2,1`: a selection is an order rather than a set, and it can be built in code too. |
 | `merge-streams` | A source that is an upload stream, and one that is already a `byte[]`. |
 | `no-container` | The same merge without a container, and the proof that both routes write the same bytes. |
-| `inspect-first` | Describing a folder of documents before merging: an encrypted or unusable file is reported, not thrown. |
+| `inspect-first` | Describing a folder of documents before merging: a file that is unusable, or encrypted and waiting for its password, is reported, not thrown. |
 | `options` | Metadata policy and override, outline and page-label policy, the target version, reproducible output. |
+| `protect-result` | A result that needs a password: AES-256, a user and an owner password, the permission bits, and a merge of an encrypted source into a document sealed again under new passwords. |
 | `warnings` | What inspection reports about a document, versus what a merge reports about its own work. |
 | `errors` | Every refusal a caller can meet, with the exception type and the message the library produces. |
 
@@ -188,9 +219,22 @@ engine be swapped in.
 
 ## Known limits (deliberate, for version 1)
 
-* **Encrypted documents are refused** with `PdfEncryptionException`; no decryption is attempted, so
-  `PdfDocumentInfo.RequiresPassword` is always `false` — the engine cannot know whether an empty user
-  password would have opened the file.
+* **Encryption covers the standard security handler, revisions 2 to 6.** A document that uses a public
+  key handler, or a crypt filter that is not `RC4`, `AESV2`, `AESV3` or `None`, stays closed: inspection
+  reports it with `PdfDocumentInfo.IsReadable` cleared and `PdfDocumentInfo.RequiresPassword` still
+  `false`, because no password would help, and a merge refuses it with `PdfEncryptionException`.
+* **The merged document is written in the clear unless `MergeOutputOptions.Encryption` asks for more.**
+  Encryption is opt in, and a result has its own passwords and permissions: what a source declared is
+  never carried into it.
+* **Passwords are taken exactly as they are given**, without SASLprep normalization, so a password whose
+  normalized form differs from the form its producer used must be supplied as the producer wrote it.
+  Revisions 2 to 4 predate any agreement on how the characters of one become bytes — Adobe, qpdf and
+  pypdf all hash the Latin-1 bytes of the text, which is what the engine reads and writes, and text with
+  no Latin-1 form is hashed as UTF-8 — while revisions 5 and 6 are UTF-8 by definition and use at most
+  127 bytes.
+* **An encrypted result is reproducible byte for byte only when it is written with RC4.** AES seals every
+  value with a fresh initialization vector and AES-256 draws a random file key, so two runs of the same
+  merge differ; RC4 keeps no such state, so fixing `ModificationDate` fixes the output.
 * **Named destinations are merged from the primary source only.** A bookmark of another source that
   used a named destination keeps its title and loses its destination, and the merge says so in its
   warnings.
@@ -207,7 +251,7 @@ engine be swapped in.
 # Everything at once, through the solution: the four packages, the tests,
 # the examples and the measurement harness.
 dotnet build .\SharpCorePDF.slnx -c Release
-dotnet test  .\SharpCorePDF.slnx                      # 383 tests on net10.0, 383 on net11.0
+dotnet test  .\SharpCorePDF.slnx                      # 437 tests on net10.0, 437 on net11.0
 dotnet run --project .\examples\SharpCorePDF.Examples -c Release
 
 # Or one project at a time:
@@ -220,8 +264,10 @@ dotnet test .\tests\SharpCorePDF.Tests\SharpCorePDF.Tests.csproj -p:TargetFramew
 
 The tests cover the domain invariants, the serialisation details, the reader against a real-world
 document, a document that uses object streams and cross-reference streams, a document with bookmarks,
-page labels, annotations and a rotated page, an encrypted document, and the whole merge path through
-the container.
+page labels, annotations and a rotated page, one encrypted document per revision of the standard
+security handler — including one whose password is not ASCII — the merge path through the container,
+and the encryption of a merged result, which every algorithm is checked against by reading the document
+back with the password it was written with.
 
 ### Measuring what a merge costs
 
@@ -244,12 +290,15 @@ means. The recorded numbers, and what they say about the performance and memory 
 
 ```powershell
 uv run --with pikepdf python .\docs\tools\validate-pdf.py <file.pdf>
+uv run --with pikepdf python .\docs\tools\validate-pdf.py --password <password> <encrypted.pdf>
 uv run --with pikepdf python .\docs\tools\make-fixtures.py .\tests\SharpCorePDF.Tests\Assets
 ```
 
 `validate-pdf.py` runs `qpdf --check`, decodes every stream in the file, and prints the geometry,
-rotation and annotations of every page. It is the check that caught the one bug this library has had so
-far: a hexadecimal string written with name escapes, which `qpdf` rejected as damage.
+rotation and annotations of every page; with `--password` it does the same for an encrypted document and
+prints what qpdf makes of its encryption dictionary. It is the check that caught the one bug this library
+has had so far: a hexadecimal string written with name escapes, which `qpdf` rejected as damage. The
+encrypted documents the merge engine writes were checked the same way with qpdf, pikepdf and pypdf.
 
 ## Continuous integration
 
@@ -334,11 +383,11 @@ Publishing then happens one of two ways:
   legs run, every package is checked, and the packages are pushed into a throwaway local feed as a
   handshake. Set `publish` to true to carry on to nuget.org.
 * **Push a `v*` tag** —
-  `git tag v1.0.0-preview.1 && git push origin v1.0.0-preview.1`. The tag is a `v` followed by the
+  `git tag v1.0.0-preview.3 && git push origin v1.0.0-preview.3`. The tag is a `v` followed by the
   exact `<Version>` in
   [`src/Directory.Build.props`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/src/Directory.Build.props),
   prerelease suffix included, because a tagged run refuses to publish a version the tag does not name:
-  `v1.0.0` against the current `1.0.0-preview.1` fails the check instead of publishing.
+  `v1.0.0` against the current `1.0.0-preview.3` fails the check instead of publishing.
 
 Nothing reaches a feed until the packages pass that check: every `.nupkg` must carry both `lib/net10.0`
 and `lib/net11.0`, which is the promise made in `src/Directory.Build.props`.

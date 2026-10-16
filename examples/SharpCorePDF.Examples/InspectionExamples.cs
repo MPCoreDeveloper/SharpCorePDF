@@ -17,7 +17,8 @@ internal static class InspectionExamples
     public static async Task InspectFirstAsync(ExampleContext context, CancellationToken cancellationToken)
     {
         // The sample folder holds six files that behave differently: three that merge cleanly, one that merges
-        // but has something to report, one that is not a PDF at all, and one whose trailer declares encryption.
+        // but has something to report, one that is not a PDF at all, and one that is encrypted with the
+        // standard security handler and needs its password before it can be read.
         var mergeable = new List<string>();
 
         Report.Heading($"every .pdf in {context.InputFolder}");
@@ -30,11 +31,13 @@ internal static class InspectionExamples
             {
                 var info = await context.Inspector.InspectAsync(source, cancellationToken: cancellationToken);
 
-                // Inspection reports encryption instead of throwing, so a caller can explain the problem
-                // before a merge refuses the document.
-                if (info.IsEncrypted)
+                // Inspection reports a document it cannot read instead of throwing, so a caller can explain
+                // the problem before a merge refuses the document. A document whose encryption stays closed
+                // says whether a password is what stands in the way.
+                if (!info.IsReadable)
                 {
-                    Report.Line($"{source.DisplayName,-14} encrypted: it cannot be merged");
+                    Report.Line($"{source.DisplayName,-14} unreadable: {info}");
+                    Report.Line($"{string.Empty,-14} a password is required: {info.RequiresPassword}");
                     continue;
                 }
 
@@ -64,6 +67,20 @@ internal static class InspectionExamples
         Report.Line(
             "(HasUniformPageSize is False wherever the pages of a document differ in size, which the samples do on purpose)");
 
+        // The same document, inspected with the password it was encrypted with: the page tree, the metadata
+        // and the warnings are all there, exactly as they are for a document that was never encrypted.
+        var encryptedPath = Path.Combine(context.InputFolder, "Encrypted.pdf");
+        var locked = PdfFileSource.From(encryptedPath);
+        var opened = await context.Inspector.InspectAsync(
+            locked,
+            password: SampleDocuments.EncryptedPassword,
+            cancellationToken: cancellationToken);
+
+        Report.Heading("the encrypted sample, inspected with its password");
+        Report.Line($"{locked.DisplayName,-14} {opened}");
+        Report.Line($"{string.Empty,-14} readable {opened.IsReadable}, password required {opened.RequiresPassword}, "
+            + $"title \"{opened.Metadata.Title}\"");
+
         // A plan is immutable, so building one in a loop is a reassignment and not a mutation. That is also
         // why a plan can be built once and executed from several threads.
         var plan = MergePlan.Create();
@@ -73,9 +90,13 @@ internal static class InspectionExamples
             plan = plan.AddFile(path);
         }
 
+        // The encrypted sample joins the plan with its password, and every string and stream of it is read in
+        // the clear, so the merged document holds a page that nothing else in this folder has.
+        plan = plan.AddFile(encryptedPath, password: SampleDocuments.EncryptedPassword);
+
         var problems = plan.Validate();
 
-        Report.Heading($"the {mergeable.Count} document(s) that passed inspection, in one plan");
+        Report.Heading($"the {mergeable.Count} document(s) that passed inspection, plus the encrypted one, in one plan");
         Report.Item("plan problems", problems.Count == 0 ? "none" : string.Join("; ", problems));
         Report.Item("sources", plan.SourceCount);
 

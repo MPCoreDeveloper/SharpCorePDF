@@ -16,6 +16,9 @@ internal sealed partial class PdfObjectParser
     private readonly PdfLexer lexer;
     private readonly Func<long, long?>? indirectLengthResolver;
     private readonly int maxDepth;
+    private PdfSecurityHandler? security;
+    private long encryptedObjectNumber;
+    private int encryptedGeneration;
 
     /// <summary>Initializes a new instance of the <see cref="PdfObjectParser"/> class.</summary>
     /// <param name="data">The bytes of the document.</param>
@@ -47,6 +50,26 @@ internal sealed partial class PdfObjectParser
     {
         get => lexer.Position;
         set => lexer.Position = value;
+    }
+
+    /// <summary>
+    /// Makes the parser decrypt the strings and the stream bodies it reads with the file key of one
+    /// indirect object.
+    /// </summary>
+    /// <param name="handler">The handler that holds the file key.</param>
+    /// <param name="objectNumber">The object number the values are encrypted under.</param>
+    /// <param name="generation">The generation number the values are encrypted under.</param>
+    /// <remarks>
+    /// A parser that is never told this reads every value exactly as it was stored, which is what the
+    /// cross-reference reader needs — nothing it reads is encrypted — and what the object stream
+    /// reader needs, because the objects inside a stream were already covered by the decryption of
+    /// the stream that carries them.
+    /// </remarks>
+    public void DecryptWith(PdfSecurityHandler handler, long objectNumber, int generation)
+    {
+        security = handler;
+        encryptedObjectNumber = objectNumber;
+        encryptedGeneration = generation;
     }
 
     /// <summary>Reads a keyword when it is next.</summary>
@@ -107,10 +130,18 @@ internal sealed partial class PdfObjectParser
             PdfTokenType.Number when token.IsInteger => ParseIntegerOrReference(token),
             PdfTokenType.Number => new PdfReal(token.RealValue),
             PdfTokenType.Name => new PdfName(token.Text),
-            PdfTokenType.LiteralString => new PdfString(token.Bytes ?? [], false),
-            PdfTokenType.HexString => new PdfString(token.Bytes ?? [], true),
+            PdfTokenType.LiteralString => new PdfString(DecryptString(token.Bytes ?? []), false),
+            PdfTokenType.HexString => new PdfString(DecryptString(token.Bytes ?? []), true),
             PdfTokenType.Keyword => ParseKeyword(token),
             _ => PdfNull.Instance,
         };
     }
+
+    /// <summary>Decrypts the bytes of a string, when the parser was told how to.</summary>
+    /// <param name="data">The bytes as they were stored.</param>
+    /// <returns>The bytes to expose.</returns>
+    private byte[] DecryptString(ReadOnlySpan<byte> data) =>
+        security is null
+            ? data.ToArray()
+            : security.DecryptString(data, encryptedObjectNumber, encryptedGeneration);
 }

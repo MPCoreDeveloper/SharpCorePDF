@@ -6,16 +6,17 @@ namespace SharpCorePDF.Domain.Ports;
 /// Reads the structure of a PDF document without changing it.
 /// </summary>
 /// <remarks>
-/// Inspection never throws for an encrypted document: it reports
-/// <see cref="PdfDocumentInfo.IsEncrypted"/> instead, so a caller can explain the problem before
-/// attempting a merge. Malformed input still raises
+/// Inspection never throws for an encrypted document: it opens the encryption with the password it is
+/// given and, when the document stays closed, reports <see cref="PdfDocumentInfo.IsReadable"/> and
+/// <see cref="PdfDocumentInfo.RequiresPassword"/> instead, so a caller can explain the problem or ask
+/// for the right password before attempting a merge. Malformed input still raises
 /// <see cref="Exceptions.PdfSourceFormatException"/>.
 /// </remarks>
 public interface IPdfInspector
 {
     /// <summary>Reads the structure of a document.</summary>
     /// <param name="source">The content to inspect.</param>
-    /// <param name="password">The user password, when the document is encrypted.</param>
+    /// <param name="password">The user or owner password, when the document is encrypted.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>What the document contains: version, page count, page sizes, metadata and document level features.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>

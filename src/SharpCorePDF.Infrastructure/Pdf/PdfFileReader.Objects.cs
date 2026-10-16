@@ -40,9 +40,24 @@ internal sealed partial class PdfFileReader
 
         var parser = new PdfObjectParser(data, SourceName, offset, ResolveIndirectLength, options.MaxNestingDepth);
 
-        if (!parser.TryReadIndirectHeader(out var objectNumber, out _))
+        if (!parser.TryReadIndirectHeader(out var objectNumber, out var generation))
         {
             return null;
+        }
+
+        // The header is what makes decryption possible: the key of every string and stream of an object
+        // is derived from the number this object carries in the file, so the parser is told about it
+        // before a byte of the body is read. The number from the header is the one used even when the
+        // cross-reference table disagrees, because that is the number the producer derived the key
+        // from.
+        //
+        // Exactly one object is exempt: the metadata stream of a document that clears EncryptMetadata,
+        // which the specification keeps in the clear. Decrypting it would turn the XMP into rubbish,
+        // and the catalog that names it is resolved before anything else can reach it, so the object
+        // is already known when it is parsed.
+        if (Security is not null && !IsClearTextMetadata(objectNumber))
+        {
+            parser.DecryptWith(Security, objectNumber, generation);
         }
 
         if (objectNumber != expectedObjectNumber)

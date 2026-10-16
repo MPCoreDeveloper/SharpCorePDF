@@ -20,14 +20,44 @@ namespace SharpCorePDF.Examples;
 /// </para>
 /// <para>
 /// Some of the files are awkward on purpose, because that is what a caller meets in the wild: a text file
-/// renamed to .pdf, one whose trailer declares encryption, and one whose first page declares no size and
-/// whose catalog carries named destinations — so that inspection and merging each have something to report.
+/// renamed to .pdf, one that is encrypted with the standard security handler and needs its password, and one
+/// whose first page declares no size and whose catalog carries named destinations — so that inspection and
+/// merging each have something to report.
+/// </para>
+/// <para>
+/// The encrypted sample is the one document that is not built here. Writing it would mean implementing the
+/// key derivation of the security handler inside an example, and what the example has to show is that the
+/// library opens a document somebody else encrypted. Its bytes are therefore carried as the base64 of the
+/// fixture that <c>docs/tools/make-fixtures.py</c> writes with pikepdf: one page, AES-128, security handler
+/// revision 4, opened with <see cref="EncryptedPassword"/>.
 /// </para>
 /// </remarks>
 internal static class SampleDocuments
 {
     /// <summary>The producer the sample documents declare, so that a round trip through a merge is visible.</summary>
     private const string Producer = "SharpCorePDF.Examples";
+
+    /// <summary>The user password of the encrypted sample, which is the password merging it needs.</summary>
+    public const string EncryptedPassword = "user-password";
+
+    /// <summary>The encrypted sample, as the base64 of the fixture that <c>make-fixtures.py</c> writes.</summary>
+    private const string EncryptedSampleBase64 =
+        "JVBERi0xLjYKJb/3ov4KMSAwIG9iago8PCAvUGFnZXMgMyAwIFIgL1R5cGUgL0NhdGFsb2cgPj4KZW5kb2JqCjIgMCBvYmoK"
+        + "PDwgL1RpdGxlIDw5ZWU2NWQ1OTk0YWFhMDU1NjdlNWM5ZWUzYjY1YWZkZWI2MWViNjQzZGQ2NWNhYTY1YzQ3NGNmMmZmNGNi"
+        + "MTVhMzNmMzkwNTU4YjYwZjI0MzVjMTVmNDgzOTdlYjE2MDE+ID4+CmVuZG9iagozIDAgb2JqCjw8IC9Db3VudCAxIC9LaWRz"
+        + "IFsgNCAwIFIgXSAvVHlwZSAvUGFnZXMgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0NvbnRlbnRzIDUgMCBSIC9NZWRpYUJveCBb"
+        + "IDAgMCA1OTUuMjc2IDg0MS44OSBdIC9QYXJlbnQgMyAwIFIgL1Jlc291cmNlcyA8PCA+PiAvVHlwZSAvUGFnZSA+PgplbmRv"
+        + "YmoKNSAwIG9iago8PCAvTGVuZ3RoIDY0IC9GaWx0ZXIgL0ZsYXRlRGVjb2RlID4+CnN0cmVhbQrh3P0bqd0yiQwSjL0v5VlD"
+        + "86J6/mFtu10gYhyUpqSnn3wRGqY1zFkCkqJT4xns/8usZvtUokZZle8SR5rq1B/ICmVuZHN0cmVhbQplbmRvYmoKNiAwIG9i"
+        + "ago8PCAvQ0YgPDwgL1N0ZENGIDw8IC9BdXRoRXZlbnQgL0RvY09wZW4gL0NGTSAvQUVTVjIgL0xlbmd0aCAxNiA+PiA+PiAv"
+        + "RmlsdGVyIC9TdGFuZGFyZCAvTGVuZ3RoIDEyOCAvTyA8ZmQ0YmUyZjAyYWI2YzMzOTUyYTg2NDBlYzFlZmFkZjRlY2Y3MTM4"
+        + "NTgyZDE0MTIzMmY0MDdjYmNiYzhmZDMwMz4gL09FIDw+IC9QIC0xMDI4IC9SIDQgL1N0bUYgL1N0ZENGIC9TdHJGIC9TdGRD"
+        + "RiAvVSA8MjdlYzU0ZTZhMGQ3YzE2MDg2ZDdlN2NlZDg3M2U5N2QwMDIxNDQ2OTkwYjllNDExNDA3MWE0ZDkxMDQ5ODRjMT4g"
+        + "L1VFIDw+IC9WIDQgPj4KZW5kb2JqCnhyZWYKMCA3CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNSAwMDAwMCBuIAow"
+        + "MDAwMDAwMDY0IDAwMDAwIG4gCjAwMDAwMDAxOTEgMDAwMDAgbiAKMDAwMDAwMDI1MCAwMDAwMCBuIAowMDAwMDAwMzYzIDAw"
+        + "MDAwIG4gCjAwMDAwMDA0OTggMDAwMDAgbiAKdHJhaWxlciA8PCAvSW5mbyAyIDAgUiAvUm9vdCAxIDAgUiAvU2l6ZSA3IC9J"
+        + "RCBbPGFlYjNlMDYyYTJiNzcxM2Q2NTE3OWUyMGIwNzJiZTE5PjxhZWIzZTA2MmEyYjc3MTNkNjUxNzllMjBiMDcyYmUxOT5d"
+        + "IC9FbmNyeXB0IDYgMCBSID4+CnN0YXJ0eHJlZgo4MTQKJSVFT0YK";
 
     /// <summary>Everything that makes one sample document different from another.</summary>
     /// <param name="Title">The title in the document information, and the text drawn on every page.</param>
@@ -36,7 +66,6 @@ internal static class SampleDocuments
     /// <param name="Height">The height of every page in points.</param>
     /// <param name="Author">The author in the document information, when one is wanted.</param>
     /// <param name="CreationDate">The creation date in the document information, when one is wanted.</param>
-    /// <param name="Encrypt">Whether the trailer declares an encryption dictionary.</param>
     /// <param name="OmitFirstPageMediaBox">Whether the first page leaves out its page size.</param>
     /// <param name="NamedDestinations">Whether the catalog carries named destinations.</param>
     private sealed record Sample(
@@ -46,7 +75,6 @@ internal static class SampleDocuments
         int Height,
         string? Author = null,
         string? CreationDate = null,
-        bool Encrypt = false,
         bool OmitFirstPageMediaBox = false,
         bool NamedDestinations = false);
 
@@ -82,16 +110,16 @@ internal static class SampleDocuments
             "Annex.pdf",
             new Sample("Reading guide", Pages: 1, Width: 595, Height: 842));
 
-        // A file that is not a PDF at all, and one whose trailer declares encryption. A caller meets both in
-        // the wild, and both are what IPdfInspector exists to report without an exception.
+        // A file that is not a PDF at all, and one that is really encrypted. A caller meets both in the wild,
+        // and the first is what IPdfInspector reports without an exception; the second is reported as needing
+        // a password, and opens once it is given one.
         File.WriteAllText(
             Path.Combine(folder, "Broken.pdf"),
             "This file is a text report that someone renamed to .pdf.\n");
 
-        Write(
-            folder,
-            "Encrypted.pdf",
-            new Sample("Encrypted sample", Pages: 1, Width: 595, Height: 842, Encrypt: true));
+        File.WriteAllBytes(
+            Path.Combine(folder, "Encrypted.pdf"),
+            Convert.FromBase64String(EncryptedSampleBase64));
 
         // The awkward but mergeable one: its first page declares no page size, which the inspection reports,
         // and its catalog carries named destinations, which a merge can only take from the primary source, so
@@ -136,7 +164,6 @@ internal static class SampleDocuments
         var pageObjects = Enumerable.Range(0, sample.Pages).Select(_ => (Page: Take(), Contents: Take())).ToArray();
         var font = Take();
         var information = Take();
-        var security = sample.Encrypt ? Take() : 0;
 
         var bodies = new string[last + 1];
 
@@ -184,16 +211,6 @@ internal static class SampleDocuments
 
         bodies[information] = $"<< {entries} >>";
 
-        if (sample.Encrypt)
-        {
-            // The engine classifies a document as encrypted when its trailer declares /Encrypt, and it never
-            // decrypts anything, so a well-formed security handler is not needed for the example: the zeros
-            // stand in for the strings that handler would carry.
-            bodies[security] =
-                "<< /Filter /Standard /V 2 /R 3 /Length 128 "
-                + $"/O <{new string('0', 64)}> /U <{new string('0', 64)}> /P -1 >>";
-        }
-
         using var buffer = new MemoryStream();
         var offsets = new long[last + 1];
 
@@ -219,11 +236,6 @@ internal static class SampleDocuments
         }
 
         var trailer = new StringBuilder($"trailer\n<< /Size {size} /Root {catalog} 0 R /Info {information} 0 R");
-
-        if (sample.Encrypt)
-        {
-            trailer.Append(CultureInfo.InvariantCulture, $" /Encrypt {security} 0 R");
-        }
 
         trailer.Append(CultureInfo.InvariantCulture, $" >>\nstartxref\n{startOfTable}\n%%EOF\n");
 

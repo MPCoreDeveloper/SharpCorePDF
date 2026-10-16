@@ -14,12 +14,17 @@ internal sealed class PdfMergeContext
     /// <param name="request">The request being executed.</param>
     /// <param name="writer">The writer of the merged document.</param>
     /// <param name="options">The engine options.</param>
-    public PdfMergeContext(MergeEngineRequest request, PdfWriter writer, PdfEngineOptions options)
+    /// <param name="modificationDate">The moment written as the modification date of the result, which the identifier of the document is derived from as well.</param>
+    public PdfMergeContext(
+        MergeEngineRequest request,
+        PdfWriter writer,
+        PdfEngineOptions options,
+        DateTimeOffset? modificationDate = null)
     {
         Request = request ?? throw new ArgumentNullException(nameof(request));
         Writer = writer ?? throw new ArgumentNullException(nameof(writer));
         Options = options ?? throw new ArgumentNullException(nameof(options));
-        ModificationDate = request.Output.ModificationDate ?? DateTimeOffset.UtcNow;
+        ModificationDate = modificationDate ?? request.Output.ModificationDate ?? DateTimeOffset.UtcNow;
     }
 
     /// <summary>Gets the request being executed.</summary>

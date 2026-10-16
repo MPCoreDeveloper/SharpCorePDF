@@ -31,8 +31,128 @@ public sealed class MergeOutputOptionsTests
         Assert.True(options.PreserveAnnotations);
         Assert.True(options.PreserveAcroForm);
         Assert.True(options.PreserveEmbeddedFiles);
+        Assert.Null(options.Encryption);
         Assert.StartsWith("SharpCorePDF ", options.Producer, StringComparison.Ordinal);
         Assert.Empty(options.Validate());
+    }
+
+    /// <summary>
+    /// The crypt filters AES is written with arrived with PDF 1.5, and AES-256 followed in PDF 1.7, so a
+    /// version that predates them is refused rather than written with an entry it does not define.
+    /// </summary>
+    /// <param name="algorithm">The algorithm to write with.</param>
+    /// <param name="major">The major version of the target.</param>
+    /// <param name="minor">The minor version of the target.</param>
+    [Theory]
+    [InlineData(PdfEncryptionAlgorithm.AesWith128BitKey, 1, 4)]
+    [InlineData(PdfEncryptionAlgorithm.AesWith256BitKey, 1, 4)]
+    [InlineData(PdfEncryptionAlgorithm.AesWith256BitKey, 1, 5)]
+    [InlineData(PdfEncryptionAlgorithm.AesWith256BitKey, 1, 6)]
+    public void Refuses_an_encryption_the_target_version_is_too_old_for(
+        PdfEncryptionAlgorithm algorithm,
+        int major,
+        int minor)
+    {
+        var options = MergeOutputOptions.Default with
+        {
+            TargetVersion = new PdfVersion(major, minor),
+            Encryption = PdfEncryptionOptions.Default with { Algorithm = algorithm },
+        };
+
+        Assert.Contains(options.Validate(), error => error.Contains("too old", StringComparison.Ordinal));
+    }
+
+    /// <summary>Every algorithm is accepted by the versions that define it, RC4 by all of them.</summary>
+    /// <param name="algorithm">The algorithm to write with.</param>
+    /// <param name="major">The major version of the target.</param>
+    /// <param name="minor">The minor version of the target.</param>
+    [Theory]
+    [InlineData(PdfEncryptionAlgorithm.Rc4With40BitKey, 1, 4)]
+    [InlineData(PdfEncryptionAlgorithm.Rc4With128BitKey, 1, 4)]
+    [InlineData(PdfEncryptionAlgorithm.AesWith128BitKey, 1, 5)]
+    [InlineData(PdfEncryptionAlgorithm.AesWith256BitKey, 1, 7)]
+    [InlineData(PdfEncryptionAlgorithm.AesWith256BitKey, 2, 0)]
+    public void Accepts_an_encryption_the_target_version_defines(
+        PdfEncryptionAlgorithm algorithm,
+        int major,
+        int minor)
+    {
+        var options = MergeOutputOptions.Default with
+        {
+            TargetVersion = new PdfVersion(major, minor),
+            Encryption = PdfEncryptionOptions.Default with
+            {
+                Algorithm = algorithm,
+                UserPassword = "opens-it",
+                OwnerPassword = "owns-it",
+                Permissions = PdfPermissions.PrintOnly,
+            },
+        };
+
+        Assert.Empty(options.Validate());
+    }
+
+    /// <summary>An algorithm or a permission set that is not one of the defined values is refused.</summary>
+    [Fact]
+    public void Refuses_encryption_values_that_are_not_defined()
+    {
+        var algorithm = MergeOutputOptions.Default with
+        {
+            Encryption = PdfEncryptionOptions.Default with { Algorithm = (PdfEncryptionAlgorithm)9 },
+        };
+
+        var permissions = MergeOutputOptions.Default with
+        {
+            Encryption = PdfEncryptionOptions.Default with { Permissions = (PdfPermissions)1 },
+        };
+
+        Assert.Contains(algorithm.Validate(), error => error.Contains("algorithm", StringComparison.Ordinal));
+        Assert.Contains(permissions.Validate(), error => error.Contains("permissions", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// A password that is longer than the revision can use is refused instead of being truncated in
+    /// silence, because the document would then need a password other than the one that was set.
+    /// </summary>
+    [Fact]
+    public void Refuses_an_encryption_password_that_would_be_truncated()
+    {
+        var thirtyThree = new string('a', 33);
+        var oneHundredTwentyEight = new string('a', 128);
+        var oneHundredTwentySeven = new string('a', 127);
+
+        var rc4 = MergeOutputOptions.Default with
+        {
+            Encryption = PdfEncryptionOptions.Default with
+            {
+                Algorithm = PdfEncryptionAlgorithm.Rc4With128BitKey,
+                UserPassword = thirtyThree,
+            },
+        };
+
+        var aes128 = MergeOutputOptions.Default with
+        {
+            Encryption = PdfEncryptionOptions.Default with
+            {
+                Algorithm = PdfEncryptionAlgorithm.AesWith128BitKey,
+                OwnerPassword = thirtyThree,
+            },
+        };
+
+        var aes256 = MergeOutputOptions.Default with
+        {
+            Encryption = PdfEncryptionOptions.Default with { UserPassword = oneHundredTwentyEight },
+        };
+
+        var fits = MergeOutputOptions.Default with
+        {
+            Encryption = PdfEncryptionOptions.Default with { UserPassword = oneHundredTwentySeven },
+        };
+
+        Assert.Contains(rc4.Validate(), error => error.Contains("user password", StringComparison.Ordinal));
+        Assert.Contains(aes128.Validate(), error => error.Contains("owner password", StringComparison.Ordinal));
+        Assert.Contains(aes256.Validate(), error => error.Contains("truncated", StringComparison.Ordinal));
+        Assert.Empty(fits.Validate());
     }
 
     /// <summary>The engine writes cross-reference tables, so a version that predates them is refused.</summary>

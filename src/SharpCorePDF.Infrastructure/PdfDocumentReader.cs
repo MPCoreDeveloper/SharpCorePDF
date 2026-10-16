@@ -11,14 +11,16 @@ namespace SharpCorePDF.Infrastructure;
 /// <remarks>
 /// <para>
 /// The reader never throws for a document that merely looks unusual: damaged cross-reference tables
-/// are reconstructed, missing page boxes are reported as warnings, and an encrypted document is
-/// described with <see cref="PdfDocumentInfo.IsEncrypted"/> set instead of an exception.
+/// are reconstructed, missing page boxes are reported as warnings, and an encrypted document that
+/// cannot be opened is described with <see cref="PdfDocumentInfo.IsReadable"/> cleared instead of an
+/// exception.
 /// </para>
 /// <para>
-/// Because the engine does not attempt decryption, it cannot tell whether an encrypted document would
-/// open with an empty user password. Such a document is therefore reported with
-/// <see cref="PdfDocumentInfo.RequiresPassword"/> set to <see langword="false"/>, and the merge
-/// use case refuses it with a plain "encrypted documents cannot be merged" message.
+/// An encrypted document is opened with the password the caller supplies, which may be either the
+/// user or the owner password. A document whose encryption stays closed because the password was
+/// missing or wrong is reported with <see cref="PdfDocumentInfo.RequiresPassword"/> set, so a caller
+/// can ask for the right one; a document whose security handler the engine does not implement is
+/// reported without that flag, because no password would help.
 /// </para>
 /// </remarks>
 public sealed class PdfDocumentReader : IPdfDocumentReader
@@ -46,7 +48,7 @@ public sealed class PdfDocumentReader : IPdfDocumentReader
             .ReadAllAsync(content, options.MaxSourceBytes, sourceName, cancellationToken)
             .ConfigureAwait(false);
 
-        var reader = new PdfFileReader(bytes, sourceName, options);
+        var reader = new PdfFileReader(bytes, sourceName, options, password);
 
         return PdfDocumentInspection.Describe(reader, bytes.LongLength);
     }

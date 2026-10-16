@@ -1,0 +1,6 @@
+# The fixture corpus of tests/SharpCorePDF.Tests/Assets is read by byte and by offset: a document whose
+# line endings were converted is a different document, because every entry of its cross-reference table
+# points at an offset that moved. Two of the AES fixtures carry no byte Git detects as binary, so it
+# treated them as text and rewrote them on checkout (1119 -> 1155 bytes). Declaring PDFs binary also
+# keeps their diffs out of the text viewer, where they only ever read as mojibake.
+*.pdf binary

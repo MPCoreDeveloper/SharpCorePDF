@@ -27,13 +27,19 @@ internal static partial class PdfDocumentInspection
         var warnings = new List<string>(reader.Warnings);
         var encrypted = reader.IsEncrypted;
 
-        if (encrypted)
+        // A document is readable when it is not encrypted, or when the engine opened its encryption
+        // with the password the caller supplied. Everything else about an encrypted document that
+        // stayed closed is left empty, because reporting a page count of zero would be a claim about
+        // the document rather than about the reader.
+        var readable = !encrypted || reader.Security is not null;
+
+        if (!readable)
         {
             warnings.Add(
-                $"'{reader.SourceName}': the document is encrypted; its page tree cannot be read without the password and it cannot be merged.");
+                $"'{reader.SourceName}': the document is encrypted and could not be opened, so its page tree cannot be read and it cannot be merged.");
         }
 
-        List<PdfPageInfo> pages = encrypted ? [] : ReadPages(reader, warnings);
+        List<PdfPageInfo> pages = readable ? ReadPages(reader, warnings) : [];
 
         return new PdfDocumentInfo
         {
@@ -41,13 +47,14 @@ internal static partial class PdfDocumentInspection
             Version = reader.Version,
             PageCount = pages.Count,
             IsEncrypted = encrypted,
-            RequiresPassword = false,
-            Metadata = encrypted ? PdfMetadata.Empty : ReadMetadata(reader),
+            RequiresPassword = reader.RequiresPassword,
+            IsReadable = readable,
+            Metadata = readable ? ReadMetadata(reader) : PdfMetadata.Empty,
             Pages = pages,
-            HasOutlines = !encrypted && reader.Catalog?.Get("Outlines") is not null,
-            OutlineItemCount = encrypted ? 0 : CountOutlineItems(reader),
-            EmbeddedFileCount = encrypted ? 0 : CountEmbeddedFiles(reader),
-            HasAcroForm = !encrypted && reader.Catalog?.Get("AcroForm") is not null,
+            HasOutlines = readable && reader.Catalog?.Get("Outlines") is not null,
+            OutlineItemCount = readable ? CountOutlineItems(reader) : 0,
+            EmbeddedFileCount = readable ? CountEmbeddedFiles(reader) : 0,
+            HasAcroForm = readable && reader.Catalog?.Get("AcroForm") is not null,
             SourceLengthBytes = lengthBytes,
             Warnings = warnings,
         };

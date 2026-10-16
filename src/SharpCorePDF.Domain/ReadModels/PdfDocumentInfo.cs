@@ -15,8 +15,8 @@ public sealed record PdfDocumentInfo
     public required PdfVersion Version { get; init; }
 
     /// <summary>
-    /// Gets the number of pages. When <see cref="IsEncrypted"/> is <see langword="true"/> the page
-    /// tree cannot be read without the password and this is zero.
+    /// Gets the number of pages. When <see cref="IsReadable"/> is <see langword="false"/> the page
+    /// tree could not be read and this is zero.
     /// </summary>
     public required int PageCount { get; init; }
 
@@ -28,6 +28,18 @@ public sealed record PdfDocumentInfo
     /// meaningful when <see cref="IsEncrypted"/> is <see langword="true"/>.
     /// </summary>
     public bool RequiresPassword { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the structure of the document could be read.
+    /// </summary>
+    /// <remarks>
+    /// This is <see langword="false"/> for an encrypted document whose encryption stayed closed,
+    /// either because a password is needed or because the security handler it uses is not one the
+    /// engine implements. Everything other than <see cref="SourceName"/>, <see cref="IsEncrypted"/>,
+    /// <see cref="RequiresPassword"/> and <see cref="Warnings"/> is empty or zero when it is
+    /// <see langword="false"/>. A document that is not encrypted is always readable.
+    /// </remarks>
+    public bool IsReadable { get; init; } = true;
 
     /// <summary>Gets the document information of the source.</summary>
     public PdfMetadata Metadata { get; init; } = PdfMetadata.Empty;
@@ -65,7 +77,15 @@ public sealed record PdfDocumentInfo
 
     /// <summary>Formats the document for diagnostics.</summary>
     /// <returns>The formatted document.</returns>
-    public override string ToString() => IsEncrypted
-        ? $"{SourceName}: encrypted PDF {Version}"
-        : $"{SourceName}: PDF {Version}, {PageCount} page(s)";
+    public override string ToString()
+    {
+        if (!IsEncrypted)
+        {
+            return $"{SourceName}: PDF {Version}, {PageCount} page(s)";
+        }
+
+        return IsReadable
+            ? $"{SourceName}: encrypted PDF {Version}, opened, {PageCount} page(s)"
+            : $"{SourceName}: encrypted PDF {Version}, which could not be opened";
+    }
 }

@@ -30,14 +30,16 @@ public sealed partial class PdfMergeEngine
                 .ReadAllAsync(resolved.Content, options.MaxSourceBytes, displayName, cancellationToken)
                 .ConfigureAwait(false);
 
-            var reader = new PdfFileReader(bytes, displayName, options);
+            var reader = new PdfFileReader(bytes, displayName, options, resolved.Source.Password);
 
-            if (reader.IsEncrypted)
+            if (reader.IsEncrypted && reader.Security is null)
             {
-                // The application layer refuses encrypted sources before the engine runs, but the
-                // engine implements a public port and must not be fooled by being called directly:
-                // the streams of such a source would be copied in their still-encrypted form.
-                throw new PdfEncryptionException(displayName, requiresPassword: false);
+                // The application layer refuses a source it could not open before the engine runs, but
+                // the engine implements a public port and must not be fooled by being called directly:
+                // the streams of such a source would be copied in their still-encrypted form. A source
+                // whose encryption the engine did open is merged like any other, because every string
+                // and stream of it is already in the clear by the time it is read.
+                throw new PdfEncryptionException(displayName, reader.RequiresPassword);
             }
 
             var source = new MergeSource(resolved, reader, new PdfObjectCopier(reader, context.Writer));

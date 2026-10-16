@@ -59,13 +59,35 @@ public sealed partial class PdfMergeEngine : IPdfMergeEngine
                 $"The engine options are not usable: {string.Join(" ", problems)}");
         }
 
+        // The engine implements a public port, so what a caller asks of the result is checked here as
+        // well: the application layer has already refused an unusable plan, but a direct caller has not
+        // been through that.
+        var outputProblems = request.Output.Validate();
+
+        if (outputProblems.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"The output options are not usable: {string.Join(" ", outputProblems)}");
+        }
+
         var started = Stopwatch.GetTimestamp();
+
+        // The moment the result is stamped with, and the identifier that is written twice in its
+        // trailer, are decided before the first source is read: the identifier is part of the key
+        // derivation of every revision, so it must exist before the first encrypted byte is written.
+        var modificationDate = request.Output.ModificationDate ?? DateTimeOffset.UtcNow;
+        var identifier = BuildFileIdentifier(request, modificationDate);
 
         // The capture is disposed with the merge: it owns a pooled buffer, and the destination it
         // forwards to belongs to the caller and is left open.
         using var capture = options.VerifyOutput ? new PdfCaptureStream(destination) : null;
-        var writer = new PdfWriter(capture ?? destination, request.Output.TargetVersion, options);
-        var context = new PdfMergeContext(request, writer, options)
+
+        var security = request.Output.Encryption is { } encryption
+            ? PdfSecurityWriter.Create(encryption, identifier.Bytes)
+            : null;
+
+        var writer = new PdfWriter(capture ?? destination, request.Output.TargetVersion, options, security);
+        var context = new PdfMergeContext(request, writer, options, modificationDate)
         {
             CatalogNumber = writer.AllocateObject(),
             PagesNodeNumber = writer.AllocateObject(),
@@ -82,7 +104,7 @@ public sealed partial class PdfMergeEngine : IPdfMergeEngine
         Flush(context);
 
         var infoNumber = WriteInformation(context);
-        WriteTrailer(context, infoNumber);
+        WriteTrailer(context, infoNumber, identifier, security);
 
         Verify(context);
 
@@ -126,7 +148,19 @@ public sealed partial class PdfMergeEngine : IPdfMergeEngine
 
         try
         {
-            var reader = new PdfFileReader(data, "merged document", options);
+            // An encrypted document is read back with the password it was just written with, which is
+            // the only way to prove that the encryption is one the engine can undo again.
+            var reader = new PdfFileReader(
+                data,
+                "merged document",
+                options,
+                context.Output.Encryption?.UserPassword);
+
+            if (reader.IsEncrypted && reader.Security is null)
+            {
+                throw new InvalidOperationException(
+                    "The merged document was written encrypted but cannot be opened with the password it was written with.");
+            }
 
             if (reader.Pages.Count != expected)
             {
@@ -150,13 +184,21 @@ public sealed partial class PdfMergeEngine : IPdfMergeEngine
     }
 
     /// <summary>Builds the identifier written twice in the trailer of the result.</summary>
-    /// <param name="context">The merge context.</param>
+    /// <param name="request">The request being executed.</param>
+    /// <param name="modificationDate">The moment written as the modification date of the result.</param>
     /// <returns>The identifier as a hexadecimal string.</returns>
-    private static PdfString BuildFileIdentifier(PdfMergeContext context)
+    /// <remarks>
+    /// The seed describes the document that is being written rather than the documents it is made from:
+    /// where the content came from leaves no trace in the result, but the version, the moment and the
+    /// size of the merge do. Two merges of the same content at the same moment therefore produce the
+    /// same file, which is what makes the output reproducible. The values are taken from the request
+    /// because the identifier is needed before a single source has been read.
+    /// </remarks>
+    private static PdfString BuildFileIdentifier(MergeEngineRequest request, DateTimeOffset modificationDate)
     {
         var seed = string.Create(
             System.Globalization.CultureInfo.InvariantCulture,
-            $"{context.Output.TargetVersion}|{context.ModificationDate:O}|{context.Sources.Count}|{context.Sources.Sum(source => source.PageTargets.Count)}");
+            $"{request.Output.TargetVersion}|{modificationDate:O}|{request.Sources.Count}|{request.TotalPageCount}");
 
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(seed));
 

@@ -6,7 +6,7 @@ namespace SharpCorePDF.Application.Services;
 
 /// <summary>
 /// The inspection use case: open a content source and describe what it contains, without changing
-/// anything and without throwing for merely encrypted documents.
+/// anything and without throwing for an encrypted document it cannot open.
 /// </summary>
 /// <remarks>The class is stateless and thread safe.</remarks>
 public sealed class PdfInspectorService : IPdfInspector

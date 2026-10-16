@@ -39,15 +39,19 @@ public sealed record PdfSource
     /// <summary>Gets the pages this source contributes, in the order they must appear in the result.</summary>
     public PageSelection Pages { get; }
 
-    /// <summary>Gets the user password, when the document is encrypted.</summary>
-    /// <remarks>Version 1 of the engine refuses encrypted documents, so this is reserved for future use.</remarks>
+    /// <summary>Gets the user or owner password, when the document is encrypted.</summary>
+    /// <remarks>
+    /// A document that is encrypted is opened with this password before it is merged, and every string
+    /// and stream of it is read in the clear. An encrypted document that is only protected against
+    /// editing opens with no password at all, so this may stay <see langword="null"/> for it.
+    /// </remarks>
     public string? Password { get; }
 
     /// <summary>Creates a source with a freshly generated identity.</summary>
     /// <param name="content">The readable content of the document.</param>
     /// <param name="displayName">The name used in messages; defaults to <see cref="IPdfContentSource.DisplayName"/>.</param>
     /// <param name="pages">The pages to contribute; defaults to every page.</param>
-    /// <param name="password">The user password for encrypted documents.</param>
+    /// <param name="password">The user or owner password, for an encrypted document.</param>
     /// <returns>The created source.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="content"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">No usable display name could be determined.</exception>
@@ -63,7 +67,7 @@ public sealed record PdfSource
     /// <param name="content">The readable content of the document.</param>
     /// <param name="displayName">The name used in messages; defaults to <see cref="IPdfContentSource.DisplayName"/>.</param>
     /// <param name="pages">The pages to contribute; defaults to every page.</param>
-    /// <param name="password">The user password for encrypted documents.</param>
+    /// <param name="password">The user or owner password, for an encrypted document.</param>
     /// <returns>The created source.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="content"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">No usable display name could be determined.</exception>

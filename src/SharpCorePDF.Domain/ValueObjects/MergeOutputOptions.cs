@@ -59,6 +59,17 @@ public sealed record MergeOutputOptions
     /// <summary>Gets a value indicating whether embedded files of the primary source are carried over.</summary>
     public bool PreserveEmbeddedFiles { get; init; } = true;
 
+    /// <summary>
+    /// Gets the encryption the result is written with, or <see langword="null"/> — the default — for a
+    /// document that anyone can read.
+    /// </summary>
+    /// <remarks>
+    /// A merged document is written in the clear unless this is set, even when every source it was
+    /// made from was encrypted: a merged document is a new document, and the passwords of its sources
+    /// are not carried into it.
+    /// </remarks>
+    public PdfEncryptionOptions? Encryption { get; init; }
+
     /// <summary>Gets the value written to the <c>/Producer</c> entry of the result.</summary>
     public string Producer { get; init; } = ProductInfo.DefaultProducer;
 
@@ -97,6 +108,13 @@ public sealed record MergeOutputOptions
         if (Producer is not null && string.IsNullOrWhiteSpace(Producer))
         {
             errors.Add("the producer must be a non-empty string when it is set.");
+        }
+
+        if (Encryption is { } encryption)
+        {
+            // The encryption has to be told the version, because the crypt filters of AES-128 and
+            // AES-256 are newer than the formats that precede them.
+            errors.AddRange(encryption.Validate(TargetVersion));
         }
 
         return errors;

@@ -1,9 +1,12 @@
 """Validates a PDF with an independent implementation (pikepdf, which wraps qpdf).
 
 Run with:  uv run --with pikepdf python docs/tools/validate-pdf.py <file.pdf> [...]
+           uv run --with pikepdf python docs/tools/validate-pdf.py --password <password> <file.pdf> [...]
 
 Checks that qpdf raises no problems, that every page can be read, that every content stream and
-image can be decoded, and that no object in the file is unreachable or dangling.
+image can be decoded, and that no object in the file is unreachable or dangling. For an encrypted
+document the check needs the password, which is what proves that another implementation derives the
+same key this repository's writer derived.
 """
 
 import sys
@@ -12,9 +15,14 @@ from pathlib import Path
 import pikepdf
 
 
-def run_qpdf_check(path: Path) -> list[str]:
+def run_qpdf_check(path: Path, password: str = "") -> list[str]:
     """Runs qpdf --check through pikepdf and returns the lines it complained about."""
-    job = pikepdf.Job(["qpdf", "--check", str(path)])
+    arguments = ["qpdf", "--check", str(path)]
+
+    if password:
+        arguments.append(f"--password={password}")
+
+    job = pikepdf.Job(arguments)
     job.run()
 
     problems = []
@@ -24,10 +32,10 @@ def run_qpdf_check(path: Path) -> list[str]:
     return problems
 
 
-def check(path: Path) -> int:
+def check(path: Path, password: str = "") -> int:
     print(f"== {path}")
-    problems = run_qpdf_check(path)
-    pdf = pikepdf.open(path)
+    problems = run_qpdf_check(path, password)
+    pdf = pikepdf.open(path, password=password)
 
     if problems:
         for problem in problems:
@@ -36,6 +44,17 @@ def check(path: Path) -> int:
         print("  qpdf check: no problems")
 
     print(f"  version   : {pdf.pdf_version}, pages: {len(pdf.pages)}, objects: {len(pdf.objects)}")
+
+    if pdf.is_encrypted:
+        print(f"  encrypted : {describe_encryption(pdf.encryption)}")
+
+        if password:
+            # qpdf reports the user password it verified or recovered, which is how a check can tell
+            # which of the two passwords opened the document: nothing is reported for a revision 5 or
+            # 6 document that was opened with its owner password, because those store no user password.
+            known = bytes(pdf.encryption.user_password or b"")
+            print(f"  password  : the user password checks out as {known!r}")
+
     print(f"  root      : {sorted(str(k) for k in pdf.Root.keys())}")
 
     if "/Outlines" in pdf.Root:
@@ -46,6 +65,17 @@ def check(path: Path) -> int:
 
     print(f"  streams   : {decoded} decoded, {undecodable} failed")
     return failures + len(problems) + undecodable
+
+
+def describe_encryption(info) -> str:
+    """Describes the encryption dictionary of an open document."""
+    permissions = int(info.P)
+
+    return (
+        f"V {info.V}, R {info.R}, {info.bits} bits, "
+        f"P {permissions} (print={bool(permissions & 4)}, copy={bool(permissions & 16)}), "
+        f"streams {info.stream_method}, strings {info.string_method}"
+    )
 
 
 def check_pages(pdf) -> int:
@@ -113,9 +143,18 @@ def count_bookmarks(item) -> int:
 
 
 def main():
+    arguments = sys.argv[1:]
+    password = ""
+
+    if "--password" in arguments:
+        index = arguments.index("--password")
+        password = arguments[index + 1]
+        del arguments[index : index + 2]
+
     exit_code = 0
-    for argument in sys.argv[1:]:
-        exit_code += check(Path(argument))
+    for argument in arguments:
+        exit_code += check(Path(argument), password)
+
     sys.exit(0 if exit_code == 0 else 1)
 
 

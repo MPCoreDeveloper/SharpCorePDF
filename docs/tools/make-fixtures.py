@@ -2,11 +2,22 @@
 
 Run with:  uv run --with pikepdf python docs/tools/make-fixtures.py tests/SharpCorePDF.Tests/Assets
 
-The fixtures are checked in; this script exists so they can be regenerated and so it is clear
-exactly what they contain. Two shapes are deliberately covered:
+Pass one or more fixture names — modern, outlined, encrypted, encrypted-revisions,
+encrypted-non-ascii, encrypted-clear-metadata — to regenerate only those; with no name every fixture
+is rewritten.
 
-* a document written with object streams and cross-reference streams (PDF 1.5 style), and
-* a document with an outline, a page label tree, an annotation and a rotated page.
+The fixtures are checked in; this script exists so they can be regenerated and so it is clear
+exactly what they contain. These shapes are deliberately covered:
+
+* a document written with object streams and cross-reference streams (PDF 1.5 style),
+* a document with an outline, a page label tree, an annotation and a rotated page,
+* one encrypted document per revision of the standard security handler, including the two revisions
+  whose user password is empty and which therefore open without a password,
+* one document of revision 4 whose user password is not ASCII, which is where the encoding of a
+  password of the legacy revisions shows: the producer and the engine both hash its Latin-1 bytes,
+* one document of revision 4 whose metadata stream is stored in the clear, because it clears
+  EncryptMetadata: that one stream of an encrypted document must be read as it stands, so decrypting
+  it is the mistake a fixture can catch.
 """
 
 import sys
@@ -21,6 +32,12 @@ LETTER = [0, 0, 612, 792]
 # The document information key every fixture sets, named once because a repeated literal is a spelling
 # that can drift.
 DOCINFO_TITLE = "/Title"
+
+# The two titles of the fixture whose metadata stream is stored in the clear: the XMP one is in the file
+# as it stands and the document information one is encrypted, so the pair tells a test which of the two
+# the reader had to decrypt.
+CLEAR_METADATA_XMP_TITLE = "Cleartext metadata sample"
+CLEAR_METADATA_DOCINFO_TITLE = "Encrypted sample clear metadata"
 
 
 def blank_page(pdf: Pdf, box, rotate=0):
@@ -122,12 +139,129 @@ def make_encrypted(path: Path):
     print(f"wrote {path}")
 
 
+def make_encrypted_revision(
+    path: Path, revision: int, aes: bool, user: str, owner: str, title: str
+):
+    """One page, encrypted with one specific revision of the standard security handler.
+
+    Every revision derives its file key differently — 2 and 3 hash the password with MD5, 4 adds the
+    crypt filters, 5 and 6 replace the whole scheme with SHA-256 — so one fixture per revision is what
+    proves the reader implements all of them rather than only the newest.
+    """
+    pdf = Pdf.new()
+    blank_page(pdf, A4)
+    pdf.docinfo[DOCINFO_TITLE] = String(title)
+
+    # Only revision 4 and later can state whether the metadata stream is encrypted; asking an older
+    # revision for it is what pikepdf rejects.
+    pdf.save(
+        path,
+        encryption=pikepdf.Encryption(
+            owner=owner, user=user, R=revision, aes=aes, metadata=revision >= 4
+        ),
+    )
+    print(f"wrote {path}")
+
+
+def make_encrypted_revisions(target: Path):
+    """One fixture per revision of the standard security handler.
+
+    The empty user password of two of them is the shape a document has when it is only protected
+    against editing: it opens without a password at all.
+    """
+    make_encrypted_revision(
+        target / "EncryptedRc4.pdf", 2, False, "", "owner-password", "Encrypted sample R2"
+    )
+    make_encrypted_revision(
+        target / "EncryptedRc4Large.pdf", 3, False, "user-password", "owner-password", "Encrypted sample R3"
+    )
+    make_encrypted_revision(
+        target / "EncryptedAes128.pdf", 4, True, "user-password", "owner-password", "Encrypted sample R4"
+    )
+    make_encrypted_revision(
+        target / "EncryptedAes256R5.pdf", 5, True, "", "owner-password", "Encrypted sample R5"
+    )
+
+
+def make_encrypted_non_ascii_password(path: Path):
+    """One page whose user password is not ASCII, which only the legacy revisions make interesting.
+
+    Revisions 2 to 4 predate any agreement on how the characters of a password become bytes. Adobe,
+    qpdf and pypdf all hash the Latin-1 bytes of the text, which is the reading the engine reads and
+    writes; a password whose text has no Latin-1 form is hashed as UTF-8 instead, and there is no
+    fixture for it because no tool here can write one.
+    """
+    pdf = Pdf.new()
+    blank_page(pdf, A4)
+    pdf.docinfo[DOCINFO_TITLE] = String("Encrypted sample non-ASCII")
+
+    pdf.save(
+        path,
+        encryption=pikepdf.Encryption(
+            owner="owner-password",
+            user="ünïcode-pässword",
+            R=4,
+            aes=True,
+            metadata=True,
+        ),
+    )
+    print(f"wrote {path}")
+
+
+def make_encrypted_clear_metadata(path: Path):
+    """One page whose metadata stream is stored in the clear, which only revision 4 can state.
+
+    Clearing EncryptMetadata is what lets a tool read the metadata of a document it cannot otherwise
+    open, so a reader has to leave that one stream alone: decrypting it turns the XMP into rubbish,
+    which is a defect no other assertion of the suite would notice. The metadata pikepdf writes is
+    uncompressed, so the XMP text is visible in the file exactly as the specification intends.
+    """
+    pdf = Pdf.new()
+    blank_page(pdf, A4)
+
+    with pdf.open_metadata() as metadata:
+        metadata["dc:title"] = CLEAR_METADATA_XMP_TITLE
+        metadata["dc:creator"] = ["SharpCorePDF"]
+
+    # Storing XMP also updates the document information dictionary, so the title that has to stay
+    # encrypted is set afterwards.
+    pdf.docinfo[DOCINFO_TITLE] = String(CLEAR_METADATA_DOCINFO_TITLE)
+
+    pdf.save(
+        path,
+        encryption=pikepdf.Encryption(
+            owner="owner-password", user="user-password", R=4, aes=True, metadata=False
+        ),
+    )
+    print(f"wrote {path}")
+
+
 def main():
     target = Path(sys.argv[1] if len(sys.argv) > 1 else ".")
     target.mkdir(parents=True, exist_ok=True)
-    make_modern(target / "Modern.pdf")
-    make_outlined(target / "Outlined.pdf")
-    make_encrypted(target / "Encrypted.pdf")
+
+    # Naming a fixture regenerates only that one, so adding a fixture never rewrites the bytes of the
+    # ones that are already checked in.
+    makers = {
+        "modern": lambda: make_modern(target / "Modern.pdf"),
+        "outlined": lambda: make_outlined(target / "Outlined.pdf"),
+        "encrypted": lambda: make_encrypted(target / "Encrypted.pdf"),
+        "encrypted-revisions": lambda: make_encrypted_revisions(target),
+        "encrypted-non-ascii": lambda: make_encrypted_non_ascii_password(
+            target / "EncryptedNonAscii.pdf"
+        ),
+        "encrypted-clear-metadata": lambda: make_encrypted_clear_metadata(
+            target / "EncryptedClearMetadata.pdf"
+        ),
+    }
+
+    requested = sys.argv[2:]
+
+    if not requested:
+        requested = list(makers)
+
+    for name in requested:
+        makers[name]()
 
 
 if __name__ == "__main__":

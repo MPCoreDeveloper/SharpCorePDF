@@ -25,15 +25,29 @@ internal sealed partial class PdfObjectParser
         {
             // The body is a view of the document rather than a copy: a source is held in memory for the
             // whole merge, so duplicating every image, font and content stream would double the largest
-            // part of what the engine uses, without any byte of it being needed twice.
+            // part of what the engine uses, without any byte of it being needed twice. A body that has
+            // to be decrypted is the one exception, because ciphertext never reaches the model.
             Position = (int)(dataStart + direct);
             TryReadKeyword("endstream");
 
-            return new PdfStream(dictionary, lexer.Memory.Slice(dataStart, (int)direct));
+            return new PdfStream(dictionary, ReadStreamBody(lexer.Memory.Slice(dataStart, (int)direct)));
         }
 
         return ReadStreamByScanning(dictionary, dataStart);
     }
+
+    /// <summary>Decrypts the body of a stream, when the parser was told how to.</summary>
+    /// <param name="body">The bytes as they were stored.</param>
+    /// <returns>The bytes to expose as the raw body of the stream.</returns>
+    /// <remarks>
+    /// What comes back is still encoded, because a stream is compressed first and encrypted second,
+    /// so everything downstream keeps treating <see cref="PdfStream.Raw"/> as the stored form of the
+    /// stream and applies the filters of its dictionary as usual.
+    /// </remarks>
+    private ReadOnlyMemory<byte> ReadStreamBody(ReadOnlyMemory<byte> body) =>
+        security is null
+            ? body
+            : security.DecryptStream(body.Span, encryptedObjectNumber, encryptedGeneration);
 
     /// <summary>Skips the end of line that must follow the <c>stream</c> keyword.</summary>
     /// <returns>The offset of the first byte of stream data.</returns>
@@ -96,7 +110,7 @@ internal sealed partial class PdfObjectParser
 
             var end = TrimTrailingEol(data, dataStart, index);
 
-            var candidate = lexer.Memory.Slice(dataStart, end - dataStart);
+            var candidate = ReadStreamBody(lexer.Memory.Slice(dataStart, end - dataStart));
 
             if (firstCandidate is null)
             {
@@ -104,6 +118,8 @@ internal sealed partial class PdfObjectParser
                 firstCandidateEnd = index + 9;
             }
 
+            // The candidate has to be decrypted before it can be decompressed, because the stream of
+            // an encrypted document is deflated first and encrypted second.
             if (!isCompressed || PdfFilters.TryInflate(candidate, out _))
             {
                 Position = index + 9;
