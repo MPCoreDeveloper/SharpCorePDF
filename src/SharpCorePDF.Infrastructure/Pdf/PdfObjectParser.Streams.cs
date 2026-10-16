@@ -94,21 +94,7 @@ internal sealed partial class PdfObjectParser
                 break;
             }
 
-            var end = index;
-
-            if (end > dataStart && data[end - 1] == (byte)'\n')
-            {
-                end--;
-
-                if (end > dataStart && data[end - 1] == (byte)'\r')
-                {
-                    end--;
-                }
-            }
-            else if (end > dataStart && data[end - 1] == (byte)'\r')
-            {
-                end--;
-            }
+            var end = TrimTrailingEol(data, dataStart, index);
 
             var candidate = lexer.Memory.Slice(dataStart, end - dataStart);
 
@@ -130,6 +116,33 @@ internal sealed partial class PdfObjectParser
 
         Position = firstCandidateEnd;
         return new PdfStream(dictionary, firstCandidate ?? ReadOnlyMemory<byte>.Empty);
+    }
+
+    /// <summary>Removes the end of line that a writer puts between the data and the keyword.</summary>
+    /// <param name="data">The bytes of the document.</param>
+    /// <param name="dataStart">The offset the stream data starts at.</param>
+    /// <param name="end">The offset the keyword was found at.</param>
+    /// <returns>The offset the stream data ends at.</returns>
+    private static int TrimTrailingEol(byte[] data, int dataStart, int end)
+    {
+        if (end > dataStart && data[end - 1] == (byte)'\n')
+        {
+            end--;
+
+            if (end > dataStart && data[end - 1] == (byte)'\r')
+            {
+                end--;
+            }
+
+            return end;
+        }
+
+        if (end > dataStart && data[end - 1] == (byte)'\r')
+        {
+            end--;
+        }
+
+        return end;
     }
 
     private static int FindEndStream(byte[] data, int from)

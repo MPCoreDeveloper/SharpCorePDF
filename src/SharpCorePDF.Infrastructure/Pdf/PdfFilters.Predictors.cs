@@ -89,54 +89,98 @@ internal static partial class PdfFilters
             var current = result.AsSpan(row * rowLength, rowLength);
 
             data.AsSpan(source + 1, rowLength).CopyTo(current);
-
-            switch (filterType)
-            {
-                case 0:
-                    break;
-
-                case 1:
-                    for (var index = bytesPerPixel; index < rowLength; index++)
-                    {
-                        current[index] = (byte)(current[index] + current[index - bytesPerPixel]);
-                    }
-
-                    break;
-
-                case 2:
-                    for (var index = 0; index < rowLength; index++)
-                    {
-                        current[index] = (byte)(current[index] + previous[index]);
-                    }
-
-                    break;
-
-                case 3:
-                    for (var index = 0; index < rowLength; index++)
-                    {
-                        var left = index >= bytesPerPixel ? current[index - bytesPerPixel] : 0;
-                        current[index] = (byte)(current[index] + ((left + previous[index]) / 2));
-                    }
-
-                    break;
-
-                case 4:
-                    for (var index = 0; index < rowLength; index++)
-                    {
-                        var left = index >= bytesPerPixel ? current[index - bytesPerPixel] : (byte)0;
-                        var upperLeft = index >= bytesPerPixel ? previous[index - bytesPerPixel] : (byte)0;
-                        current[index] = (byte)(current[index] + Paeth(left, previous[index], upperLeft));
-                    }
-
-                    break;
-
-                default:
-                    throw new PdfSourceFormatException(
-                        sourceName,
-                        $"a compressed stream uses the undefined PNG predictor filter type {filterType}.");
-            }
-
+            UndoPngRow(filterType, current, previous, bytesPerPixel, sourceName);
             current.CopyTo(previous);
+        }
+    }
+
+    /// <summary>Undoes one row of PNG prediction, which is the filter type byte of that row.</summary>
+    /// <param name="filterType">The filter type of the row.</param>
+    /// <param name="current">The row, predicted in place.</param>
+    /// <param name="previous">The row above it, already undone.</param>
+    /// <param name="bytesPerPixel">The distance between two pixels of a row.</param>
+    /// <param name="sourceName">The name of the source, used in diagnostics.</param>
+    private static void UndoPngRow(
+        byte filterType,
+        Span<byte> current,
+        ReadOnlySpan<byte> previous,
+        int bytesPerPixel,
+        string sourceName)
+    {
+        switch (filterType)
+        {
+            case 0:
+                return;
+
+            case 1:
+                UndoSub(current, bytesPerPixel);
+                return;
+
+            case 2:
+                UndoUp(current, previous);
+                return;
+
+            case 3:
+                UndoAverage(current, previous, bytesPerPixel);
+                return;
+
+            case 4:
+                UndoPaeth(current, previous, bytesPerPixel);
+                return;
+
+            default:
+                throw new PdfSourceFormatException(
+                    sourceName,
+                    $"a compressed stream uses the undefined PNG predictor filter type {filterType}.");
+        }
+    }
+
+    /// <summary>Undoes filter type 1: every byte is predicted from the byte one pixel to its left.</summary>
+    /// <param name="current">The row, predicted in place.</param>
+    /// <param name="bytesPerPixel">The distance between two pixels of a row.</param>
+    private static void UndoSub(Span<byte> current, int bytesPerPixel)
+    {
+        for (var index = bytesPerPixel; index < current.Length; index++)
+        {
+            current[index] = (byte)(current[index] + current[index - bytesPerPixel]);
+        }
+    }
+
+    /// <summary>Undoes filter type 2: every byte is predicted from the byte above it.</summary>
+    /// <param name="current">The row, predicted in place.</param>
+    /// <param name="previous">The row above it, already undone.</param>
+    private static void UndoUp(Span<byte> current, ReadOnlySpan<byte> previous)
+    {
+        for (var index = 0; index < current.Length; index++)
+        {
+            current[index] = (byte)(current[index] + previous[index]);
+        }
+    }
+
+    /// <summary>Undoes filter type 3: every byte is predicted from the mean of its neighbours.</summary>
+    /// <param name="current">The row, predicted in place.</param>
+    /// <param name="previous">The row above it, already undone.</param>
+    /// <param name="bytesPerPixel">The distance between two pixels of a row.</param>
+    private static void UndoAverage(Span<byte> current, ReadOnlySpan<byte> previous, int bytesPerPixel)
+    {
+        for (var index = 0; index < current.Length; index++)
+        {
+            var left = index >= bytesPerPixel ? current[index - bytesPerPixel] : 0;
+            current[index] = (byte)(current[index] + ((left + previous[index]) / 2));
+        }
+    }
+
+    /// <summary>Undoes filter type 4: every byte is predicted from its three neighbours.</summary>
+    /// <param name="current">The row, predicted in place.</param>
+    /// <param name="previous">The row above it, already undone.</param>
+    /// <param name="bytesPerPixel">The distance between two pixels of a row.</param>
+    private static void UndoPaeth(Span<byte> current, ReadOnlySpan<byte> previous, int bytesPerPixel)
+    {
+        for (var index = 0; index < current.Length; index++)
+        {
+            var left = index >= bytesPerPixel ? current[index - bytesPerPixel] : (byte)0;
+            var upperLeft = index >= bytesPerPixel ? previous[index - bytesPerPixel] : (byte)0;
+            current[index] = (byte)(current[index] + Paeth(left, previous[index], upperLeft));
         }
     }
 
@@ -175,8 +219,11 @@ internal static partial class PdfFilters
         var distanceAbove = Math.Abs(estimate - above);
         var distanceUpperLeft = Math.Abs(estimate - upperLeft);
 
-        return distanceLeft <= distanceAbove && distanceLeft <= distanceUpperLeft
-            ? left
-            : distanceAbove <= distanceUpperLeft ? above : upperLeft;
+        if (distanceLeft <= distanceAbove && distanceLeft <= distanceUpperLeft)
+        {
+            return left;
+        }
+
+        return distanceAbove <= distanceUpperLeft ? above : upperLeft;
     }
 }

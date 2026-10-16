@@ -91,15 +91,22 @@ internal static partial class PdfFilters
 
         if (count > 0)
         {
-            for (var index = count; index < 5; index++)
-            {
-                group[index] = 84;
-            }
-
-            AppendAscii85Group(result, group, count - 1);
+            AppendAscii85Tail(result, group, count);
         }
 
         return result.ToExactArray();
+    }
+
+    // The last group of an Ascii85 stream is short by definition: the specification pads it with 'u' (84)
+    // up to five digits and keeps only the bytes the group stands for.
+    private static void AppendAscii85Tail(PooledByteBuffer result, Span<int> group, int count)
+    {
+        for (var index = count; index < 5; index++)
+        {
+            group[index] = 84;
+        }
+
+        AppendAscii85Group(result, group, count - 1);
     }
 
     private static void AppendAscii85Group(PooledByteBuffer result, ReadOnlySpan<int> group, int byteCount)

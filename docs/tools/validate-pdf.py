@@ -41,7 +41,17 @@ def check(path: Path) -> int:
     if "/Outlines" in pdf.Root:
         print(f"  bookmarks : {count_bookmarks(pdf.Root.Outlines.get('/First'))}")
 
+    failures = check_pages(pdf)
+    decoded, undecodable = check_streams(pdf)
+
+    print(f"  streams   : {decoded} decoded, {undecodable} failed")
+    return failures + len(problems) + undecodable
+
+
+def check_pages(pdf) -> int:
+    """Reads every page and returns how many of them could not be read."""
     failures = 0
+
     for index, page in enumerate(pdf.pages, start=1):
         try:
             data = page_contents(page)
@@ -52,8 +62,14 @@ def check(path: Path) -> int:
             failures += 1
             print(f"  page {index}    : FAILED {type(error).__name__}: {error}")
 
+    return failures
+
+
+def check_streams(pdf) -> tuple[int, int]:
+    """Decodes every stream and returns how many were decoded and how many failed."""
     decoded = 0
     undecodable = 0
+
     for obj in pdf.objects:
         if not isinstance(obj, pikepdf.Stream):
             continue
@@ -71,8 +87,7 @@ def check(path: Path) -> int:
             undecodable += 1
             print(f"  stream    : FAILED {type(error).__name__}: {error}")
 
-    print(f"  streams   : {decoded} decoded, {undecodable} failed")
-    return failures + len(problems) + undecodable
+    return decoded, undecodable
 
 
 def page_contents(page) -> bytes:

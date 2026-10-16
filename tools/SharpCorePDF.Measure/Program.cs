@@ -6,6 +6,7 @@ using SharpCorePDF.Application.Services;
 using SharpCorePDF.Domain.Aggregates;
 using SharpCorePDF.Infrastructure;
 using SharpCorePDF.Infrastructure.Extensions;
+using SharpCorePDF.Measure;
 
 // The §7.1 / §7.2 harness of addendum A7. Run it from the repository root:
 //
@@ -58,8 +59,13 @@ var hundredFiftyLarge = Enumerable.Range(0, 150)
 
 // The bytes of the stream-backed sources are read once, outside the measured region, so that what is
 // measured for a stream source is the library's own work and not the harness reading a file.
-var oneLargeBytes = File.ReadAllBytes(oneLarge);
-var manySmallBytes = manySmall.Select(File.ReadAllBytes).ToArray();
+var oneLargeBytes = await File.ReadAllBytesAsync(oneLarge);
+var manySmallBytes = new byte[manySmall.Length][];
+
+for (var index = 0; index < manySmall.Length; index++)
+{
+    manySmallBytes[index] = await File.ReadAllBytesAsync(manySmall[index]);
+}
 
 var plain = new PdfMergerService(new PdfDocumentReader(PdfEngineOptions.Default), new PdfMergeEngine(PdfEngineOptions.Default));
 var verifying = new PdfMergerService(
@@ -129,7 +135,7 @@ Console.WriteLine($"peak working set after the large runs: {Process.GetCurrentPr
 
 Console.WriteLine();
 Console.WriteLine($"peak working set over the whole run: {Process.GetCurrentProcess().PeakWorkingSet64 / 1024.0 / 1024.0:N1} MB");
-Console.WriteLine($"managed heap retained after the run: {GC.GetTotalMemory(forceFullCollection: true) / 1024.0 / 1024.0:N2} MB");
+Console.WriteLine($"managed heap retained after the run: {ManagedHeapBytes() / 1024.0 / 1024.0:N2} MB");
 
 /// <summary>Joins the paths into one plan, every page of every source.</summary>
 static MergePlan PlanOfFiles(IReadOnlyList<string> paths)
@@ -183,7 +189,7 @@ static async Task<double> Report(string label, long inputBytes, PdfMergerService
         allocated.Add(measured.Allocated);
         elapsed.Add(measured.Milliseconds);
         output = measured.OutputBytes;
-        live = GC.GetTotalMemory(forceFullCollection: true);
+        live = ManagedHeapBytes();
     }
 
     allocated.Sort();
@@ -207,9 +213,7 @@ static async Task<(long Allocated, long OutputBytes, double Milliseconds)> Merge
     MergePlan plan,
     CountingStream destination)
 {
-    GC.Collect();
-    GC.WaitForPendingFinalizers();
-    GC.Collect();
+    CollectForMeasurement();
 
     var before = GC.GetTotalAllocatedBytes(precise: true);
     var watch = Stopwatch.StartNew();
@@ -221,6 +225,23 @@ static async Task<(long Allocated, long OutputBytes, double Milliseconds)> Merge
     return (GC.GetTotalAllocatedBytes(precise: true) - before, destination.Written, watch.Elapsed.TotalMilliseconds);
 }
 
+/// <summary>Collects the heap so that a merge starts from a known one, which is what makes a peak its own.</summary>
+/// <remarks>
+/// Forcing a collection is the measurement: a peak read on top of the garbage of the previous merge belongs
+/// to no scenario at all (§7.2). This is a harness, not a library path, so the usual advice does not apply.
+/// </remarks>
+static void CollectForMeasurement()
+{
+    GC.Collect(); // NOSONAR: forcing the collection is the measurement itself, not an optimisation to skip.
+    GC.WaitForPendingFinalizers();
+    GC.Collect(); // NOSONAR: a finalizer can resurrect its object, so one pass is not a collection.
+}
+
+/// <summary>Reads the retained managed heap, collecting first so that only what is reachable is counted.</summary>
+/// <returns>The number of bytes the managed heap holds.</returns>
+static long ManagedHeapBytes() =>
+    GC.GetTotalMemory(forceFullCollection: true); // NOSONAR: the retained heap is the number the harness reports.
+
 /// <summary>Runs one merge in this process while a background thread samples the managed heap.</summary>
 /// <param name="label">The name of the scenario.</param>
 /// <param name="inputBytes">The bytes of input the scenario reads.</param>
@@ -230,9 +251,7 @@ static async Task Single(string label, long inputBytes, PdfMergerService merger,
 {
     // One warm-up so that JIT compilation is not part of the peak.
     await Merge(merger, plan(), new CountingStream());
-    GC.Collect();
-    GC.WaitForPendingFinalizers();
-    GC.Collect();
+    CollectForMeasurement();
 
     var running = true;
     var peakHeap = 0L;
@@ -263,16 +282,14 @@ static async Task Single(string label, long inputBytes, PdfMergerService merger,
     running = false;
     sampler.Join();
 
-    GC.Collect();
-    GC.WaitForPendingFinalizers();
-    GC.Collect();
+    CollectForMeasurement();
 
     var managedPeak = Volatile.Read(ref peakHeap);
 
     Console.WriteLine(
         $"{label} : {measured.Allocated / 1024.0 / 1024.0,7:N1} MB allocated, {watch.Elapsed.TotalMilliseconds,7:N0} ms, "
         + $"peak managed heap {managedPeak / 1024.0 / 1024.0,6:N1} MB ({managedPeak / (double)inputBytes,5:N2}x input), "
-        + $"live after GC {GC.GetTotalMemory(true) / 1024.0 / 1024.0,5:N1} MB, "
+        + $"live after GC {ManagedHeapBytes() / 1024.0 / 1024.0,5:N1} MB, "
         + $"process peak working set {Process.GetCurrentProcess().PeakWorkingSet64 / 1024.0 / 1024.0,6:N1} MB, "
         + $"server GC {GCSettings.IsServerGC}, output {measured.OutputBytes:N0} B");
 }
@@ -340,49 +357,4 @@ static string Pad(string source, string destination, int size)
     File.WriteAllBytes(destination, Encoding.Latin1.GetBytes(text));
 
     return destination;
-}
-
-/// <summary>A destination that counts bytes and keeps none of them, so that the harness measures the engine.</summary>
-internal sealed class CountingStream : Stream
-{
-    /// <summary>Gets how many bytes the engine wrote.</summary>
-    public long Written { get; private set; }
-
-    /// <inheritdoc />
-    public override bool CanRead => false;
-
-    /// <inheritdoc />
-    public override bool CanSeek => false;
-
-    /// <inheritdoc />
-    public override bool CanWrite => true;
-
-    /// <inheritdoc />
-    public override long Length => Written;
-
-    /// <inheritdoc />
-    public override long Position { get => Written; set => throw new NotSupportedException(); }
-
-    /// <inheritdoc />
-    public override void Write(byte[] buffer, int offset, int count) => Written += count;
-
-    /// <inheritdoc />
-    public override void Write(ReadOnlySpan<byte> buffer) => Written += buffer.Length;
-
-    /// <inheritdoc />
-    public override void WriteByte(byte value) => Written++;
-
-    /// <inheritdoc />
-    public override void Flush()
-    {
-    }
-
-    /// <inheritdoc />
-    public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-
-    /// <inheritdoc />
-    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-    /// <inheritdoc />
-    public override void SetLength(long value) => throw new NotSupportedException();
 }

@@ -14,8 +14,6 @@ internal sealed class PdfWriter
 {
     private readonly PdfOutputBuffer output;
     private readonly Dictionary<int, long> offsets = [];
-    private readonly PdfEngineOptions options;
-    private readonly PdfVersion version;
     private int lastObjectNumber;
 
     /// <summary>Initializes a new instance of the <see cref="PdfWriter"/> class.</summary>
@@ -25,9 +23,10 @@ internal sealed class PdfWriter
     public PdfWriter(Stream destination, PdfVersion version, PdfEngineOptions options)
     {
         ArgumentNullException.ThrowIfNull(destination);
+        ArgumentNullException.ThrowIfNull(options);
 
-        this.version = version;
-        this.options = options ?? throw new ArgumentNullException(nameof(options));
+        // The version and the options are written into the header and the binary marker here and are not
+        // needed afterwards: the header is the only thing a writer puts in the file from either of them.
         output = new PdfOutputBuffer(destination);
 
         // The header and the object headers are written byte by byte: a document has one header and

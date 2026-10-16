@@ -183,20 +183,11 @@ public sealed partial class PdfMergeEngine
             descendants += children.TotalItems;
 
             var isOpen = (node.Dictionary.GetInteger("Count") ?? 0) >= 0;
-            var count = children.FirstTarget > 0 ? (isOpen ? children.TotalItems : -children.TotalItems) : 0;
+            var count = children.FirstTarget > 0 ? OutlineCount(children.TotalItems, isOpen) : 0;
             var isPrimary = source.Resolved.Source.Id == context.Request.PrimarySourceId;
+            var placement = new BookmarkPlacement(parent, children, targets, position, linkage, count, isPrimary);
 
-            source.Copier.Override(node.ObjectNumber, body => RewriteBookmark(
-                context,
-                source,
-                body,
-                parent,
-                children,
-                targets,
-                position,
-                linkage,
-                count,
-                isPrimary));
+            source.Copier.Override(node.ObjectNumber, body => RewriteBookmark(context, source, body, placement));
         }
 
         return new OutlineChain(targets[0], targets[^1], nodes.Count, descendants);
@@ -219,41 +210,61 @@ public sealed partial class PdfMergeEngine
         public int Next { get; set; }
     }
 
+    /// <summary>
+    /// Gives the value of the <c>/Count</c> entry of a bookmark: a negative count is how a reader is
+    /// told that the bookmark starts out collapsed.
+    /// </summary>
+    /// <param name="totalItems">The number of bookmarks including everything below them.</param>
+    /// <param name="isOpen">Whether the bookmark is meant to be shown expanded.</param>
+    /// <returns>The count to write, or its negation for a collapsed bookmark.</returns>
+    private static int OutlineCount(int totalItems, bool isOpen) => isOpen ? totalItems : -totalItems;
+
+    /// <summary>Where a copied bookmark belongs in the merged outline.</summary>
+    /// <param name="Parent">The parent the bookmark must point at.</param>
+    /// <param name="Children">What was copied below the bookmark.</param>
+    /// <param name="Targets">The target object numbers of the chain the bookmark belongs to.</param>
+    /// <param name="Position">The position of the bookmark inside its chain.</param>
+    /// <param name="Linkage">The links to the sibling chains.</param>
+    /// <param name="Count">The value for the <c>/Count</c> entry, or zero.</param>
+    /// <param name="IsPrimary">Whether the bookmark comes from the primary source.</param>
+    private sealed record BookmarkPlacement(
+        OutlineParent Parent,
+        OutlineChain Children,
+        int[] Targets,
+        int Position,
+        OutlineLinkage Linkage,
+        int Count,
+        bool IsPrimary);
+
     /// <summary>Rewrites a copied bookmark into its place in the merged outline.</summary>
     /// <param name="context">The merge context.</param>
     /// <param name="source">The source the bookmark comes from.</param>
     /// <param name="body">The copied bookmark dictionary.</param>
-    /// <param name="parent">The parent the bookmark must point at.</param>
-    /// <param name="children">What was copied below the bookmark.</param>
-    /// <param name="targets">The target object numbers of the chain the bookmark belongs to.</param>
-    /// <param name="position">The position of the bookmark inside its chain.</param>
-    /// <param name="linkage">The links to the sibling chains.</param>
-    /// <param name="count">The value for the <c>/Count</c> entry, or zero.</param>
-    /// <param name="isPrimary">Whether the bookmark comes from the primary source.</param>
+    /// <param name="placement">Where the bookmark belongs in the merged outline.</param>
     /// <returns>The rewritten bookmark.</returns>
     private static PdfDictionary RewriteBookmark(
         PdfMergeContext context,
         MergeSource source,
         PdfObject body,
-        OutlineParent parent,
-        OutlineChain children,
-        int[] targets,
-        int position,
-        OutlineLinkage linkage,
-        int count,
-        bool isPrimary)
+        BookmarkPlacement placement)
     {
         var bookmark = body as PdfDictionary ?? new PdfDictionary();
 
-        SetReference(bookmark, "Parent", parent.Target);
-        SetReference(bookmark, "First", children.FirstTarget);
-        SetReference(bookmark, "Last", children.LastTarget);
-        SetReference(bookmark, "Prev", position > 0 ? targets[position - 1] : linkage.Previous);
-        SetReference(bookmark, "Next", position + 1 < targets.Length ? targets[position + 1] : linkage.Next);
+        SetReference(bookmark, "Parent", placement.Parent.Target);
+        SetReference(bookmark, "First", placement.Children.FirstTarget);
+        SetReference(bookmark, "Last", placement.Children.LastTarget);
+        SetReference(
+            bookmark,
+            "Prev",
+            placement.Position > 0 ? placement.Targets[placement.Position - 1] : placement.Linkage.Previous);
+        SetReference(
+            bookmark,
+            "Next",
+            placement.Position + 1 < placement.Targets.Length ? placement.Targets[placement.Position + 1] : placement.Linkage.Next);
 
-        if (count != 0)
+        if (placement.Count != 0)
         {
-            bookmark.SetInteger("Count", count);
+            bookmark.SetInteger("Count", placement.Count);
         }
         else
         {
@@ -263,7 +274,7 @@ public sealed partial class PdfMergeEngine
         // A named destination points into the name tree of a document; only the tree of the primary
         // source is carried over, so a bookmark of any other source must not keep pointing into a
         // tree that no longer exists.
-        if (!isPrimary && bookmark.Get("Dest") is PdfName or PdfString)
+        if (!placement.IsPrimary && bookmark.Get("Dest") is PdfName or PdfString)
         {
             bookmark.Remove("Dest");
             context.Warnings.Add(

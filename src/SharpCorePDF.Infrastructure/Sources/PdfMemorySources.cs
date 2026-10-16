@@ -104,9 +104,12 @@ public sealed class PdfStreamSource : IPdfContentSource
         {
             var current = capture;
 
-            return current is { IsCompletedSuccessfully: true, Result: { } bytes }
-                ? bytes.LongLength
-                : content.CanSeek ? content.Length : null;
+            if (current is { IsCompletedSuccessfully: true, Result: { } bytes })
+            {
+                return bytes.LongLength;
+            }
+
+            return content.CanSeek ? content.Length : null;
         }
     }
 

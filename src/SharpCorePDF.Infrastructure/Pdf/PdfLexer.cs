@@ -210,15 +210,15 @@ internal sealed partial class PdfLexer
 
     private PdfToken ReadNumber(int start)
     {
-        if (data[Position] is (byte)'+' or (byte)'-')
-        {
-            Position++;
-        }
+        ConsumeSignIfPresent();
 
         var sawDigit = false;
         var sawDot = false;
         var sawExponent = false;
 
+        // A number is one run of digits with at most one point and at most one exponent, which is the shape
+        // the specification gives it: a second point or a second exponent therefore ends this number and
+        // starts the next token.
         while (Position < data.Length)
         {
             var current = data[Position];
@@ -230,39 +230,43 @@ internal sealed partial class PdfLexer
                 continue;
             }
 
-            if (current == (byte)'.')
+            if (current == (byte)'.' && !sawDot)
             {
-                if (sawDot)
-                {
-                    break;
-                }
-
                 sawDot = true;
                 Position++;
                 continue;
             }
 
-            if (current is (byte)'e' or (byte)'E')
+            if ((current is (byte)'e' or (byte)'E') && !sawExponent && sawDigit)
             {
-                if (sawExponent || !sawDigit)
-                {
-                    break;
-                }
-
                 sawExponent = true;
                 Position++;
-
-                if (Position < data.Length && data[Position] is (byte)'+' or (byte)'-')
-                {
-                    Position++;
-                }
-
+                ConsumeSignIfPresent();
                 continue;
             }
 
             break;
         }
 
+        return CreateNumberToken(start, sawExponent);
+    }
+
+    // A sign is optional in front of a number and in front of its exponent, so consuming one is a no-op
+    // when the byte that follows is not a sign.
+    private void ConsumeSignIfPresent()
+    {
+        if (Position < data.Length && data[Position] is (byte)'+' or (byte)'-')
+        {
+            Position++;
+        }
+    }
+
+    /// <summary>Builds the token of the number that was scanned.</summary>
+    /// <param name="start">The offset the number starts at.</param>
+    /// <param name="sawExponent">Whether the number carries an exponent.</param>
+    /// <returns>The number token.</returns>
+    private PdfToken CreateNumberToken(int start, bool sawExponent)
+    {
         var text = Encoding.Latin1.GetString(data, start, Position - start);
 
         if (!sawExponent && long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integer))
@@ -278,6 +282,8 @@ internal sealed partial class PdfLexer
             };
         }
 
+        // PDF has no exponent form, so a number that carries one is a real here, and text that does not
+        // parse at all is read as zero rather than as a broken token.
         var real = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : 0d;

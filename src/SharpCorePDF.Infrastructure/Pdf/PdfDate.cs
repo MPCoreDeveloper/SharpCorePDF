@@ -104,17 +104,11 @@ internal static class PdfDate
 
     private static TimeSpan ReadOffset(ReadOnlySpan<char> rest)
     {
-        if (rest.Length == 0 || rest[0] is 'Z' or 'z')
+        if (rest.Length == 0 || rest[0] is 'Z' or 'z' or not ('+' or '-'))
         {
             return TimeSpan.Zero;
         }
 
-        if (rest[0] is not ('+' or '-'))
-        {
-            return TimeSpan.Zero;
-        }
-
-        var sign = rest[0] == '-' ? -1 : 1;
         var hours = 0;
         var minutes = 0;
         var position = 1;
@@ -122,20 +116,7 @@ internal static class PdfDate
 
         while (position < rest.Length && field < 2)
         {
-            if (!char.IsAsciiDigit(rest[position]))
-            {
-                position++;
-                continue;
-            }
-
-            var start = position;
-
-            while (position < rest.Length && char.IsAsciiDigit(rest[position]))
-            {
-                position++;
-            }
-
-            if (!int.TryParse(rest[start..position], NumberStyles.None, CultureInfo.InvariantCulture, out var parsed))
+            if (!TryReadOffsetField(rest, ref position, out var parsed))
             {
                 continue;
             }
@@ -152,6 +133,32 @@ internal static class PdfDate
             field++;
         }
 
+        var sign = rest[0] == '-' ? -1 : 1;
         return sign * new TimeSpan(Math.Clamp(hours, 0, 23), Math.Clamp(minutes, 0, 59), 0);
+    }
+
+    /// <summary>Reads the next run of digits of a time zone offset, skipping what is not a digit.</summary>
+    /// <param name="rest">The text after the date itself.</param>
+    /// <param name="position">The position in <paramref name="rest"/>, advanced past the field.</param>
+    /// <param name="value">The value of the field when one was read.</param>
+    /// <returns><see langword="true"/> when the run of digits parsed as a value.</returns>
+    private static bool TryReadOffsetField(ReadOnlySpan<char> rest, ref int position, out int value)
+    {
+        value = 0;
+
+        while (position < rest.Length && !char.IsAsciiDigit(rest[position]))
+        {
+            position++;
+        }
+
+        var start = position;
+
+        while (position < rest.Length && char.IsAsciiDigit(rest[position]))
+        {
+            position++;
+        }
+
+        return start < position
+            && int.TryParse(rest[start..position], NumberStyles.None, CultureInfo.InvariantCulture, out value);
     }
 }

@@ -18,6 +18,10 @@ from pikepdf import Array, Dictionary, Name, Pdf, String
 A4 = [0, 0, 595.276, 841.89]
 LETTER = [0, 0, 612, 792]
 
+# The document information key every fixture sets, named once because a repeated literal is a spelling
+# that can drift.
+DOCINFO_TITLE = "/Title"
+
 
 def blank_page(pdf: Pdf, box, rotate=0):
     page = pdf.add_blank_page(page_size=(box[2], box[3]))
@@ -33,7 +37,7 @@ def make_modern(path: Path):
     pdf = Pdf.new()
     blank_page(pdf, A4)
     blank_page(pdf, A4, rotate=90)
-    pdf.docinfo["/Title"] = String("Modern sample")
+    pdf.docinfo[DOCINFO_TITLE] = String("Modern sample")
     pdf.docinfo["/Author"] = String("SharpCorePDF")
     pdf.save(path, object_stream_mode=pikepdf.ObjectStreamMode.generate)
     print(f"wrote {path}")
@@ -103,7 +107,7 @@ def make_outlined(path: Path):
         )
     )
 
-    pdf.docinfo["/Title"] = String("Outlined sample")
+    pdf.docinfo[DOCINFO_TITLE] = String("Outlined sample")
     pdf.docinfo["/Producer"] = String("pikepdf")
     pdf.save(path)
     print(f"wrote {path}")
@@ -113,7 +117,7 @@ def make_encrypted(path: Path):
     """One page, encrypted so a user password is needed to read the page tree."""
     pdf = Pdf.new()
     blank_page(pdf, A4)
-    pdf.docinfo["/Title"] = String("Encrypted sample")
+    pdf.docinfo[DOCINFO_TITLE] = String("Encrypted sample")
     pdf.save(path, encryption=pikepdf.Encryption(owner="owner-password", user="user-password", R=6))
     print(f"wrote {path}")
 

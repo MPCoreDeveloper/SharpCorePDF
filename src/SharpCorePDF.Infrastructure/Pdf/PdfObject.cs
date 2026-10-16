@@ -132,17 +132,32 @@ internal static class PdfNumberFormat
             return "0";
         }
 
-        if (value == Math.Floor(value) && Math.Abs(value) < 1e15)
+        if (IsWholeNumber(value))
         {
             return ((long)value).ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
 
         var text = value.ToString("0.#####", System.Globalization.CultureInfo.InvariantCulture);
 
-        return text[0] == '.' ? string.Concat("0", text)
-            : text.StartsWith("-.", System.StringComparison.Ordinal) ? string.Concat("-0", text[1..])
+        if (text[0] == '.')
+        {
+            return string.Concat("0", text);
+        }
+
+        return text.StartsWith("-.", System.StringComparison.Ordinal)
+            ? string.Concat("-0", text[1..])
             : text;
     }
+
+    /// <summary>Determines whether a value is a whole number that a <see cref="long"/> holds exactly.</summary>
+    /// <param name="value">The value to test.</param>
+    /// <returns><see langword="true"/> when the value has no fractional part and fits into a long.</returns>
+    /// <remarks>
+    /// The test is exact on purpose: a value that arrived as <c>3.0</c> is exactly three, and rounding it
+    /// would write a number the producer did not write. Values at or above 10^15 are written as reals
+    /// instead, because a double has no digits left to spare above that point.
+    /// </remarks>
+    public static bool IsWholeNumber(double value) => double.IsInteger(value) && Math.Abs(value) < 1e15;
 
     /// <summary>
     /// Formats a real number into bytes, without materialising a string. A document holds thousands of
@@ -168,7 +183,7 @@ internal static class PdfNumberFormat
             return true;
         }
 
-        if (value == Math.Floor(value) && Math.Abs(value) < 1e15)
+        if (IsWholeNumber(value))
         {
             return ((long)value).TryFormat(destination, out bytesWritten, default, System.Globalization.CultureInfo.InvariantCulture);
         }

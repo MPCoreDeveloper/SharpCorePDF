@@ -133,7 +133,7 @@ internal sealed class PdfDictionary : PdfObject
     public long? GetInteger(string key) => Get(key) switch
     {
         PdfInteger integer => integer.Value,
-        PdfReal real when real.Value == Math.Floor(real.Value) => (long)real.Value,
+        PdfReal real when PdfNumberFormat.IsWholeNumber(real.Value) => (long)real.Value,
         _ => null,
     };
 

@@ -94,7 +94,16 @@ internal static partial class PdfFilters
     private static byte[] ApplyFlate(ReadOnlyMemory<byte> data, PdfDictionary? parameters, string sourceName)
     {
         var inflated = Inflate(data, sourceName);
-        var predictor = (int)(parameters?.GetInteger("Predictor") ?? 1);
+
+        // Every parameter of the filter is optional and every one of them is absent when the stream has no
+        // filter dictionary at all, so the dictionary is established once here instead of being tested
+        // again for each entry.
+        if (parameters is null)
+        {
+            return inflated;
+        }
+
+        var predictor = (int)(parameters.GetInteger("Predictor") ?? 1);
 
         if (predictor <= 1)
         {
@@ -104,9 +113,9 @@ internal static partial class PdfFilters
         return ApplyPredictor(
             inflated,
             predictor,
-            (int)(parameters?.GetInteger("Colors") ?? parameters?.GetInteger("ColorSpace") ?? 1),
-            (int)(parameters?.GetInteger("BitsPerComponent") ?? 8),
-            (int)(parameters?.GetInteger("Columns") ?? 1),
+            (int)(parameters.GetInteger("Colors") ?? parameters.GetInteger("ColorSpace") ?? 1),
+            (int)(parameters.GetInteger("BitsPerComponent") ?? 8),
+            (int)(parameters.GetInteger("Columns") ?? 1),
             sourceName);
     }
 }

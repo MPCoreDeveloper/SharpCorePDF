@@ -131,10 +131,11 @@ jobs:
 
       # Exchanges this workflow's OIDC token for a temporary API key (valid for 1 hour) that
       # nuget.org matched against the trusted publishing policy. The username is the nuget.org
-      # account the policy is owned by.
+      # account the policy is owned by. The action is pinned to the commit its v1 tag points at,
+      # because a tag can be moved and this step is handed the token that mints an API key.
       - name: NuGet login (OIDC to temporary API key)
         if: ${{ github.event_name == 'push' || inputs.publish }}
-        uses: NuGet/login@v1
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
         id: login
         with:
           user: ${{ secrets.NUGET_USERNAME }}
