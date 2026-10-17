@@ -215,8 +215,10 @@ Two consequences worth stating before a release:
    and leaves the project at 91% fails the new-code condition, which is the condition that would have
    caught it.
 3. **The 90% is a setting, not a property of the tree.** Nothing in this repository declares it: it is
-   entered on the quality gate at sonarcloud.io, where Sonar's default is 80% on new code. Until it is
-   entered, `sonar.qualitygate.wait` enforces 80% faithfully, and a green gate is a true statement about
-   the wrong number.
+   entered on the quality gate at sonarcloud.io. At the time of writing the project is bound to `Sonar way`,
+   the default gate, whose only coverage condition is `new_coverage < 80` — so until 90% is entered there,
+   `sonar.qualitygate.wait` enforces 80% faithfully, and a green gate is a true statement about the wrong
+   number. The same gate asks for 100% of new security hotspots reviewed, which is a click in the UI and not
+   something a build can do for itself.
 
 
