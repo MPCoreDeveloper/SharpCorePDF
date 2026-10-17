@@ -40,10 +40,18 @@ internal readonly struct PdfObjectEncryption
     /// <summary>Encrypts the bytes of a string.</summary>
     /// <param name="data">The bytes of the string.</param>
     /// <returns>The bytes to write instead.</returns>
-    public byte[] EncryptString(ReadOnlySpan<byte> data) => writer!.EncryptString(data, objectNumber);
+    public byte[] EncryptString(ReadOnlySpan<byte> data) => Active.EncryptString(data, objectNumber);
 
     /// <summary>Encrypts the bytes of a stream body.</summary>
     /// <param name="data">The encoded bytes of the stream.</param>
     /// <returns>The bytes to write instead.</returns>
-    public byte[] EncryptStream(ReadOnlySpan<byte> data) => writer!.EncryptStream(data, objectNumber);
+    public byte[] EncryptStream(ReadOnlySpan<byte> data) => Active.EncryptStream(data, objectNumber);
+
+    /// <summary>
+    /// Gets the writer, which is present whenever <see cref="IsActive"/> is true. A serializer asks
+    /// either for <see cref="IsActive"/> first or for nothing at all, so the absent case is a defect
+    /// in the caller rather than a state the document can be in.
+    /// </summary>
+    private PdfSecurityWriter Active =>
+        writer ?? throw new InvalidOperationException("An object written in the clear has no encryption to apply.");
 }

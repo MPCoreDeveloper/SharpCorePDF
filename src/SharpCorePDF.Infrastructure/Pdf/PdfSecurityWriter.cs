@@ -34,6 +34,12 @@ namespace SharpCorePDF.Infrastructure.Pdf;
 /// </remarks>
 internal sealed class PdfSecurityWriter
 {
+    /// <summary>The name of the entry that states a key length, in the dictionary and in a crypt filter.</summary>
+    private const string LengthEntry = "Length";
+
+    /// <summary>The name of the crypt filter that strings and streams are written with.</summary>
+    private const string StandardCryptFilter = "StdCF";
+
     private readonly byte[] fileKey;
     private readonly PdfCryptMethod method;
     private readonly int objectKeyLength;
@@ -139,7 +145,7 @@ internal sealed class PdfSecurityWriter
             .SetName("Filter", "Standard")
             .SetInteger("V", version)
             .SetInteger("R", revision)
-            .SetInteger("Length", keyLength * 8)
+            .SetInteger(LengthEntry, keyLength * 8)
             .Set("O", HexString(ownerEntry))
             .Set("U", HexString(PdfStandardSecurity.ComputeUserEntry(fileKey, revision, fileIdentifier)));
 
@@ -149,13 +155,13 @@ internal sealed class PdfSecurityWriter
             // names the filter both strings and streams are encrypted with. The length of a crypt
             // filter counts bytes, where the one of the encryption dictionary counts bits.
             dictionary
-                .Set("CF", new PdfDictionary().Set("StdCF", new PdfDictionary()
+                .Set("CF", new PdfDictionary().Set(StandardCryptFilter, new PdfDictionary()
                     .SetName("Type", "CryptFilter")
                     .SetName("CFM", "AESV2")
-                    .SetInteger("Length", keyLength)
+                    .SetInteger(LengthEntry, keyLength)
                     .SetName("AuthEvent", "DocOpen")))
-                .SetName("StmF", "StdCF")
-                .SetName("StrF", "StdCF")
+                .SetName("StmF", StandardCryptFilter)
+                .SetName("StrF", StandardCryptFilter)
                 .Set("EncryptMetadata", PdfBoolean.From(true));
         }
 
@@ -214,14 +220,14 @@ internal sealed class PdfSecurityWriter
             .SetName("Filter", "Standard")
             .SetInteger("V", 5)
             .SetInteger("R", 6)
-            .SetInteger("Length", 256)
-            .Set("CF", new PdfDictionary().Set("StdCF", new PdfDictionary()
+            .SetInteger(LengthEntry, 256)
+            .Set("CF", new PdfDictionary().Set(StandardCryptFilter, new PdfDictionary()
                 .SetName("Type", "CryptFilter")
                 .SetName("CFM", "AESV3")
-                .SetInteger("Length", 32)
+                .SetInteger(LengthEntry, 32)
                 .SetName("AuthEvent", "DocOpen")))
-            .SetName("StmF", "StdCF")
-            .SetName("StrF", "StdCF")
+            .SetName("StmF", StandardCryptFilter)
+            .SetName("StrF", StandardCryptFilter)
             .Set("O", HexString(ownerEntry))
             .Set("U", HexString(userEntry))
             .Set("OE", HexString(EncryptFileKey(KeyFor(ownerPassword, ownerKeySalt, userEntry), fileKey)))

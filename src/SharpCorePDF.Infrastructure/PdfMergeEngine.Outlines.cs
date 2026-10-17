@@ -17,6 +17,12 @@ public sealed partial class PdfMergeEngine
     /// <summary>The largest number of outline items that is copied, as a guard against damaged trees.</summary>
     private const int MaxOutlineItems = 100_000;
 
+    /// <summary>The name of the entry that holds the first child of a bookmark or of the outline root.</summary>
+    private const string FirstEntry = "First";
+
+    /// <summary>The name of the entry that states how many items a bookmark has open below it.</summary>
+    private const string CountEntry = "Count";
+
     /// <summary>Copies the outline trees of every source into one merged outline.</summary>
     /// <param name="context">The merge context.</param>
     /// <returns>The reference to the root of the merged outline, or <see langword="null"/>.</returns>
@@ -48,7 +54,7 @@ public sealed partial class PdfMergeEngine
             }
 
             var linkage = new OutlineLinkage();
-            var nodes = ReadChain(source.Reader, outline.Get("First"), context, source);
+            var nodes = ReadChain(source.Reader, outline.Get(FirstEntry), context, source);
             var chain = CopyChain(context, source, nodes, parent, linkage);
 
             if (!chain.IsEmpty)
@@ -82,9 +88,9 @@ public sealed partial class PdfMergeEngine
 
         var root = new PdfDictionary();
         root.Set("Type", new PdfName("Outlines"));
-        root.Set("First", new PdfReference(sections[0].FirstTarget, 0));
+        root.Set(FirstEntry, new PdfReference(sections[0].FirstTarget, 0));
         root.Set("Last", new PdfReference(sections[^1].LastTarget, 0));
-        root.SetInteger("Count", sections.Sum(section => section.TotalItems));
+        root.SetInteger(CountEntry, sections.Sum(section => section.TotalItems));
 
         context.Writer.WriteObject(rootTarget, root);
 
@@ -179,13 +185,13 @@ public sealed partial class PdfMergeEngine
             var children = CopyChain(
                 context,
                 source,
-                ReadChain(source.Reader, node.Dictionary.Get("First"), context, source),
+                ReadChain(source.Reader, node.Dictionary.Get(FirstEntry), context, source),
                 itemParent,
                 new OutlineLinkage());
 
             descendants += children.TotalItems;
 
-            var isOpen = (node.Dictionary.GetInteger("Count") ?? 0) >= 0;
+            var isOpen = (node.Dictionary.GetInteger(CountEntry) ?? 0) >= 0;
             var count = children.FirstTarget > 0 ? OutlineCount(children.TotalItems, isOpen) : 0;
             var isPrimary = source.Resolved.Source.Id == context.Request.PrimarySourceId;
             var placement = new BookmarkPlacement(parent, children, targets, position, linkage, count, isPrimary);
@@ -254,7 +260,7 @@ public sealed partial class PdfMergeEngine
         var bookmark = body as PdfDictionary ?? new PdfDictionary();
 
         SetReference(bookmark, "Parent", placement.Parent.Target);
-        SetReference(bookmark, "First", placement.Children.FirstTarget);
+        SetReference(bookmark, FirstEntry, placement.Children.FirstTarget);
         SetReference(bookmark, "Last", placement.Children.LastTarget);
         SetReference(
             bookmark,
@@ -267,11 +273,11 @@ public sealed partial class PdfMergeEngine
 
         if (placement.Count != 0)
         {
-            bookmark.SetInteger("Count", placement.Count);
+            bookmark.SetInteger(CountEntry, placement.Count);
         }
         else
         {
-            bookmark.Remove("Count");
+            bookmark.Remove(CountEntry);
         }
 
         // A named destination points into the name tree of a document; only the tree of the primary

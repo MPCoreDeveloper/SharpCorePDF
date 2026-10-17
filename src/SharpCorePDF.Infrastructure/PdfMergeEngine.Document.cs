@@ -9,6 +9,9 @@ namespace SharpCorePDF.Infrastructure;
 /// </summary>
 public sealed partial class PdfMergeEngine
 {
+    /// <summary>The name of the tree of named destinations, which is carried over as a whole.</summary>
+    private const string DestsEntry = "Dests";
+
     /// <summary>Builds the catalog of the merged document.</summary>
     /// <param name="context">The merge context.</param>
     /// <param name="outlines">The root of the merged outline, when there is one.</param>
@@ -34,7 +37,7 @@ public sealed partial class PdfMergeEngine
         CopyFromPrimary(primary, source, catalog, "Lang");
         CopyFromPrimary(primary, source, catalog, "MarkInfo");
         CopyFromPrimary(primary, source, catalog, "OutputIntents");
-        CopyFromPrimary(primary, source, catalog, "Dests");
+        CopyFromPrimary(primary, source, catalog, DestsEntry);
 
         if (context.Output.MetadataPolicy != MetadataPolicy.None)
         {
@@ -73,9 +76,9 @@ public sealed partial class PdfMergeEngine
         var names = new PdfDictionary();
         var sourceNames = primary.Reader.ResolveDictionary(primary.Reader.Catalog?.Get("Names"));
 
-        if (sourceNames?.Get("Dests") is { } dests)
+        if (sourceNames?.Get(DestsEntry) is { } dests)
         {
-            names.Set("Dests", primary.Copier.Clone(dests));
+            names.Set(DestsEntry, primary.Copier.Clone(dests));
         }
 
         if (context.Output.PreserveEmbeddedFiles && sourceNames?.Get("EmbeddedFiles") is { } embedded)
@@ -92,7 +95,7 @@ public sealed partial class PdfMergeEngine
         {
             var otherNames = other.Reader.ResolveDictionary(other.Reader.Catalog?.Get("Names"));
 
-            if (otherNames?.Get("Dests") is not null || other.Reader.Catalog?.Get("Dests") is not null)
+            if (otherNames?.Get(DestsEntry) is not null || other.Reader.Catalog?.Get(DestsEntry) is not null)
             {
                 context.Warnings.Add(new(
                     PdfWarningKind.NamedDestinationsDropped,

@@ -184,36 +184,8 @@ internal sealed class PdfSecurityHandler
         ArgumentNullException.ThrowIfNull(encryption);
         ArgumentNullException.ThrowIfNull(warnings);
 
-        var filter = encryption.GetName("Filter") ?? "Standard";
-
-        if (!string.Equals(filter, "Standard", StringComparison.Ordinal))
-        {
-            warnings.Add(new(
-                PdfWarningKind.EncryptionHandlerUnsupported,
-                $"'{sourceName}': the document is encrypted with the '{filter}' security handler, which the engine does not implement, so its pages cannot be read."));
-            return PdfDecryptionResult.Closed;
-        }
-
-        if (encryption.ContainsKey("SubFilter"))
-        {
-            warnings.Add(new(
-                PdfWarningKind.EncryptionHandlerUnsupported,
-                $"'{sourceName}': the document declares a security handler sub-filter, which the engine does not implement, so its pages cannot be read."));
-            return PdfDecryptionResult.Closed;
-        }
-
-        var version = (int)(encryption.GetInteger("V") ?? 0);
-        var revision = (int)(encryption.GetInteger("R") ?? 0);
-
-        if (version is < 1 or > 5 || revision is < 2 or > 6)
-        {
-            warnings.Add(new(
-                PdfWarningKind.EncryptionRevisionUnsupported,
-                $"'{sourceName}': the document is encrypted with security handler /V {version} /R {revision}, which the engine does not implement, so its pages cannot be read."));
-            return PdfDecryptionResult.Closed;
-        }
-
-        if (!TryResolveMethods(encryption, version, sourceName, warnings, out var stringMethod, out var streamMethod, out var cryptFilterBits))
+        if (!TryAcceptHandler(encryption, sourceName, warnings, out var version, out var revision)
+            || !TryResolveMethods(encryption, version, sourceName, warnings, out var stringMethod, out var streamMethod, out var cryptFilterBits))
         {
             return PdfDecryptionResult.Closed;
         }
@@ -230,7 +202,7 @@ internal sealed class PdfSecurityHandler
         // states its own, in bytes, and it is the one the file key is actually derived with.
         var declaredBits = (int)(encryption.GetInteger("Length") ?? 40);
         var keyBits = version >= 4 && cryptFilterBits is { } filterBits ? filterBits : declaredBits;
-        var encryptsMetadata = encryption.Get("EncryptMetadata") is not PdfBoolean { Value: false };
+        var encryptsMetadata = ReadEncryptsMetadata(encryption);
 
         byte[]? fileKey;
         int objectKeyLength;
@@ -246,18 +218,12 @@ internal sealed class PdfSecurityHandler
             }
 
             objectKeyLength = revision == 2 ? 5 : Math.Clamp(keyBits / 8, 5, 16);
-            fileKey = TryOpenLegacy(encryption, ownerEntry, userEntry, revision, objectKeyLength, fileIdentifier, encryptsMetadata, password);
+            fileKey = TryOpenLegacy(encryption, ownerEntry, userEntry, revision, objectKeyLength, fileIdentifier, password);
         }
         else
         {
-            if (userEntry.Length < 48
-                || ownerEntry.Length < 48
-                || GetBytes(encryption, "UE") is not { } userKey
-                || GetBytes(encryption, "OE") is not { } ownerKey)
+            if (!TryReadAes256Entries(encryption, ownerEntry, userEntry, sourceName, warnings, out var ownerKey, out var userKey))
             {
-                warnings.Add(new(
-                    PdfWarningKind.EncryptionDictionaryIncomplete,
-                    $"'{sourceName}': the encryption dictionary of a /V 5 document is incomplete, so the document cannot be read."));
                 return PdfDecryptionResult.Closed;
             }
 
@@ -286,6 +252,106 @@ internal sealed class PdfSecurityHandler
     /// <returns>The bytes of the string, or <see langword="null"/>.</returns>
     private static byte[]? GetBytes(PdfDictionary dictionary, string key) =>
         dictionary.Get(key) is PdfString text ? text.Bytes : null;
+
+    /// <summary>
+    /// Determines whether the document encrypts its metadata stream, which the file-key algorithms of
+    /// revisions 2 to 4 take into account.
+    /// </summary>
+    /// <param name="encryption">The encryption dictionary.</param>
+    /// <returns><see langword="true"/> unless the <c>EncryptMetadata</c> entry says <c>false</c>.</returns>
+    private static bool ReadEncryptsMetadata(PdfDictionary encryption) =>
+        encryption.Get("EncryptMetadata") is not PdfBoolean { Value: false };
+
+    /// <summary>
+    /// Determines whether the document names a security handler this engine implements, and at which
+    /// version and revision.
+    /// </summary>
+    /// <param name="encryption">The encryption dictionary.</param>
+    /// <param name="sourceName">The name of the source, used in diagnostics.</param>
+    /// <param name="warnings">The list that receives non-fatal remarks.</param>
+    /// <param name="version">The value of the <c>V</c> entry.</param>
+    /// <param name="revision">The value of the <c>R</c> entry.</param>
+    /// <returns><see langword="true"/> when the handler is the Standard one at a revision the engine reads.</returns>
+    private static bool TryAcceptHandler(
+        PdfDictionary encryption,
+        string sourceName,
+        List<PdfWarning> warnings,
+        out int version,
+        out int revision)
+    {
+        version = (int)(encryption.GetInteger("V") ?? 0);
+        revision = (int)(encryption.GetInteger("R") ?? 0);
+
+        var filter = encryption.GetName("Filter") ?? "Standard";
+
+        if (!string.Equals(filter, "Standard", StringComparison.Ordinal))
+        {
+            warnings.Add(new(
+                PdfWarningKind.EncryptionHandlerUnsupported,
+                $"'{sourceName}': the document is encrypted with the '{filter}' security handler, which the engine does not implement, so its pages cannot be read."));
+            return false;
+        }
+
+        if (encryption.ContainsKey("SubFilter"))
+        {
+            warnings.Add(new(
+                PdfWarningKind.EncryptionHandlerUnsupported,
+                $"'{sourceName}': the document declares a security handler sub-filter, which the engine does not implement, so its pages cannot be read."));
+            return false;
+        }
+
+        if (version is < 1 or > 5 || revision is < 2 or > 6)
+        {
+            warnings.Add(new(
+                PdfWarningKind.EncryptionRevisionUnsupported,
+                $"'{sourceName}': the document is encrypted with security handler /V {version} /R {revision}, which the engine does not implement, so its pages cannot be read."));
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Reads the <c>OE</c> and <c>UE</c> entries, which a document of revision 5 or 6 needs in addition
+    /// to the <c>O</c> and <c>U</c> ones.
+    /// </summary>
+    /// <param name="encryption">The encryption dictionary.</param>
+    /// <param name="ownerEntry">The bytes of the <c>O</c> entry.</param>
+    /// <param name="userEntry">The bytes of the <c>U</c> entry.</param>
+    /// <param name="sourceName">The name of the source, used in diagnostics.</param>
+    /// <param name="warnings">The list that receives non-fatal remarks.</param>
+    /// <param name="ownerKey">The bytes of the <c>OE</c> entry.</param>
+    /// <param name="userKey">The bytes of the <c>UE</c> entry.</param>
+    /// <returns><see langword="true"/> when the entries are all present and long enough.</returns>
+    private static bool TryReadAes256Entries(
+        PdfDictionary encryption,
+        byte[] ownerEntry,
+        byte[] userEntry,
+        string sourceName,
+        List<PdfWarning> warnings,
+        out byte[] ownerKey,
+        out byte[] userKey)
+    {
+        ownerKey = [];
+        userKey = [];
+
+        // The entry of a revision 5 document is a 32 byte hash followed by two 8 byte salts; anything
+        // shorter cannot be one, and the algorithms below would read past its end.
+        if (userEntry.Length < 48
+            || ownerEntry.Length < 48
+            || GetBytes(encryption, "UE") is not { } userKeyValue
+            || GetBytes(encryption, "OE") is not { } ownerKeyValue)
+        {
+            warnings.Add(new(
+                PdfWarningKind.EncryptionDictionaryIncomplete,
+                $"'{sourceName}': the encryption dictionary of a /V 5 document is incomplete, so the document cannot be read."));
+            return false;
+        }
+
+        ownerKey = ownerKeyValue;
+        userKey = userKeyValue;
+        return true;
+    }
 
     /// <summary>
     /// Determines how strings and streams are encrypted. Revisions 2 and 3 state the method directly,
@@ -409,7 +475,8 @@ internal sealed class PdfSecurityHandler
 
     /// <summary>
     /// Derives the file key of a document whose security handler is revision 2, 3 or 4, by algorithms
-    /// 2, 6 and 7 of the specification.
+    /// 2, 6 and 7 of the specification. The dictionary also supplies the permissions and the metadata
+    /// flag those algorithms take, so both are read here rather than passed in beside it.
     /// </summary>
     /// <param name="encryption">The encryption dictionary.</param>
     /// <param name="ownerEntry">The bytes of the <c>O</c> entry.</param>
@@ -417,7 +484,6 @@ internal sealed class PdfSecurityHandler
     /// <param name="revision">The value of the <c>R</c> entry.</param>
     /// <param name="keyLength">The number of bytes of the file key.</param>
     /// <param name="fileIdentifier">The first element of the trailer <c>ID</c>.</param>
-    /// <param name="encryptsMetadata">Whether the document encrypts its metadata stream.</param>
     /// <param name="password">The password the caller supplied, or <see langword="null"/>.</param>
     /// <returns>The file key, or <see langword="null"/> when the password did not open the document.</returns>
     private static byte[]? TryOpenLegacy(
@@ -427,10 +493,10 @@ internal sealed class PdfSecurityHandler
         int revision,
         int keyLength,
         ReadOnlySpan<byte> fileIdentifier,
-        bool encryptsMetadata,
         string? password)
     {
         var permissions = unchecked((uint)(encryption.GetInteger("P") ?? 0));
+        var encryptsMetadata = ReadEncryptsMetadata(encryption);
         var padded = PdfStandardSecurity.PadPassword(PdfStandardSecurity.EncodeLegacyPassword(password));
 
         // Algorithm 7: an owner password opens the document by yielding the user password, which the
