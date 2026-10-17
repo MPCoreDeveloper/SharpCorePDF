@@ -89,6 +89,13 @@ internal static class OptionExamples
         // option. The result has its own passwords and permissions: nothing a source declared is carried
         // into it, so a document that was only protected against editing can be merged and re-protected in
         // one step.
+        // The two passwords are made here rather than written into the file. An example that ships a
+        // literal credential is what a scanner should complain about, and the part worth copying is the
+        // shape — a password is a value the caller decides — not a constant that ends up in a repository.
+        // They are printed below, so the document this writes can be opened again.
+        var userPassword = ExamplePassword();
+        var ownerPassword = ExamplePassword();
+
         var plan = MergePlan.Create()
             .AddFile(context.Summary)
             .AddFile(context.Appendix, pages: "1")
@@ -97,8 +104,8 @@ internal static class OptionExamples
                 Encryption = new PdfEncryptionOptions
                 {
                     Algorithm = PdfEncryptionAlgorithm.AesWith256BitKey,  // the default, spelled out
-                    UserPassword = "opens-it",                            // what a reader is asked for
-                    OwnerPassword = "owns-it",                            // what opens it with every permission
+                    UserPassword = userPassword,                          // what a reader is asked for
+                    OwnerPassword = ownerPassword,                        // what opens it with every permission
                     Permissions = PdfPermissions.PrintOnly,               // printing, but no copying or editing
                 },
             });
@@ -119,10 +126,11 @@ internal static class OptionExamples
         Report.Item("encrypted", locked.IsEncrypted);
         Report.Item("readable without a password", locked.IsReadable);
         Report.Item("needs a password", locked.RequiresPassword);
+        Report.Item("user password of the document this wrote", userPassword);
 
         var opened = await context.Inspector.InspectAsync(
             PdfFileSource.From(destination),
-            password: "opens-it",
+            password: userPassword,
             cancellationToken: cancellationToken);
 
         Report.Item("readable with the user password", opened.IsReadable);
@@ -183,5 +191,9 @@ internal static class OptionExamples
             Report.Line($"{contribution}  (complete: {contribution.IsComplete})");
         }
     }
+
+    /// <summary>Makes a password for the document the encryption example writes.</summary>
+    /// <returns>A value that is different on every run, so no credential is stored in this file.</returns>
+    private static string ExamplePassword() => Guid.NewGuid().ToString("N")[..16];
 }
 
