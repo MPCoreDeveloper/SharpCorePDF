@@ -23,6 +23,12 @@
 # ways at once, and with Automatic Analysis on, `end` fails with "You are running CI analysis while
 # Automatic Analysis is enabled".
 #
+# That switch lives on SonarCloud and nowhere in this repository, and the conflict it causes is reported by
+# the last step, after the build and both test legs have already run. So its value is read before the scan
+# begins and the run stops at the setting itself, named, with the page that changes it. The read is
+# best-effort: a token that cannot see project settings produces a note rather than a failure, and `end`
+# stays the authority on the conflict.
+#
 # SONAR_TOKEN gates the scan, and the gate is decided in a small first job because a job-level `if` cannot
 # read a secret. A fork, or a repository where the secret has not been added yet, still gets a green run
 # for the build and the tests; it simply gets no analysis. ServiceMq carries the same gate in a workflow
@@ -86,6 +92,21 @@ jobs:
     needs: check-sonar-token
     timeout-minutes: 45
 
+    # The two tools this workflow installs are not .NET 10 or .NET 11 programs, and one of them is a .NET 8
+    # program: dotnet-coverage publishes a single `tools/net8.0/any` build whose runtimeconfig asks for
+    # Microsoft.NETCore.App 8.0.0 with `rollForward: Major`, so on an image that still carries the 8.0
+    # runtime it hosts itself on 8.0 and the log opens with
+    # "dotnet-coverage v18.12.0.0 [linux-x64 - .NET 8.0.31]". That is the collector's own host process,
+    # not an assembly this repository builds, installs or ships -- every leg under test is net10.0 or
+    # net11.0 -- but it is still a runtime this repository does not support, so it is not left to chance:
+    # LatestMajor sends both tools to the highest installed GA major, which is the 10.0 runtime this job
+    # installs, and never to a prerelease major (11.0-rc2 is not a candidate). The legs under test are
+    # untouched: their runtimeconfigs name a version that is present, and a roll-forward only applies when
+    # the requested one is missing. dotnet-sonarscanner already ships `netcoreapp3.1` with LatestMajor, so
+    # this only makes that policy explicit for it and changes the collector.
+    env:
+      DOTNET_ROLL_FORWARD: LatestMajor
+
     steps:
       # SonarCloud attributes findings to commits and decorates a pull request from the git history, which
       # a shallow clone does not carry.
@@ -113,9 +134,13 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      # The pin jumps a major because of the runtime, not because of the API: v4 is a Node.js 20 action,
+      # and the runner now runs those on Node.js 24 while warning that the support is going away. v5 is
+      # the first release built for Node.js 24 and needs a runner of 2.327.1 or newer, which the hosted
+      # images are. The inputs below are the same ones v4 accepted.
       - name: Cache the SonarCloud cache
         if: needs.check-sonar-token.outputs.has-token == 'true'
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
@@ -130,6 +155,33 @@ jobs:
       - name: Install the SonarScanner
         if: needs.check-sonar-token.outputs.has-token == 'true'
         run: dotnet tool install --tool-path ./.tools dotnet-sonarscanner
+
+      # Automatic Analysis and CI analysis are mutually exclusive. The server reports the conflict from
+      # `end`, which is the last step -- by then the build and both test legs have run, and the message
+      # ("You are running CI analysis while Automatic Analysis is enabled") names a cause that is a page on
+      # sonarcloud.io rather than a line in this repository. Reading the switch up front turns that into a
+      # failure at the setting, with the page in the error. Nothing here can flip it: the Web API exposes
+      # the value read-only, so the switch is a human's click. A token that cannot read project settings
+      # (an analysis-only token) answers 401/403, which is a note here and not a failure -- `end` still
+      # reports the conflict if there is one.
+      - name: Check that Automatic Analysis is off
+        if: needs.check-sonar-token.outputs.has-token == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          body=$(mktemp)
+          status=$(curl -sS -o "$body" -w '%{http_code}' \
+            -H "Authorization: Bearer $SONAR_TOKEN" \
+            "https://sonarcloud.io/api/settings/values?component=MPCoreDeveloper_SharpCorePDF&keys=sonar.autoscan.enabled") || status=""
+          if [ "$status" != "200" ]; then
+            echo "::notice::The analysis method could not be read (HTTP ${status:-no response}); 'end' will report a conflict if there is one."
+            exit 0
+          fi
+          if grep -Eq '"value": *"true"' "$body"; then
+            echo "::error::Automatic Analysis is on for MPCoreDeveloper_SharpCorePDF, so a CI analysis cannot upload. Turn it off under Administration -> Analysis Method: https://sonarcloud.io/project/settings?id=MPCoreDeveloper_SharpCorePDF#analysis_method"
+            exit 1
+          fi
+          echo "Automatic Analysis is off; this run owns the analysis."
 
       # On a pull request the analysis is a pull-request analysis, which is what makes SonarCloud decorate
       # the pull request; on a branch it is a branch analysis. The array keeps both shapes in one step, the
@@ -202,8 +254,11 @@ jobs:
           ./.tools/dotnet-coverage merge -f xml -o ./artifacts/coverage/net11.0.xml ./artifacts/coverage/net11.0.coverage
           ls -l ./artifacts/coverage
 
+      # Node.js 24 starts at v6, not v5: v5.0.0's action.yml still declares `node20`, so bumping to it
+      # would keep the deprecation warning and only change the version number. v6 takes the same inputs
+      # this step passes.
       - name: Upload the coverage report
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: coverage-net11.0
           path: artifacts/coverage/net11.0.*
