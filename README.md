@@ -13,6 +13,8 @@
     tests              the ci.yml runs: the build, both test legs and the SonarCloud analysis
     quality gate       the SonarCloud project MPCoreDeveloper_SharpCorePDF. It reads "unknown" until
                        the first analysis lands, the way the version badge did before the first push
+    coverage           the Codecov project, which carries the 90% target codecov.yml declares and the
+                       number ci.yml measures; it reads "unknown" until the first report lands too
     licence            LICENSE, MIT
     Sponsor            the funding page, which .github/FUNDING.yml puts on the repository page too
 -->
@@ -20,14 +22,17 @@
   <img src="https://raw.githubusercontent.com/MPCoreDeveloper/SharpCorePDF/main/Logo.jpg" alt="SharpCorePDF" width="260" />
 </p>
 <p align="center">
-  <a href="https://www.nuget.org/packages/SharpCorePDF.DependencyInjection">
-    <img src="https://img.shields.io/nuget/vpre/SharpCorePDF.DependencyInjection?label=nuget.org" alt="nuget.org version" />
+  <a href="https://www.nuget.org/packages/SharpCorePDF">
+    <img src="https://img.shields.io/nuget/vpre/SharpCorePDF?label=nuget.org" alt="nuget.org version" />
   </a>
   <a href="https://github.com/MPCoreDeveloper/SharpCorePDF/actions/workflows/ci.yml">
     <img src="https://img.shields.io/github/actions/workflow/status/MPCoreDeveloper/SharpCorePDF/ci.yml?label=tests&amp;logo=githubactions&amp;logoColor=white" alt="tests" />
   </a>
   <a href="https://sonarcloud.io/dashboard?id=MPCoreDeveloper_SharpCorePDF">
     <img src="https://img.shields.io/sonar/quality_gate/MPCoreDeveloper_SharpCorePDF?server=https%3A%2F%2Fsonarcloud.io&amp;logo=sonarcloud&amp;logoColor=white" alt="SonarCloud quality gate" />
+  </a>
+  <a href="https://codecov.io/gh/MPCoreDeveloper/SharpCorePDF">
+    <img src="https://img.shields.io/codecov/c/github/MPCoreDeveloper/SharpCorePDF?logo=codecov&amp;logoColor=white" alt="coverage" />
   </a>
   <a href="https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/licence-MIT-blue" alt="licence: MIT" />
@@ -105,7 +110,8 @@ await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
   only protected against editing can be merged and re-protected in one step.
 * **Diagnostics instead of surprises**: damaged cross-reference tables are rebuilt by scanning the
   file, unselected pages that something still points at are folded onto a page that exists, and
-  anything the merge had to change is reported in `MergeResult.Warnings`.
+  anything the merge had to change is reported in `MergeResult.Warnings` as a `PdfWarning` whose
+  `Kind` names the condition — the part a caller may match on, while its message is only text.
 
 ## Getting it into a project
 
@@ -135,25 +141,28 @@ given instead of throwing. A document whose encryption stays closed is reported 
 `PdfDocumentInfo.IsReadable` cleared and `PdfDocumentInfo.RequiresPassword` set when a password is what
 stands in the way, so a caller can ask for one instead of being told the document is simply unusable.
 
-The package to install is `SharpCorePDF.DependencyInjection`: it depends on the other three, and its
-`AddSharpCorePDF()` call is the whole wiring. The version is still a preview, so `--prerelease` is
-required until 1.0.0 ships:
+The package to install is `SharpCorePDF`. It is the product name and the only name to remember: it
+carries no code of its own and depends on the four layers below, so one `dotnet add package` pulls in the
+whole library. The version is still a preview, so `--prerelease` is required until 1.0.0 ships:
 
 ```powershell
-dotnet add package SharpCorePDF.DependencyInjection --prerelease
+dotnet add package SharpCorePDF --prerelease
 ```
+
+If you would rather take one layer on its own — `SharpCorePDF.Domain` has no dependency at all — the four
+are published separately and install the same way.
 
 The XML documentation ships inside the packages, so every public type and member is described in
 IntelliSense without leaving the editor.
 
 To work against this source tree instead of the feed, reference the project
 (`dotnet add reference .\src\SharpCorePDF.DependencyInjection\SharpCorePDF.DependencyInjection.csproj`),
-or pack all four into a local feed and install them from there:
+or pack all five into a local feed and install them from there:
 
 ```powershell
 dotnet pack .\SharpCorePDF.slnx -c Release -o $env:TEMP\SharpCorePDF-feed
 dotnet nuget add source $env:TEMP\SharpCorePDF-feed --name SharpCorePDF
-dotnet add package SharpCorePDF.DependencyInjection --prerelease
+dotnet add package SharpCorePDF --prerelease
 ```
 
 Every package carries the logo as its package icon and embeds this README, so the page a feed shows for
@@ -191,10 +200,12 @@ walks through each one.
 
 ## How it is put together
 
-Four packages, one per layer. Each name links to its page on nuget.org.
+Five packages: one to install, and four that do the work, one per layer. Each name links to its page on
+nuget.org.
 
 | Package | Contents |
 | --- | --- |
+| [`SharpCorePDF`](https://www.nuget.org/packages/SharpCorePDF) | The one to install. Carries no assembly of its own: its only content is a dependency on the four below, so `dotnet add package SharpCorePDF` is the whole install. |
 | [`SharpCorePDF.Domain`](https://www.nuget.org/packages/SharpCorePDF.Domain) | The `MergePlan` aggregate, the `PdfSource` entity, value objects (`PageSelection`, `PageRange`, `PdfMetadata`, `PdfVersion`, `PdfPageSize`, `PageRotation`, the policies), the read models and the ports (`IPdfMerger`, `IPdfInspector`, `IPdfContentSource`). No I/O, no third-party code. |
 | [`SharpCorePDF.Application`](https://www.nuget.org/packages/SharpCorePDF.Application) | The use cases: `PdfMergerService` (validate, open, inspect, resolve selections, hand over to the engine, release every stream) and `PdfInspectorService`, plus the extension methods callers use. |
 | [`SharpCorePDF.Infrastructure`](https://www.nuget.org/packages/SharpCorePDF.Infrastructure) | The engine: the object model, the lexer, the object parser, the filter decoders, cross-reference tables, cross-reference streams, object streams, the page tree walk, the object copier, `PdfMergeEngine`, `PdfDocumentReader`, the writer and the content sources. |
@@ -248,10 +259,10 @@ engine be swapped in.
 ## Building and testing
 
 ```powershell
-# Everything at once, through the solution: the four packages, the tests,
+# Everything at once, through the solution: the five packages, the tests,
 # the examples and the measurement harness.
 dotnet build .\SharpCorePDF.slnx -c Release
-dotnet test  .\SharpCorePDF.slnx                      # 437 tests on net10.0, 437 on net11.0
+dotnet test  .\SharpCorePDF.slnx                      # 447 tests on net10.0, 447 on net11.0
 dotnet run --project .\examples\SharpCorePDF.Examples -c Release
 
 # Or one project at a time:
@@ -303,41 +314,67 @@ encrypted documents the merge engine writes were checked the same way with qpdf,
 ## Continuous integration
 
 [`ci.yml`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/.github/workflows/ci.yml) runs on
-every push to `main` and on every pull request: it builds the solution, runs both test legs, and sends
-the result to SonarCloud. It is deliberately not the publishing workflow, so a pull request is checked
-without anything reaching a feed.
+every push to `main` and on every pull request: it builds the solution, runs both test legs under the
+coverage collector, uploads the measurement to Codecov and to SonarCloud, and fails the run when either
+quality gate fails. It is deliberately not the publishing workflow, so a pull request is checked without
+anything reaching a feed.
 
 | What | Workflow | When |
 | --- | --- | --- |
-| Build, both test legs, coverage, static analysis | `ci.yml` | a push to `main`, a pull request, a manual dispatch |
+| Build, both test legs, coverage, static analysis, both gates | `ci.yml` | a push to `main`, a pull request, a manual dispatch |
 | Pack, the package check, the push to nuget.org | `publish.yml` | a `v*` tag, a manual dispatch with `publish: true` |
 
 The analysis runs in the runner rather than on SonarCloud's side, which is what lets it carry coverage:
-the scanner session opens before the build, both test legs run inside it, and it closes after them, so the
-report describes the assemblies that run produced. Coverage comes from `dotnet-coverage collect`, because
-`global.json` pins Microsoft.Testing.Platform as the test runner and the VSTest-only switches
-(`--collect "XPlat Code Coverage"`) are rejected there; the collector's Visual Studio XML is what Sonar
-reads, and a cobertura copy of the same measurement is attached to the run as an artifact.
+the scanner session opens before the build, the measured test leg runs inside it, and it closes after it,
+so the report describes the assemblies that run produced. Coverage comes from `dotnet-coverage collect`,
+because `global.json` pins Microsoft.Testing.Platform as the test runner and the VSTest-only switches
+(`--collect "XPlat Code Coverage"`) are rejected there. One binary report is converted twice: the Visual
+Studio XML that Sonar reads, and a cobertura copy that the artifact and the Codecov upload carry. Both
+services read the same measurement from the same run, so the gate and the badge cannot disagree about what
+was measured.
 
 What the analysis reports on is `src/` and `tests/`. The BMad Method bundle (`_bmad`, `_bmad-output`,
 `.cline`), the Python tooling under `docs/`, the examples and the measurement harness are excluded,
-because the gate is about what the packages ship rather than about everything in the tree.
+because the gate is about what the packages ship rather than about everything in the tree. Codecov is
+narrower still: `codecov.yml` ignores `tests/` as well, so its number is the coverage of the shipped
+assemblies. That number was 92% when this paragraph was written, against a declared target of 90%; the
+test project itself measures 99%, and a suite covering itself is not coverage of anything.
 
-Two things switch the scan on, and both live outside this repository:
+Both gates fail the run:
+
+| Gate | Where its rules live | What a red run means |
+| --- | --- | --- |
+| SonarCloud quality gate | the project on sonarcloud.io, kept in step with `src/.editorconfig` | the analysis was uploaded and the gate failed |
+| Codecov: 90% on the project, 90% on the change | `codecov.yml` | the report arrived and a number is below its target |
+
+`sonar.qualitygate.wait` on the scanner's `end` step is what turns the first from a badge into a gate.
+`fail_ci_if_error` on the Codecov upload does the same for the second: a report that never lands fails the
+run instead of leaving a stale number behind.
+
+Three things switch the uploads on, and all three live outside this repository:
 
 1. **A project on SonarCloud** under the key `MPCoreDeveloper_SharpCorePDF` in the organisation
    `mpcoredeveloper`, analysed through CI rather than by Automatic Analysis. A repository cannot be
    analysed both ways at once, and Automatic Analysis cannot import coverage.
 2. **The repository secret `SONAR_TOKEN`** (settings → Secrets and variables → Actions), a token from
    that SonarCloud account.
+3. **The repository secret `CODECOV_TOKEN`**, the upload token of the Codecov project for
+   `MPCoreDeveloper/SharpCorePDF`.
 
-Until the secret exists the scan steps are skipped and the workflow still builds and tests, because the
-gate is a small job that checks the secret — a job-level `if` cannot read one itself. That is what keeps a
-fork, or this repository before the SonarCloud project was created, from showing a red run that says
-nothing about the code.
+Until a secret exists, the steps that need it are skipped and the workflow still builds, tests and
+measures coverage, because the gate is a small first job that checks both secrets — a job-level `if`
+cannot read one itself. That is what keeps a fork, or this repository before either project was created,
+from showing a red run that says nothing about the code.
 
-The quality gate is reported rather than enforced: nothing in the workflow waits for it, so a failing gate
-colours the badge and appears on SonarCloud without failing a build whose tests passed.
+### The same rules, locally
+
+`src/Directory.Build.props` references `SonarAnalyzer.CSharp`, so `dotnet build` runs the rules the
+SonarCloud profile runs and reports a finding at the line that causes it instead of after a push. The
+build is clean on both legs with the analyzer enabled. Three findings this repository answers with a
+decision rather than a change — `S101` for the product's capitalised name, `S1694` for the closed
+`PdfObject` hierarchy, `S4790` for the MD5 that the PDF encryption algorithms specify — are silenced per
+file in `src/.editorconfig`, each with the reason, and the affected lines carry `// NOSONAR` so the server
+reaches the same conclusion. Everything else the analyzer reports is meant to be fixed.
 
 ## Publishing
 
@@ -364,13 +401,17 @@ That box is the one the portal labels *Glob Patterns and Packages (Separate by a
 takes one glob or exact package ID per line:
 
 ```
+SharpCorePDF
 SharpCorePDF.*
 ```
 
 An empty box is refused with *At least one valid glob pattern or package must be specified*. A line may
-hold only `*`, letters, digits, `_`, `.` and `-`, which is why `SharpCorePDF.*` is accepted and why it
-covers all four packages here; four lines holding the four IDs cover the same ground. The temporary API
-key is scoped to the subjects written there, so a package that no subject matches cannot be pushed.
+hold only `*`, letters, digits, `_`, `.` and `-`, which is why both lines are accepted — and both are
+needed. `SharpCorePDF.*` matches the four layers, which all have a dot after the product name, and does
+not match `SharpCorePDF` itself, which has not. A policy holding only the glob publishes four packages and
+refuses the entry point with 403 Forbidden; five lines holding the five IDs cover the same ground. The
+temporary API key is scoped to the subjects written there, so a package that no subject matches cannot be
+pushed.
 
 The policy is owned by a nuget.org user or organization and applies to every package that owner owns;
 its scopes decide whether it may publish new packages, new versions of existing ones, or both. The
@@ -397,6 +438,29 @@ re-run of an already-published version a no-op instead of an error. Publishing f
 means a long-lived API key, because the temporary ones exist only inside a CI run. GitHub Packages is a
 separate mechanism that does not use any of this: it wants a token with `packages: write`, either
 `GITHUB_TOKEN` inside a workflow or a personal access token from a workstation.
+
+What has to be true *before* any of that is spent on a version number — the package id, the settled
+surface, the single target framework, the changelog, the symbols, and the dry run — is written down as a
+gate list in
+[`docs/release-checklist.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/release-checklist.md).
+The [.NET Foundation's eligibility criteria](https://github.com/dotnet-foundation/projects#eligibility-criteria),
+adopted here as the project's public bar rather than as an application tactic, are mapped criterion by
+criterion in
+[`docs/foundation-readiness.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/foundation-readiness.md).
+The eight conditions that decide *when* an application is filed, and the answers it will contain, are in
+[`docs/foundation-application.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/foundation-application.md).
+
+## Contributing
+
+Read
+[`CONTRIBUTING.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/CONTRIBUTING.md) before the
+first pull request: it names the two SDKs the build needs, the per-framework test invocations, the bar a
+change has to clear, and what a merge buys you in rights. Participation falls under the
+[Code of Conduct](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/CODE_OF_CONDUCT.md), and a
+suspected vulnerability goes through
+[`SECURITY.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/SECURITY.md) rather than through
+the issue tracker — a public issue describing a crash in a PDF parser is a working exploit by the time it
+is indexed.
 
 ## Feedback
 

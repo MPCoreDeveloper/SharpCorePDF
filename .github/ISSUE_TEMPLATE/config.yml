@@ -1,0 +1,18 @@
+# The chooser a reader meets before writing anything.
+#
+# Blank issues stay off: both forms ask for the two things a report cannot be acted on without — the
+# version, and what the document contained. The links below go to files in this repository rather than to
+# GitHub's security-advisory form, because that form only answers once private vulnerability reporting is
+# switched on in the repository settings, and a link that 404s is worse than a page that explains.
+# https://docs.github.com/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: Report a vulnerability privately
+    url: https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/SECURITY.md
+    about: The two private channels (GitHub's private advisory, or the contact form), scope, and what happens after a report.
+
+  - name: Read how to contribute before opening a pull request
+    url: https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/CONTRIBUTING.md
+    about: The two SDKs, the commands, the bar a change has to clear, and the rights ladder from contributor to committer.

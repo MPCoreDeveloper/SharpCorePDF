@@ -1,0 +1,52 @@
+NOTICE
+======
+
+SharpCorePDF
+Copyright (c) 2026 MPCoreDeveloper
+
+This repository, and every package built from it (SharpCorePDF, SharpCorePDF.Domain,
+SharpCorePDF.Application, SharpCorePDF.Infrastructure, SharpCorePDF.DependencyInjection), is licensed
+under the MIT licence in LICENSE. The copyright in all of it is held by MPCoreDeveloper, who is also the
+only author of every source file currently in the tree. There is no corporate entity behind the project
+and no contributor has assigned or retained rights in code that is not theirs: the contribution terms are
+in CONTRIBUTING.md, and no outside contribution has been merged yet.
+
+Third-party material
+--------------------
+
+No third-party source code is vendored, copied, generated from or linked into these assemblies. The PDF
+object model, the lexer, the object parser, the stream filters (FlateDecode, ASCIIHexDecode and
+ASCII85Decode, with the PNG and TIFF predictors), the cross-reference tables, the cross-reference and
+object streams, the page tree walk, the object copier and the writer are all written in this repository,
+against ISO 32000-1 and ISO 32000-2 as specifications rather than against an implementation.
+
+The only third-party code a consumer receives comes from NuGet, transitively, and only through
+SharpCorePDF.DependencyInjection. SharpCorePDF.Domain, SharpCorePDF.Application and
+SharpCorePDF.Infrastructure have no package reference at all; SharpCorePDF itself has no code of its own.
+
+    Microsoft.Extensions.Configuration.Binder         MIT   Copyright (c) .NET Foundation and Contributors
+    Microsoft.Extensions.DependencyInjection.Abstractions   MIT
+    Microsoft.Extensions.Options                      MIT
+
+Their licence texts travel inside their own packages; nothing of theirs is modified or republished here.
+Microsoft.CodeAnalysis.PublicApiAnalyzers is a development-time dependency only (PrivateAssets="all") and
+is not part of any package.
+
+Test fixtures are documents, not code. The ones under tests/ are produced by docs/tools/make-fixtures.py,
+which is part of this repository; the encrypted fixtures were additionally produced with pikepdf so that an
+independent implementation wrote them. No code from pikepdf, qpdf or any other tool is included, linked or
+redistributed, and the generated files carry no attribution requirement. pyHanko, qpdf, pikepdf and pypdf
+appear in docs/measurements.md as independent readers that were run against output; they are tools used to
+verify, not dependencies.
+
+The name
+--------
+
+"SharpCorePDF" is this project's own name. It is not affiliated with, endorsed by or derived from empira
+Software GmbH (PdfSharp), PdfSharpCore, iText Group NV or QuestPDF, and no code from any of them is part
+of this repository. The name is one transposition away from PdfSharpCore, which is stated plainly here and
+in docs/foundation-application.md rather than left to be discovered: the similarity is in the spelling, not
+in the code.
+
+Trademarks of others that appear in this repository's prose and tests (Portable Document Format, .NET,
+GitHub, nuget.org, Windows, Linux) belong to their owners and are used descriptively.

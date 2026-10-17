@@ -1,0 +1,63 @@
+name: A feature request
+description: Something the library should do, or should stop doing.
+title: "[Feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read the scope first, so that this does not turn into a conversation about 1.0 twice:
+        `README.md` lists what the library does and, in the same document, what it deliberately does not
+        do; `docs/measurements.md` says what has been measured and what has not. A request that falls
+        inside the "not doing" list is still worth filing — it is just a longer conversation, and better
+        had in public.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you cannot do today
+      description: >-
+        The problem, not the API. "Merging 400 documents takes 90 seconds and I cannot tell which one is
+        slow" is a problem; "add a progress callback" is one of its possible solutions.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like instead
+      description: If you have an API shape in mind, write it as code. It may not be the shape that ships.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried instead (optional)
+      description: A workaround someone can use today is worth more than a wish.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Does this change the public API
+      description: >-
+        An addition is a MINOR version; a change to something already published is not free, and the
+        snapshot in `PublicAPI.Shipped.txt` is what makes that visible.
+      options:
+        - An addition (new type, member or option)
+        - A change to something that already exists
+        - Neither — documentation, an example or a measurement
+        - I do not know
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: offer
+    attributes:
+      label: Would you implement it
+      options:
+        - label: I would open the pull request myself, with a test that fails without it.
+          required: false
+        - label: I can provide the documents that show the problem.
+          required: false

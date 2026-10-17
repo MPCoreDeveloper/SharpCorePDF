@@ -1,0 +1,113 @@
+name: A defect
+description: A merge or an inspection produced something it should not have, or threw when it should have reported.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A defect report is only actionable without the document it happened to. If the file cannot be
+        shared, describe what is in it (encrypted? object streams? a damaged xref? annotations?) — the
+        engine's whole design is about what it does when a document is not perfect, so which kind of
+        imperfection it was is usually the answer.
+
+        **A security problem does not belong here.** `SECURITY.md` names the two private channels; this
+        tracker is public and indexed.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The package version, as `dotnet list package` reports it.
+      placeholder: "1.0.0-preview.3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Which package
+      description: If you installed SharpCorePDF, that is the one to name; it pulls the four layers in.
+      options:
+        - SharpCorePDF
+        - SharpCorePDF.Domain
+        - SharpCorePDF.Application
+        - SharpCorePDF.Infrastructure
+        - SharpCorePDF.DependencyInjection
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: framework
+    attributes:
+      label: Target framework
+      options:
+        - net11.0
+        - net10.0
+        - other (there is no other leg yet — say which in the description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened
+      description: >-
+        What you got, verbatim where it is an exception: the type, the message and the stack trace. If a
+        merge completed with entries in `MergeResult.Warnings`, paste them — a warning that is wrong is as
+        much a defect as an exception that should not have been thrown.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+      description: If the output is a file, say what an independent reader did with it (see the next field).
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: >-
+        The smallest code path that shows it — the `MergePlan` or the `InspectAsync` call, the selections,
+        the options. A document you can attach is worth more than a description; one you cannot attach can
+        be described.
+      placeholder: |
+        var plan = MergePlan.Create().Add(...);
+        var result = await merger.MergeAsync(plan, output);
+    validations:
+      required: true
+
+  - type: textarea
+    id: independent
+    attributes:
+      label: What an independent reader says (optional)
+      description: >-
+        `qpdf --check`, `pypdf` or `pikepdf` on the output or on the input. It separates "our writer is
+        wrong" from "our reader is wrong", which is the first question anyone will ask.
+    validations:
+      required: false
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, and the runtime you ran it on (`dotnet --info` first lines).
+      placeholder: "Windows 11, .NET 11.0.x"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before submitting
+      options:
+        - label: I removed anything from the documents and the output that identifies a person or a client.
+          required: true
+        - label: This is not a security report, which goes through the private channels in SECURITY.md.
+          required: true
+        - label: I checked that the version I am on is the newest one published.
+          required: false
