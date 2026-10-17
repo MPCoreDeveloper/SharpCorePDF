@@ -230,7 +230,7 @@ that is 92% (`SharpCorePDF.Infrastructure` 91%, `SharpCorePDF.Domain` 96%,
 `SharpCorePDF.Application` 100%, `SharpCorePDF.DependencyInjection` 100%), while the suite that measures
 them sits at 99%. Counting the tests would raise the number and tell a reader nothing.
 
-Two consequences worth stating before a release:
+A few consequences worth stating before a release:
 
 1. **A gate that is green is a gate that ran.** The scan cannot be skipped silently: a missing
    `SONAR_TOKEN` skips its steps, and a run where they were skipped proves nothing about the analysis. The
@@ -246,5 +246,11 @@ Two consequences worth stating before a release:
    something a build can do for itself. Nor is the 90% a click on the gate as it stands: `Sonar way` is built
    in and cannot be edited, so 90% means copying it into a gate of this project's own and binding the project
    to that copy.
+4. **The analysis method is a setting of the same kind, and it can stop the run before the build.** SonarCloud
+   will not accept a CI analysis while the project is on Automatic Analysis, and that switch is not writable
+   from here or from the API — `api/settings/set` answers "Setting `sonar.autoscan.enabled` cannot be set on a
+   Project". `ci.yml` reads it first and fails on the step named *Check that Automatic Analysis is off*, which
+   means a run in that state has not built or tested anything; the fix is the toggle under the project's
+   Administration → Analysis Method, and the error links to it.
 
 
