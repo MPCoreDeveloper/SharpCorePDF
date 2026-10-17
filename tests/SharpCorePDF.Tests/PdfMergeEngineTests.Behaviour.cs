@@ -61,10 +61,10 @@ public sealed partial class PdfMergeEngineTests
 
         Assert.Contains(
             merged.Result.Warnings,
-            warning => warning.Contains("bookmark", StringComparison.OrdinalIgnoreCase));
+            warning => warning.Kind == PdfWarningKind.OutlinesDroppedByPolicy);
         Assert.Contains(
             merged.Result.Warnings,
-            warning => warning.Contains("read back", StringComparison.OrdinalIgnoreCase));
+            warning => warning.Kind == PdfWarningKind.OutputVerified);
         Assert.False(merged.Document.HasOutlines);
     }
 

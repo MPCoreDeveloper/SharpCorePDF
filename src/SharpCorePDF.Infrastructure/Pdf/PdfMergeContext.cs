@@ -55,7 +55,7 @@ internal sealed class PdfMergeContext
     public required int PagesNodeNumber { get; init; }
 
     /// <summary>Gets the remarks collected while merging.</summary>
-    public List<string> Warnings { get; } = [];
+    public List<PdfWarning> Warnings { get; } = [];
 
     /// <summary>Gets the sources in merge order.</summary>
     public List<MergeSource> Sources { get; } = [];

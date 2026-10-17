@@ -30,13 +30,27 @@ public sealed record PdfDocumentInfo
     public bool RequiresPassword { get; init; }
 
     /// <summary>
+    /// Gets the revision of the standard security handler the document declares, or
+    /// <see langword="null"/> when the document declares no encryption or no integer <c>R</c> entry.
+    /// </summary>
+    /// <remarks>
+    /// The value is the document's own <c>R</c> declaration, so it is reported even when the
+    /// encryption stayed closed — an unsupported filter, an unimplemented revision, or a password
+    /// that did not match. Revisions 2 to 6 are the ones the engine implements; a value outside that
+    /// range describes what the file claims rather than what the engine can read. A document that is
+    /// not encrypted reports <see langword="null"/>, never <c>0</c>.
+    /// </remarks>
+    public int? SecurityHandlerRevision { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether the structure of the document could be read.
     /// </summary>
     /// <remarks>
     /// This is <see langword="false"/> for an encrypted document whose encryption stayed closed,
     /// either because a password is needed or because the security handler it uses is not one the
     /// engine implements. Everything other than <see cref="SourceName"/>, <see cref="IsEncrypted"/>,
-    /// <see cref="RequiresPassword"/> and <see cref="Warnings"/> is empty or zero when it is
+    /// <see cref="RequiresPassword"/>, <see cref="SecurityHandlerRevision"/> and
+    /// <see cref="Warnings"/> is empty or zero when it is
     /// <see langword="false"/>. A document that is not encrypted is always readable.
     /// </remarks>
     public bool IsReadable { get; init; } = true;
@@ -66,7 +80,12 @@ public sealed record PdfDocumentInfo
     /// Gets problems that did not stop the document from being read, for example a damaged
     /// cross-reference table that had to be reconstructed by scanning the file.
     /// </summary>
-    public IReadOnlyList<string> Warnings { get; init; } = [];
+    /// <remarks>
+    /// A remark is identified by its <see cref="PdfWarning.Kind"/>; its text is for humans and may be
+    /// reworded. Remarks are reported for an encrypted document whose encryption stayed closed too,
+    /// because what prevented it from being opened is exactly what a caller needs to know.
+    /// </remarks>
+    public IReadOnlyList<PdfWarning> Warnings { get; init; } = [];
 
     /// <summary>Gets the first page size, or <see langword="null"/> for a document without pages.</summary>
     public PdfPageSize? FirstPageSize => Pages.Count > 0 ? Pages[0].Size : null;

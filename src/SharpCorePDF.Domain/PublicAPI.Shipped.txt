@@ -1,0 +1,406 @@
+#nullable enable
+~override SharpCorePDF.Domain.ValueObjects.PageRange.Equals(object obj) -> bool
+~override SharpCorePDF.Domain.ValueObjects.PdfPageSize.Equals(object obj) -> bool
+~override SharpCorePDF.Domain.ValueObjects.PdfSourceId.Equals(object obj) -> bool
+~override SharpCorePDF.Domain.ValueObjects.PdfVersion.Equals(object obj) -> bool
+const SharpCorePDF.Domain.ValueObjects.PageRange.OpenEnd = 2147483647 -> int
+const SharpCorePDF.Domain.ValueObjects.PdfPageSize.MillimetersPerInch = 25.4 -> double
+const SharpCorePDF.Domain.ValueObjects.PdfPageSize.PointsPerInch = 72 -> double
+override SharpCorePDF.Domain.Aggregates.MergePlan.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.Aggregates.MergePlan.GetHashCode() -> int
+override SharpCorePDF.Domain.Aggregates.MergePlan.ToString() -> string!
+override SharpCorePDF.Domain.Entities.PdfSource.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.Entities.PdfSource.GetHashCode() -> int
+override SharpCorePDF.Domain.Entities.PdfSource.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.MergedSourceSummary.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.MergedSourceSummary.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.MergedSourceSummary.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.MergeResult.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.MergeResult.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.MergeResult.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfPageInfo.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfPageInfo.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfPageInfo.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PageRange.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PageRange.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PageSelection.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PageSelection.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PageSelection.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfMetadata.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfMetadata.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfMetadata.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfPageSize.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfPageSize.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfSourceId.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfSourceId.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfVersion.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfVersion.ToString() -> string!
+SharpCorePDF.Domain.Aggregates.MergePlan
+SharpCorePDF.Domain.Aggregates.MergePlan.<Clone>$() -> SharpCorePDF.Domain.Aggregates.MergePlan!
+SharpCorePDF.Domain.Aggregates.MergePlan.AddSource(SharpCorePDF.Domain.Entities.PdfSource! source) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+SharpCorePDF.Domain.Aggregates.MergePlan.AddSources(System.Collections.Generic.IEnumerable<SharpCorePDF.Domain.Entities.PdfSource!>! sources) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+SharpCorePDF.Domain.Aggregates.MergePlan.EnsureValid() -> void
+SharpCorePDF.Domain.Aggregates.MergePlan.Equals(SharpCorePDF.Domain.Aggregates.MergePlan? other) -> bool
+SharpCorePDF.Domain.Aggregates.MergePlan.FindSource(SharpCorePDF.Domain.ValueObjects.PdfSourceId id) -> SharpCorePDF.Domain.Entities.PdfSource?
+SharpCorePDF.Domain.Aggregates.MergePlan.IsEmpty.get -> bool
+SharpCorePDF.Domain.Aggregates.MergePlan.Output.get -> SharpCorePDF.Domain.ValueObjects.MergeOutputOptions!
+SharpCorePDF.Domain.Aggregates.MergePlan.PrimarySource.get -> SharpCorePDF.Domain.Entities.PdfSource!
+SharpCorePDF.Domain.Aggregates.MergePlan.RemoveSource(SharpCorePDF.Domain.ValueObjects.PdfSourceId id) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+SharpCorePDF.Domain.Aggregates.MergePlan.SourceCount.get -> int
+SharpCorePDF.Domain.Aggregates.MergePlan.Sources.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.Entities.PdfSource!>!
+SharpCorePDF.Domain.Aggregates.MergePlan.Validate() -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Domain.Aggregates.MergePlan.WithOutput(SharpCorePDF.Domain.ValueObjects.MergeOutputOptions! output) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+SharpCorePDF.Domain.Aggregates.MergePlan.WithOutput(System.Func<SharpCorePDF.Domain.ValueObjects.MergeOutputOptions!, SharpCorePDF.Domain.ValueObjects.MergeOutputOptions!>! mutate) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+SharpCorePDF.Domain.Aggregates.MergePlan.WithPrimarySource(SharpCorePDF.Domain.ValueObjects.PdfSourceId? primarySourceId) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+SharpCorePDF.Domain.Entities.PdfSource
+SharpCorePDF.Domain.Entities.PdfSource.<Clone>$() -> SharpCorePDF.Domain.Entities.PdfSource!
+SharpCorePDF.Domain.Entities.PdfSource.Content.get -> SharpCorePDF.Domain.Ports.IPdfContentSource!
+SharpCorePDF.Domain.Entities.PdfSource.DisplayName.get -> string!
+SharpCorePDF.Domain.Entities.PdfSource.Equals(SharpCorePDF.Domain.Entities.PdfSource? other) -> bool
+SharpCorePDF.Domain.Entities.PdfSource.Id.get -> SharpCorePDF.Domain.ValueObjects.PdfSourceId
+SharpCorePDF.Domain.Entities.PdfSource.Pages.get -> SharpCorePDF.Domain.ValueObjects.PageSelection!
+SharpCorePDF.Domain.Entities.PdfSource.Password.get -> string?
+SharpCorePDF.Domain.Entities.PdfSource.Rename(string! displayName) -> SharpCorePDF.Domain.Entities.PdfSource!
+SharpCorePDF.Domain.Entities.PdfSource.WithPages(SharpCorePDF.Domain.ValueObjects.PageSelection! pages) -> SharpCorePDF.Domain.Entities.PdfSource!
+SharpCorePDF.Domain.Entities.PdfSource.WithPassword(string? password) -> SharpCorePDF.Domain.Entities.PdfSource!
+SharpCorePDF.Domain.Exceptions.MergePlanValidationException
+SharpCorePDF.Domain.Exceptions.MergePlanValidationException.Errors.get -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Domain.Exceptions.MergePlanValidationException.MergePlanValidationException(string! error) -> void
+SharpCorePDF.Domain.Exceptions.MergePlanValidationException.MergePlanValidationException(System.Collections.Generic.IEnumerable<string!>! errors) -> void
+SharpCorePDF.Domain.Exceptions.PdfEncryptionException
+SharpCorePDF.Domain.Exceptions.PdfEncryptionException.PdfEncryptionException(string! sourceName, bool requiresPassword) -> void
+SharpCorePDF.Domain.Exceptions.PdfEncryptionException.RequiresPassword.get -> bool
+SharpCorePDF.Domain.Exceptions.PdfEncryptionException.SourceName.get -> string!
+SharpCorePDF.Domain.Exceptions.PdfException
+SharpCorePDF.Domain.Exceptions.PdfException.PdfException(string! message, System.Exception? innerException) -> void
+SharpCorePDF.Domain.Exceptions.PdfException.PdfException(string! message) -> void
+SharpCorePDF.Domain.Exceptions.PdfSourceFormatException
+SharpCorePDF.Domain.Exceptions.PdfSourceFormatException.Detail.get -> string!
+SharpCorePDF.Domain.Exceptions.PdfSourceFormatException.PdfSourceFormatException(string! sourceName, string! detail, System.Exception? innerException = null) -> void
+SharpCorePDF.Domain.Exceptions.PdfSourceFormatException.SourceName.get -> string!
+SharpCorePDF.Domain.Exceptions.PdfUnsupportedFeatureException
+SharpCorePDF.Domain.Exceptions.PdfUnsupportedFeatureException.Feature.get -> string!
+SharpCorePDF.Domain.Exceptions.PdfUnsupportedFeatureException.PdfUnsupportedFeatureException(string! sourceName, string! feature, string! detail) -> void
+SharpCorePDF.Domain.Exceptions.PdfUnsupportedFeatureException.SourceName.get -> string!
+SharpCorePDF.Domain.Ports.IPdfContentSource
+SharpCorePDF.Domain.Ports.IPdfContentSource.DisplayName.get -> string!
+SharpCorePDF.Domain.Ports.IPdfContentSource.Length.get -> long?
+SharpCorePDF.Domain.Ports.IPdfContentSource.OpenReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.IO.Stream!>
+SharpCorePDF.Domain.Ports.IPdfInspector
+SharpCorePDF.Domain.Ports.IPdfInspector.InspectAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfDocumentInfo!>!
+SharpCorePDF.Domain.Ports.IPdfMerger
+SharpCorePDF.Domain.Ports.IPdfMerger.MergeAsync(SharpCorePDF.Domain.Aggregates.MergePlan! plan, System.IO.Stream! destination, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.MergeResult!>!
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.<Clone>$() -> SharpCorePDF.Domain.ReadModels.MergedSourceSummary!
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.Deconstruct(out string! SourceName, out int PagesContributed, out int SourcePageCount, out SharpCorePDF.Domain.ValueObjects.PdfVersion Version) -> void
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.Equals(SharpCorePDF.Domain.ReadModels.MergedSourceSummary? other) -> bool
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.IsComplete.get -> bool
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.MergedSourceSummary(string! SourceName, int PagesContributed, int SourcePageCount, SharpCorePDF.Domain.ValueObjects.PdfVersion Version) -> void
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.PagesContributed.get -> int
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.PagesContributed.init -> void
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.SourceName.get -> string!
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.SourceName.init -> void
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.SourcePageCount.get -> int
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.SourcePageCount.init -> void
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.Version.get -> SharpCorePDF.Domain.ValueObjects.PdfVersion
+SharpCorePDF.Domain.ReadModels.MergedSourceSummary.Version.init -> void
+SharpCorePDF.Domain.ReadModels.MergeResult
+SharpCorePDF.Domain.ReadModels.MergeResult.<Clone>$() -> SharpCorePDF.Domain.ReadModels.MergeResult!
+SharpCorePDF.Domain.ReadModels.MergeResult.Duration.get -> System.TimeSpan
+SharpCorePDF.Domain.ReadModels.MergeResult.Duration.init -> void
+SharpCorePDF.Domain.ReadModels.MergeResult.Equals(SharpCorePDF.Domain.ReadModels.MergeResult? other) -> bool
+SharpCorePDF.Domain.ReadModels.MergeResult.MergeResult() -> void
+SharpCorePDF.Domain.ReadModels.MergeResult.OutputBytes.get -> long
+SharpCorePDF.Domain.ReadModels.MergeResult.OutputBytes.init -> void
+SharpCorePDF.Domain.ReadModels.MergeResult.OutputVersion.get -> SharpCorePDF.Domain.ValueObjects.PdfVersion
+SharpCorePDF.Domain.ReadModels.MergeResult.OutputVersion.init -> void
+SharpCorePDF.Domain.ReadModels.MergeResult.PageCount.get -> int
+SharpCorePDF.Domain.ReadModels.MergeResult.PageCount.init -> void
+SharpCorePDF.Domain.ReadModels.MergeResult.PrimarySourceId.get -> SharpCorePDF.Domain.ValueObjects.PdfSourceId
+SharpCorePDF.Domain.ReadModels.MergeResult.PrimarySourceId.init -> void
+SharpCorePDF.Domain.ReadModels.MergeResult.SourceCount.get -> int
+SharpCorePDF.Domain.ReadModels.MergeResult.SourceCount.init -> void
+SharpCorePDF.Domain.ReadModels.MergeResult.Sources.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ReadModels.MergedSourceSummary!>!
+SharpCorePDF.Domain.ReadModels.MergeResult.Sources.init -> void
+SharpCorePDF.Domain.ReadModels.MergeResult.Warnings.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfDocumentInfo!
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.EmbeddedFileCount.get -> int
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.EmbeddedFileCount.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.Equals(SharpCorePDF.Domain.ReadModels.PdfDocumentInfo? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.FirstPageSize.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize?
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.HasAcroForm.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.HasAcroForm.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.HasOutlines.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.HasOutlines.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.HasUniformPageSize.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.IsEncrypted.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.IsEncrypted.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.IsReadable.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.IsReadable.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.Metadata.get -> SharpCorePDF.Domain.ValueObjects.PdfMetadata!
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.Metadata.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.OutlineItemCount.get -> int
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.OutlineItemCount.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.PageCount.get -> int
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.PageCount.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.Pages.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ReadModels.PdfPageInfo!>!
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.Pages.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.PdfDocumentInfo() -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.RequiresPassword.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.RequiresPassword.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.SourceLengthBytes.get -> long?
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.SourceLengthBytes.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.SourceName.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.SourceName.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.Version.get -> SharpCorePDF.Domain.ValueObjects.PdfVersion
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.Version.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.Warnings.init -> void
+SharpCorePDF.Domain.ReadModels.PdfPageInfo
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfPageInfo!
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.AnnotationCount.get -> int
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.AnnotationCount.init -> void
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.Deconstruct(out int Number, out SharpCorePDF.Domain.ValueObjects.PdfPageSize Size, out SharpCorePDF.Domain.ValueObjects.PageRotation Rotation, out bool HasContent, out int AnnotationCount) -> void
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.DisplaySize.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.Equals(SharpCorePDF.Domain.ReadModels.PdfPageInfo? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.HasContent.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.HasContent.init -> void
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.Number.get -> int
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.Number.init -> void
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.PdfPageInfo(int Number, SharpCorePDF.Domain.ValueObjects.PdfPageSize Size, SharpCorePDF.Domain.ValueObjects.PageRotation Rotation, bool HasContent, int AnnotationCount) -> void
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.Rotation.get -> SharpCorePDF.Domain.ValueObjects.PageRotation
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.Rotation.init -> void
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.Size.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+SharpCorePDF.Domain.ReadModels.PdfPageInfo.Size.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.MergeOutputOptions!
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.Encryption.get -> SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions?
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.Encryption.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.Equals(SharpCorePDF.Domain.ValueObjects.MergeOutputOptions? other) -> bool
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.MergeOutputOptions() -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.MetadataOverride.get -> SharpCorePDF.Domain.ValueObjects.PdfMetadata?
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.MetadataOverride.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.MetadataPolicy.get -> SharpCorePDF.Domain.ValueObjects.MetadataPolicy
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.MetadataPolicy.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.ModificationDate.get -> System.DateTimeOffset?
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.ModificationDate.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.OutlinePolicy.get -> SharpCorePDF.Domain.ValueObjects.OutlinePolicy
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.OutlinePolicy.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.PageLabelPolicy.get -> SharpCorePDF.Domain.ValueObjects.PageLabelPolicy
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.PageLabelPolicy.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.PreserveAcroForm.get -> bool
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.PreserveAcroForm.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.PreserveAnnotations.get -> bool
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.PreserveAnnotations.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.PreserveEmbeddedFiles.get -> bool
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.PreserveEmbeddedFiles.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.PrimarySourceId.get -> SharpCorePDF.Domain.ValueObjects.PdfSourceId?
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.PrimarySourceId.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.Producer.get -> string!
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.Producer.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.TargetVersion.get -> SharpCorePDF.Domain.ValueObjects.PdfVersion
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.TargetVersion.init -> void
+SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.Validate() -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Domain.ValueObjects.MetadataPolicy
+SharpCorePDF.Domain.ValueObjects.MetadataPolicy.FromPrimarySource = 0 -> SharpCorePDF.Domain.ValueObjects.MetadataPolicy
+SharpCorePDF.Domain.ValueObjects.MetadataPolicy.Merge = 1 -> SharpCorePDF.Domain.ValueObjects.MetadataPolicy
+SharpCorePDF.Domain.ValueObjects.MetadataPolicy.None = 2 -> SharpCorePDF.Domain.ValueObjects.MetadataPolicy
+SharpCorePDF.Domain.ValueObjects.OutlinePolicy
+SharpCorePDF.Domain.ValueObjects.OutlinePolicy.Drop = 1 -> SharpCorePDF.Domain.ValueObjects.OutlinePolicy
+SharpCorePDF.Domain.ValueObjects.OutlinePolicy.Preserve = 0 -> SharpCorePDF.Domain.ValueObjects.OutlinePolicy
+SharpCorePDF.Domain.ValueObjects.PageLabelPolicy
+SharpCorePDF.Domain.ValueObjects.PageLabelPolicy.Drop = 0 -> SharpCorePDF.Domain.ValueObjects.PageLabelPolicy
+SharpCorePDF.Domain.ValueObjects.PageLabelPolicy.FromPrimarySource = 1 -> SharpCorePDF.Domain.ValueObjects.PageLabelPolicy
+SharpCorePDF.Domain.ValueObjects.PageRange
+SharpCorePDF.Domain.ValueObjects.PageRange.Contains(int page) -> bool
+SharpCorePDF.Domain.ValueObjects.PageRange.Count(int documentPageCount, string! sourceName) -> int
+SharpCorePDF.Domain.ValueObjects.PageRange.Enumerate(int documentPageCount, string! sourceName) -> System.Collections.Generic.IEnumerable<int>!
+SharpCorePDF.Domain.ValueObjects.PageRange.Equals(SharpCorePDF.Domain.ValueObjects.PageRange other) -> bool
+SharpCorePDF.Domain.ValueObjects.PageRange.From.get -> int
+SharpCorePDF.Domain.ValueObjects.PageRange.IsOpenEnded.get -> bool
+SharpCorePDF.Domain.ValueObjects.PageRange.PageRange() -> void
+SharpCorePDF.Domain.ValueObjects.PageRange.ResolveTo(int documentPageCount, string! sourceName) -> int
+SharpCorePDF.Domain.ValueObjects.PageRange.To.get -> int
+SharpCorePDF.Domain.ValueObjects.PageRotation
+SharpCorePDF.Domain.ValueObjects.PageRotation.Clockwise180 = 180 -> SharpCorePDF.Domain.ValueObjects.PageRotation
+SharpCorePDF.Domain.ValueObjects.PageRotation.Clockwise270 = 270 -> SharpCorePDF.Domain.ValueObjects.PageRotation
+SharpCorePDF.Domain.ValueObjects.PageRotation.Clockwise90 = 90 -> SharpCorePDF.Domain.ValueObjects.PageRotation
+SharpCorePDF.Domain.ValueObjects.PageRotation.None = 0 -> SharpCorePDF.Domain.ValueObjects.PageRotation
+SharpCorePDF.Domain.ValueObjects.PageRotationExtensions
+SharpCorePDF.Domain.ValueObjects.PageRotationExtensions.extension(SharpCorePDF.Domain.ValueObjects.PageRotation)
+SharpCorePDF.Domain.ValueObjects.PageRotationExtensions.extension(SharpCorePDF.Domain.ValueObjects.PageRotation).Degrees.get -> int
+SharpCorePDF.Domain.ValueObjects.PageRotationExtensions.extension(SharpCorePDF.Domain.ValueObjects.PageRotation).Inverted.get -> SharpCorePDF.Domain.ValueObjects.PageRotation
+SharpCorePDF.Domain.ValueObjects.PageRotationExtensions.extension(SharpCorePDF.Domain.ValueObjects.PageRotation).SwapsPageDimensions.get -> bool
+SharpCorePDF.Domain.ValueObjects.PageSelection
+SharpCorePDF.Domain.ValueObjects.PageSelection.Add(SharpCorePDF.Domain.ValueObjects.PageRange range) -> SharpCorePDF.Domain.ValueObjects.PageSelection!
+SharpCorePDF.Domain.ValueObjects.PageSelection.Concat(SharpCorePDF.Domain.ValueObjects.PageSelection! other) -> SharpCorePDF.Domain.ValueObjects.PageSelection!
+SharpCorePDF.Domain.ValueObjects.PageSelection.Equals(SharpCorePDF.Domain.ValueObjects.PageSelection? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PageSelection.IsAll.get -> bool
+SharpCorePDF.Domain.ValueObjects.PageSelection.RangeCount.get -> int
+SharpCorePDF.Domain.ValueObjects.PageSelection.Ranges.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PageRange>!
+SharpCorePDF.Domain.ValueObjects.PageSelection.Resolve(int documentPageCount, string! sourceName) -> System.Collections.Generic.IReadOnlyList<int>!
+SharpCorePDF.Domain.ValueObjects.PageSelection.ResolveCount(int documentPageCount, string! sourceName) -> int
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionAlgorithm
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionAlgorithm.AesWith128BitKey = 2 -> SharpCorePDF.Domain.ValueObjects.PdfEncryptionAlgorithm
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionAlgorithm.AesWith256BitKey = 3 -> SharpCorePDF.Domain.ValueObjects.PdfEncryptionAlgorithm
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionAlgorithm.Rc4With128BitKey = 1 -> SharpCorePDF.Domain.ValueObjects.PdfEncryptionAlgorithm
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionAlgorithm.Rc4With40BitKey = 0 -> SharpCorePDF.Domain.ValueObjects.PdfEncryptionAlgorithm
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions!
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.Algorithm.get -> SharpCorePDF.Domain.ValueObjects.PdfEncryptionAlgorithm
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.Algorithm.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.Equals(SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.OwnerPassword.get -> string!
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.OwnerPassword.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.PdfEncryptionOptions() -> void
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.Permissions.get -> SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.Permissions.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.UserPassword.get -> string!
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.UserPassword.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.Validate(SharpCorePDF.Domain.ValueObjects.PdfVersion targetVersion) -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Domain.ValueObjects.PdfMetadata
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfMetadata!
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Author.get -> string?
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Author.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.CreationDate.get -> System.DateTimeOffset?
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.CreationDate.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Creator.get -> string?
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Creator.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.CustomProperties.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.CustomProperties.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Equals(SharpCorePDF.Domain.ValueObjects.PdfMetadata? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.IsEmpty.get -> bool
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Keywords.get -> string?
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Keywords.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.ModificationDate.get -> System.DateTimeOffset?
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.ModificationDate.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.PdfMetadata() -> void
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Producer.get -> string?
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Producer.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Subject.get -> string?
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Subject.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Title.get -> string?
+SharpCorePDF.Domain.ValueObjects.PdfMetadata.Title.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfPageSize
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.Equals(SharpCorePDF.Domain.ValueObjects.PdfPageSize other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.HeightInches.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.HeightMillimeters.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.HeightPoints.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.IsLandscape.get -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.IsPortrait.get -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.PdfPageSize() -> void
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.PdfPageSize(double widthPoints, double heightPoints) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.Rotate(SharpCorePDF.Domain.ValueObjects.PageRotation rotation) -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.Transpose() -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.WidthInches.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.WidthMillimeters.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfPageSize.WidthPoints.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfPermissions.All = SharpCorePDF.Domain.ValueObjects.PdfPermissions.ModifyContents | SharpCorePDF.Domain.ValueObjects.PdfPermissions.CopyContent | SharpCorePDF.Domain.ValueObjects.PdfPermissions.Annotate | SharpCorePDF.Domain.ValueObjects.PdfPermissions.FillFormFields | SharpCorePDF.Domain.ValueObjects.PdfPermissions.PrintOnly | SharpCorePDF.Domain.ValueObjects.PdfPermissions.Assemble | SharpCorePDF.Domain.ValueObjects.PdfPermissions.PrintHighQuality -> SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfPermissions.Annotate = 32 -> SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfPermissions.Assemble = 1024 -> SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfPermissions.CopyContent = 16 -> SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfPermissions.ExtractForAccessibility = 512 -> SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfPermissions.FillFormFields = 256 -> SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfPermissions.ModifyContents = 8 -> SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfPermissions.None = 0 -> SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfPermissions.Print = 4 -> SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfPermissions.PrintHighQuality = 2048 -> SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfPermissions.PrintOnly = SharpCorePDF.Domain.ValueObjects.PdfPermissions.Print | SharpCorePDF.Domain.ValueObjects.PdfPermissions.ExtractForAccessibility -> SharpCorePDF.Domain.ValueObjects.PdfPermissions
+SharpCorePDF.Domain.ValueObjects.PdfSourceId
+SharpCorePDF.Domain.ValueObjects.PdfSourceId.Equals(SharpCorePDF.Domain.ValueObjects.PdfSourceId other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfSourceId.PdfSourceId() -> void
+SharpCorePDF.Domain.ValueObjects.PdfSourceId.PdfSourceId(string! value) -> void
+SharpCorePDF.Domain.ValueObjects.PdfSourceId.Value.get -> string!
+SharpCorePDF.Domain.ValueObjects.PdfVersion
+SharpCorePDF.Domain.ValueObjects.PdfVersion.CompareTo(SharpCorePDF.Domain.ValueObjects.PdfVersion other) -> int
+SharpCorePDF.Domain.ValueObjects.PdfVersion.Equals(SharpCorePDF.Domain.ValueObjects.PdfVersion other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfVersion.IsAtLeast(SharpCorePDF.Domain.ValueObjects.PdfVersion other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfVersion.Major.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfVersion.Minor.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfVersion.PdfVersion() -> void
+SharpCorePDF.Domain.ValueObjects.PdfVersion.PdfVersion(int major, int minor) -> void
+static SharpCorePDF.Domain.Aggregates.MergePlan.Create(SharpCorePDF.Domain.ValueObjects.MergeOutputOptions? output = null) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+static SharpCorePDF.Domain.Aggregates.MergePlan.For(params SharpCorePDF.Domain.Entities.PdfSource![]! sources) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+static SharpCorePDF.Domain.Aggregates.MergePlan.operator !=(SharpCorePDF.Domain.Aggregates.MergePlan? left, SharpCorePDF.Domain.Aggregates.MergePlan? right) -> bool
+static SharpCorePDF.Domain.Aggregates.MergePlan.operator ==(SharpCorePDF.Domain.Aggregates.MergePlan? left, SharpCorePDF.Domain.Aggregates.MergePlan? right) -> bool
+static SharpCorePDF.Domain.Entities.PdfSource.Create(SharpCorePDF.Domain.Ports.IPdfContentSource! content, string? displayName = null, SharpCorePDF.Domain.ValueObjects.PageSelection? pages = null, string? password = null) -> SharpCorePDF.Domain.Entities.PdfSource!
+static SharpCorePDF.Domain.Entities.PdfSource.Create(SharpCorePDF.Domain.ValueObjects.PdfSourceId id, SharpCorePDF.Domain.Ports.IPdfContentSource! content, string? displayName = null, SharpCorePDF.Domain.ValueObjects.PageSelection? pages = null, string? password = null) -> SharpCorePDF.Domain.Entities.PdfSource!
+static SharpCorePDF.Domain.Entities.PdfSource.operator !=(SharpCorePDF.Domain.Entities.PdfSource? left, SharpCorePDF.Domain.Entities.PdfSource? right) -> bool
+static SharpCorePDF.Domain.Entities.PdfSource.operator ==(SharpCorePDF.Domain.Entities.PdfSource? left, SharpCorePDF.Domain.Entities.PdfSource? right) -> bool
+static SharpCorePDF.Domain.ReadModels.MergedSourceSummary.operator !=(SharpCorePDF.Domain.ReadModels.MergedSourceSummary? left, SharpCorePDF.Domain.ReadModels.MergedSourceSummary? right) -> bool
+static SharpCorePDF.Domain.ReadModels.MergedSourceSummary.operator ==(SharpCorePDF.Domain.ReadModels.MergedSourceSummary? left, SharpCorePDF.Domain.ReadModels.MergedSourceSummary? right) -> bool
+static SharpCorePDF.Domain.ReadModels.MergeResult.operator !=(SharpCorePDF.Domain.ReadModels.MergeResult? left, SharpCorePDF.Domain.ReadModels.MergeResult? right) -> bool
+static SharpCorePDF.Domain.ReadModels.MergeResult.operator ==(SharpCorePDF.Domain.ReadModels.MergeResult? left, SharpCorePDF.Domain.ReadModels.MergeResult? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.operator !=(SharpCorePDF.Domain.ReadModels.PdfDocumentInfo? left, SharpCorePDF.Domain.ReadModels.PdfDocumentInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.operator ==(SharpCorePDF.Domain.ReadModels.PdfDocumentInfo? left, SharpCorePDF.Domain.ReadModels.PdfDocumentInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfPageInfo.operator !=(SharpCorePDF.Domain.ReadModels.PdfPageInfo? left, SharpCorePDF.Domain.ReadModels.PdfPageInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfPageInfo.operator ==(SharpCorePDF.Domain.ReadModels.PdfPageInfo? left, SharpCorePDF.Domain.ReadModels.PdfPageInfo? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.Default.get -> SharpCorePDF.Domain.ValueObjects.MergeOutputOptions!
+static SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.operator !=(SharpCorePDF.Domain.ValueObjects.MergeOutputOptions? left, SharpCorePDF.Domain.ValueObjects.MergeOutputOptions? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.MergeOutputOptions.operator ==(SharpCorePDF.Domain.ValueObjects.MergeOutputOptions? left, SharpCorePDF.Domain.ValueObjects.MergeOutputOptions? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PageRange.All.get -> SharpCorePDF.Domain.ValueObjects.PageRange
+static SharpCorePDF.Domain.ValueObjects.PageRange.FromPage(int from) -> SharpCorePDF.Domain.ValueObjects.PageRange
+static SharpCorePDF.Domain.ValueObjects.PageRange.FromTo(int from, int to) -> SharpCorePDF.Domain.ValueObjects.PageRange
+static SharpCorePDF.Domain.ValueObjects.PageRange.operator !=(SharpCorePDF.Domain.ValueObjects.PageRange left, SharpCorePDF.Domain.ValueObjects.PageRange right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PageRange.operator ==(SharpCorePDF.Domain.ValueObjects.PageRange left, SharpCorePDF.Domain.ValueObjects.PageRange right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PageRange.Parse(string? text) -> SharpCorePDF.Domain.ValueObjects.PageRange
+static SharpCorePDF.Domain.ValueObjects.PageRange.Single(int page) -> SharpCorePDF.Domain.ValueObjects.PageRange
+static SharpCorePDF.Domain.ValueObjects.PageRange.ToPage(int to) -> SharpCorePDF.Domain.ValueObjects.PageRange
+static SharpCorePDF.Domain.ValueObjects.PageRange.TryParse(string? text, out SharpCorePDF.Domain.ValueObjects.PageRange range) -> bool
+static SharpCorePDF.Domain.ValueObjects.PageRotationExtensions.FromDegrees(int degrees) -> SharpCorePDF.Domain.ValueObjects.PageRotation
+static SharpCorePDF.Domain.ValueObjects.PageRotationExtensions.get_Degrees(SharpCorePDF.Domain.ValueObjects.PageRotation rotation) -> int
+static SharpCorePDF.Domain.ValueObjects.PageRotationExtensions.get_Inverted(SharpCorePDF.Domain.ValueObjects.PageRotation rotation) -> SharpCorePDF.Domain.ValueObjects.PageRotation
+static SharpCorePDF.Domain.ValueObjects.PageRotationExtensions.get_SwapsPageDimensions(SharpCorePDF.Domain.ValueObjects.PageRotation rotation) -> bool
+static SharpCorePDF.Domain.ValueObjects.PageRotationExtensions.Normalize(int degrees) -> SharpCorePDF.Domain.ValueObjects.PageRotation
+static SharpCorePDF.Domain.ValueObjects.PageSelection.All.get -> SharpCorePDF.Domain.ValueObjects.PageSelection!
+static SharpCorePDF.Domain.ValueObjects.PageSelection.FromPage(int from) -> SharpCorePDF.Domain.ValueObjects.PageSelection!
+static SharpCorePDF.Domain.ValueObjects.PageSelection.FromTo(int from, int to) -> SharpCorePDF.Domain.ValueObjects.PageSelection!
+static SharpCorePDF.Domain.ValueObjects.PageSelection.Of(params SharpCorePDF.Domain.ValueObjects.PageRange[]! ranges) -> SharpCorePDF.Domain.ValueObjects.PageSelection!
+static SharpCorePDF.Domain.ValueObjects.PageSelection.Of(System.Collections.Generic.IEnumerable<SharpCorePDF.Domain.ValueObjects.PageRange>! ranges) -> SharpCorePDF.Domain.ValueObjects.PageSelection!
+static SharpCorePDF.Domain.ValueObjects.PageSelection.Parse(string? text) -> SharpCorePDF.Domain.ValueObjects.PageSelection!
+static SharpCorePDF.Domain.ValueObjects.PageSelection.Single(int page) -> SharpCorePDF.Domain.ValueObjects.PageSelection!
+static SharpCorePDF.Domain.ValueObjects.PageSelection.TryParse(string? text, out SharpCorePDF.Domain.ValueObjects.PageSelection? selection) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.Default.get -> SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions!
+static SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.operator !=(SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions? left, SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions.operator ==(SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions? left, SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfMetadata.Empty.get -> SharpCorePDF.Domain.ValueObjects.PdfMetadata!
+static SharpCorePDF.Domain.ValueObjects.PdfMetadata.Merge(SharpCorePDF.Domain.ValueObjects.PdfMetadata! baseline, SharpCorePDF.Domain.ValueObjects.PdfMetadata! overlay) -> SharpCorePDF.Domain.ValueObjects.PdfMetadata!
+static SharpCorePDF.Domain.ValueObjects.PdfMetadata.operator !=(SharpCorePDF.Domain.ValueObjects.PdfMetadata? left, SharpCorePDF.Domain.ValueObjects.PdfMetadata? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfMetadata.operator ==(SharpCorePDF.Domain.ValueObjects.PdfMetadata? left, SharpCorePDF.Domain.ValueObjects.PdfMetadata? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPageSize.A3.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+static SharpCorePDF.Domain.ValueObjects.PdfPageSize.A4.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+static SharpCorePDF.Domain.ValueObjects.PdfPageSize.A5.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+static SharpCorePDF.Domain.ValueObjects.PdfPageSize.FromInches(double widthInches, double heightInches) -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+static SharpCorePDF.Domain.ValueObjects.PdfPageSize.FromMillimeters(double widthMillimeters, double heightMillimeters) -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+static SharpCorePDF.Domain.ValueObjects.PdfPageSize.FromPoints(double widthPoints, double heightPoints) -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+static SharpCorePDF.Domain.ValueObjects.PdfPageSize.Legal.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+static SharpCorePDF.Domain.ValueObjects.PdfPageSize.Letter.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+static SharpCorePDF.Domain.ValueObjects.PdfPageSize.operator !=(SharpCorePDF.Domain.ValueObjects.PdfPageSize left, SharpCorePDF.Domain.ValueObjects.PdfPageSize right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPageSize.operator ==(SharpCorePDF.Domain.ValueObjects.PdfPageSize left, SharpCorePDF.Domain.ValueObjects.PdfPageSize right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfSourceId.New() -> SharpCorePDF.Domain.ValueObjects.PdfSourceId
+static SharpCorePDF.Domain.ValueObjects.PdfSourceId.operator !=(SharpCorePDF.Domain.ValueObjects.PdfSourceId left, SharpCorePDF.Domain.ValueObjects.PdfSourceId right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfSourceId.operator ==(SharpCorePDF.Domain.ValueObjects.PdfSourceId left, SharpCorePDF.Domain.ValueObjects.PdfSourceId right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.operator !=(SharpCorePDF.Domain.ValueObjects.PdfVersion left, SharpCorePDF.Domain.ValueObjects.PdfVersion right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.operator <(SharpCorePDF.Domain.ValueObjects.PdfVersion left, SharpCorePDF.Domain.ValueObjects.PdfVersion right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.operator <=(SharpCorePDF.Domain.ValueObjects.PdfVersion left, SharpCorePDF.Domain.ValueObjects.PdfVersion right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.operator ==(SharpCorePDF.Domain.ValueObjects.PdfVersion left, SharpCorePDF.Domain.ValueObjects.PdfVersion right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.operator >(SharpCorePDF.Domain.ValueObjects.PdfVersion left, SharpCorePDF.Domain.ValueObjects.PdfVersion right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.operator >=(SharpCorePDF.Domain.ValueObjects.PdfVersion left, SharpCorePDF.Domain.ValueObjects.PdfVersion right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.Parse(string? text) -> SharpCorePDF.Domain.ValueObjects.PdfVersion
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.TryParse(string? text, out SharpCorePDF.Domain.ValueObjects.PdfVersion version) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.Unknown.get -> SharpCorePDF.Domain.ValueObjects.PdfVersion
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.V1_4.get -> SharpCorePDF.Domain.ValueObjects.PdfVersion
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.V1_5.get -> SharpCorePDF.Domain.ValueObjects.PdfVersion
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.V1_6.get -> SharpCorePDF.Domain.ValueObjects.PdfVersion
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.V1_7.get -> SharpCorePDF.Domain.ValueObjects.PdfVersion
+static SharpCorePDF.Domain.ValueObjects.PdfVersion.V2_0.get -> SharpCorePDF.Domain.ValueObjects.PdfVersion

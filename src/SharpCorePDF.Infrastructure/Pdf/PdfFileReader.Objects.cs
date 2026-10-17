@@ -62,8 +62,9 @@ internal sealed partial class PdfFileReader
 
         if (objectNumber != expectedObjectNumber)
         {
-            warnings.Add(
-                $"'{SourceName}': the cross-reference table points object {expectedObjectNumber} at the header of object {objectNumber}; the parsed object is used anyway.");
+            warnings.Add(new(
+                PdfWarningKind.CrossReferenceEntryMismatch,
+                $"'{SourceName}': the cross-reference table points object {expectedObjectNumber} at the header of object {objectNumber}; the parsed object is used anyway."));
         }
 
         return parser.ParseObject();

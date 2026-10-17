@@ -1,3 +1,5 @@
+using SharpCorePDF.Domain.ValueObjects;
+
 namespace SharpCorePDF.Infrastructure.Pdf;
 
 /// <summary>A page of a source document, together with the attributes it inherits from its ancestors.</summary>
@@ -38,7 +40,7 @@ internal static class PdfPageTree
     /// <param name="warnings">The list that receives non-fatal remarks.</param>
     /// <param name="maxDepth">The maximum depth of the tree.</param>
     /// <returns>The pages and the intermediate node object numbers.</returns>
-    public static PageTreeWalk Walk(PdfFileReader reader, List<string> warnings, int maxDepth)
+    public static PageTreeWalk Walk(PdfFileReader reader, List<PdfWarning> warnings, int maxDepth)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
@@ -47,7 +49,9 @@ internal static class PdfPageTree
 
         if (catalog?.Get("Pages") is not { } root)
         {
-            warnings.Add($"'{reader.SourceName}': the document catalog has no page tree, so the document contributes no pages.");
+            warnings.Add(new(
+                PdfWarningKind.PageTreeMissing,
+                $"'{reader.SourceName}': the document catalog has no page tree, so the document contributes no pages."));
             return result;
         }
 
@@ -60,7 +64,7 @@ internal static class PdfPageTree
     {
         private readonly PdfFileReader reader;
         private readonly PageTreeWalk result;
-        private readonly List<string> warnings;
+        private readonly List<PdfWarning> warnings;
         private readonly int maxDepth;
         private readonly HashSet<long> visited = [];
 
@@ -69,7 +73,7 @@ internal static class PdfPageTree
         /// <param name="result">The pages and the intermediate node object numbers found so far.</param>
         /// <param name="warnings">The list that receives non-fatal remarks.</param>
         /// <param name="maxDepth">The maximum depth of the tree.</param>
-        public PageTreeWalker(PdfFileReader reader, PageTreeWalk result, List<string> warnings, int maxDepth)
+        public PageTreeWalker(PdfFileReader reader, PageTreeWalk result, List<PdfWarning> warnings, int maxDepth)
         {
             this.reader = reader;
             this.result = result;
@@ -85,7 +89,9 @@ internal static class PdfPageTree
         {
             if (depth > maxDepth)
             {
-                warnings.Add($"'{reader.SourceName}': the page tree is deeper than {maxDepth} levels and was cut off.");
+                warnings.Add(new(
+                    PdfWarningKind.PageTreeTooDeep,
+                    $"'{reader.SourceName}': the page tree is deeper than {maxDepth} levels and was cut off."));
                 return;
             }
 
@@ -93,7 +99,9 @@ internal static class PdfPageTree
 
             if (objectNumber is { } number && !visited.Add(number))
             {
-                warnings.Add($"'{reader.SourceName}': the page tree contains a cycle at object {number}; the branch was skipped.");
+                warnings.Add(new(
+                    PdfWarningKind.PageTreeCycle,
+                    $"'{reader.SourceName}': the page tree contains a cycle at object {number}; the branch was skipped."));
                 return;
             }
 
@@ -101,7 +109,9 @@ internal static class PdfPageTree
 
             if (node is null)
             {
-                warnings.Add($"'{reader.SourceName}': a page tree node could not be resolved and was skipped.");
+                warnings.Add(new(
+                    PdfWarningKind.PageTreeBranchUnreadable,
+                    $"'{reader.SourceName}': a page tree node could not be resolved and was skipped."));
                 return;
             }
 
@@ -111,8 +121,9 @@ internal static class PdfPageTree
             {
                 if (node.GetName("Type") is not null and not "Pages")
                 {
-                    warnings.Add(
-                        $"'{reader.SourceName}': object {Format(objectNumber)} has children but is not typed as a page tree node.");
+                    warnings.Add(new(
+                        PdfWarningKind.PageTreeChildNotANode,
+                        $"'{reader.SourceName}': object {Format(objectNumber)} has children but is not typed as a page tree node."));
                 }
 
                 if (objectNumber is { } nodeNumber)
@@ -134,30 +145,31 @@ internal static class PdfPageTree
                 return;
             }
 
-            warnings.Add(
-                $"'{reader.SourceName}': a page stored inline in the page tree cannot be referenced and was skipped.");
+            warnings.Add(new(
+                PdfWarningKind.InlinePageSkipped,
+                $"'{reader.SourceName}': a page stored inline in the page tree cannot be referenced and was skipped."));
         }
-    }
 
-    private static string Format(long? objectNumber) => objectNumber is { } number
-        ? number.ToString(System.Globalization.CultureInfo.InvariantCulture)
-        : "?";
+        private static string Format(long? objectNumber) => objectNumber is { } number
+            ? number.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : "?";
 
-    private static PdfDictionary? MergeInheritedAttributes(PdfDictionary node, PdfDictionary? inherited)
-    {
-        PdfDictionary? effective = inherited;
-
-        foreach (var key in InheritableAttributes)
+        private static PdfDictionary? MergeInheritedAttributes(PdfDictionary node, PdfDictionary? inherited)
         {
-            if (!node.ContainsKey(key))
+            PdfDictionary? effective = inherited;
+
+            foreach (var key in InheritableAttributes)
             {
-                continue;
+                if (!node.ContainsKey(key))
+                {
+                    continue;
+                }
+
+                effective = effective is null ? new PdfDictionary() : new PdfDictionary(effective.Entries);
+                effective.Set(key, node.Get(key));
             }
 
-            effective = effective is null ? new PdfDictionary() : new PdfDictionary(effective.Entries);
-            effective.Set(key, node.Get(key));
+            return effective;
         }
-
-        return effective;
     }
 }

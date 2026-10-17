@@ -158,19 +158,12 @@ public sealed class PageSelection : IEquatable<PageSelection>
             return everyPage;
         }
 
-        var pages = new List<int>(documentPageCount);
-        var seen = new HashSet<int>();
-
-        foreach (var range in ranges)
-        {
-            foreach (var page in range.Enumerate(documentPageCount, sourceName))
-            {
-                if (seen.Add(page))
-                {
-                    pages.Add(page);
-                }
-            }
-        }
+        // The ranges are read in the caller's order and a page that appears twice keeps its first
+        // position, which is exactly what Distinct preserves over a single enumeration.
+        var pages = ranges
+            .SelectMany(range => range.Enumerate(documentPageCount, sourceName))
+            .Distinct()
+            .ToList();
 
         if (pages.Count == 0)
         {

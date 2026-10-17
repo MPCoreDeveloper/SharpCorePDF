@@ -36,7 +36,7 @@ internal enum PdfObjectKind
 /// indirect references; the engine parses files into this model, moves objects between documents in
 /// this model, and serialises this model back to bytes.
 /// </summary>
-internal abstract class PdfObject
+internal abstract class PdfObject // NOSONAR S1694: a closed hierarchy of file values with state, not a capability
 {
     /// <summary>Gets the kind of this object.</summary>
     public abstract PdfObjectKind Kind { get; }

@@ -1,6 +1,7 @@
 using System.Text;
 using SharpCorePDF.Domain.Exceptions;
 using SharpCorePDF.Domain.ReadModels;
+using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure;
 using SharpCorePDF.Infrastructure.Pdf;
 
@@ -26,7 +27,7 @@ public sealed class PdfReaderRecoveryTests
         Assert.Equal(3, document.PageCount);
         Assert.Contains(
             document.Warnings,
-            warning => warning.Contains("rebuilt by scanning", StringComparison.Ordinal));
+            warning => warning.Kind == PdfWarningKind.CrossReferenceRebuilt);
     }
 
     /// <summary>A table that is not where <c>startxref</c> announces it is recovered from as well.</summary>
@@ -38,7 +39,7 @@ public sealed class PdfReaderRecoveryTests
         Assert.Equal(6, document.PageCount);
         Assert.Contains(
             document.Warnings,
-            warning => warning.Contains("rebuilt by scanning", StringComparison.Ordinal));
+            warning => warning.Kind == PdfWarningKind.CrossReferenceRebuilt);
     }
 
     /// <summary>A document whose catalog lives in an object stream cannot be rebuilt by scanning.</summary>
@@ -124,7 +125,7 @@ public sealed class PdfReaderRecoveryTests
     public void Points_a_rebuilt_table_at_the_object_header()
     {
         const string Text = "%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n";
-        var warnings = new List<string>();
+        var warnings = new List<PdfWarning>();
 
         var table = new PdfCrossReferenceReader(
             Encoding.Latin1.GetBytes(Text),
@@ -136,7 +137,7 @@ public sealed class PdfReaderRecoveryTests
 
         Assert.True(entry.HasValue);
         Assert.Equal(Text.IndexOf("1 0 obj", StringComparison.Ordinal), entry.Value.Offset);
-        Assert.Contains(warnings, warning => warning.Contains("rebuilt by scanning", StringComparison.Ordinal));
+        Assert.Contains(warnings, warning => warning.Kind == PdfWarningKind.CrossReferenceRebuilt);
     }
 
     /// <summary>A file that lost everything behind its catalog is read as a document without pages.</summary>

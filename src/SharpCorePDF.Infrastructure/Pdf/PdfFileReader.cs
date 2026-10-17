@@ -14,7 +14,7 @@ internal sealed partial class PdfFileReader
 {
     private readonly byte[] data;
     private readonly PdfEngineOptions options;
-    private readonly List<string> warnings = [];
+    private readonly List<PdfWarning> warnings = [];
     private readonly Dictionary<long, PdfObject?> resolved = [];
     private readonly Dictionary<long, PdfObject> fromObjectStreams = [];
     private readonly HashSet<long> loadedObjectStreams = [];
@@ -63,7 +63,7 @@ internal sealed partial class PdfFileReader
     public PdfCrossReferenceTable CrossReferenceTable { get; }
 
     /// <summary>Gets non-fatal remarks collected while reading.</summary>
-    public IReadOnlyList<string> Warnings => warnings;
+    public IReadOnlyList<PdfWarning> Warnings => warnings;
 
     /// <summary>Gets a value indicating whether the document declares encryption.</summary>
     public bool IsEncrypted => CrossReferenceTable.Trailer.ContainsKey("Encrypt");
@@ -73,6 +73,17 @@ internal sealed partial class PdfFileReader
     /// the password that was supplied — possibly none at all — did not open it.
     /// </summary>
     public bool RequiresPassword { get; private set; }
+
+    /// <summary>
+    /// Gets the revision of the standard security handler the document declares, or
+    /// <see langword="null"/> when the document declares no encryption or no integer <c>R</c> entry.
+    /// </summary>
+    /// <remarks>
+    /// It is a property of the document rather than of the handler, so it is available for an
+    /// encrypted document whose encryption stayed closed — which is the case a caller has to decide
+    /// about before asking for a password.
+    /// </remarks>
+    public int? DeclaredSecurityHandlerRevision => declaredSecurityHandlerRevision;
 
     /// <summary>
     /// Gets the handler that decrypts the strings and streams of the document, or

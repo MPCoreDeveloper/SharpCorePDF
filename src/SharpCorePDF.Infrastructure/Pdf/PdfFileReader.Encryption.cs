@@ -1,3 +1,5 @@
+using SharpCorePDF.Domain.ValueObjects;
+
 namespace SharpCorePDF.Infrastructure.Pdf;
 
 /// <summary>
@@ -33,6 +35,18 @@ internal sealed partial class PdfFileReader
     /// </summary>
     private long clearTextMetadataObjectNumber;
 
+    /// <summary>
+    /// The revision of the standard security handler the document declares, or
+    /// <see langword="null"/> when it declares no integer <c>R</c> entry.
+    /// </summary>
+    /// <remarks>
+    /// Read from the <c>Encrypt</c> dictionary before the handler decides anything, because the
+    /// revision is a fact about the document rather than about the handler's ability to open it:
+    /// a document protected by a filter the engine does not implement, or by a revision outside 2 to
+    /// 6, still says which revision it uses, and a caller's decision depends on knowing that.
+    /// </remarks>
+    private int? declaredSecurityHandlerRevision;
+
     private void OpenEncryption(string? password)
     {
         if (!IsEncrypted)
@@ -42,11 +56,18 @@ internal sealed partial class PdfFileReader
 
         if (ResolveDictionary(CrossReferenceTable.Trailer.Get("Encrypt")) is not { } encryption)
         {
-            warnings.Add(
-                $"'{SourceName}': the trailer declares encryption but its /Encrypt dictionary could not be read, so the document cannot be opened.");
+            warnings.Add(new(
+                PdfWarningKind.EncryptionDictionaryUnreadable,
+                $"'{SourceName}': the trailer declares encryption but its /Encrypt dictionary could not be read, so the document cannot be opened."));
 
             return;
         }
+
+        // The declared revision survives every later refusal, which is why it is read here rather
+        // than inside the handler: a handler is never constructed for an encryption the engine
+        // cannot honour, and that is exactly the case a caller needs the revision for.
+        declaredSecurityHandlerRevision =
+            encryption.GetInteger("R") is { } declaredRevision ? (int)declaredRevision : null;
 
         var result = PdfSecurityHandler.TryCreate(
             encryption,

@@ -25,7 +25,7 @@
 
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <WarningsAsErrors>nullable</WarningsAsErrors>
+    <WarningsAsErrors>nullable;RS0016;RS0017</WarningsAsErrors>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -64,6 +64,42 @@
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\Logo-256.png" Pack="true" PackagePath="\" Visible="false" />
     <None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+  <!--
+    The approved-API snapshot (architecture AD-2, PRD §9.5).
+
+    PublicAPI.Shipped.txt is the frozen surface; PublicAPI.Unshipped.txt holds additions
+    waiting for the next release. The snapshot changes only in the same commit as the
+    surface change, and that diff is reviewed at every release. RS0016 (a public member the
+    declared API does not list) and RS0017 (an entry that outlives its member) become build
+    errors below, so neither can slip through review.
+
+    Dev-time only: PrivateAssets="all" keeps the analyzer out of the package and out of a
+    consumer's build. One pair of files per project is enough while there is a single
+    shipped leg; the per-target split the analyzer supports becomes required the day a
+    second target returns.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" PrivateAssets="all" />
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <!--
+    SonarCloud's C# rules, run by the compiler instead of discovered by the server.
+
+    The scanner analyses what this build produced, so the same rule set can run here: the analyzer is the
+    dev-time half of "comply with the quality gate". An issue becomes visible at the line that causes it,
+    before a pull request exists, rather than as a red gate after the push. PrivateAssets="all" keeps it
+    out of every package and out of a consumer's build.
+
+    The SonarCloud project (MPCoreDeveloper_SharpCorePDF) decides the gate; this only makes the rules
+    reachable locally. A rule this repository decides not to follow is silenced where it occurs, with the
+    reason on the line (`// NOSONAR`), never repo-wide.
+  -->
+  <ItemGroup>
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

@@ -47,12 +47,9 @@ public sealed partial class PdfMergeEngine
             PreparePages(context, source);
             context.Sources.Add(source);
 
-            foreach (var warning in reader.Warnings)
+            foreach (var warning in reader.Warnings.Where(warning => !context.Warnings.Contains(warning)))
             {
-                if (!context.Warnings.Contains(warning, StringComparer.Ordinal))
-                {
-                    context.Warnings.Add(warning);
-                }
+                context.Warnings.Add(warning);
             }
 
             // Flushing per source keeps the objects of one document together in the output and keeps

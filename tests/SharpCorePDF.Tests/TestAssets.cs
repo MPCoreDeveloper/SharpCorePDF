@@ -69,16 +69,24 @@ internal static class TestAssets
     /// </summary>
     public static string ClearMetadataDocumentTitle => "Encrypted sample clear metadata";
 
-    /// <summary>The encrypted fixtures and the password each of them is opened with.</summary>
-    public static IReadOnlyList<(string Path, string Password, string Title)> EncryptedFixtures =>
+    /// <summary>
+    /// The encrypted fixtures, the password each of them is opened with, the title it carries, and
+    /// the revision of the standard security handler its own generator recorded.
+    /// </summary>
+    /// <remarks>
+    /// The revision is part of this list rather than a second list on purpose: a fixture that asserts
+    /// a revision carries it, so a new fixture cannot be added without one. The values are the ones
+    /// <c>docs/tools/make-fixtures.py</c> passes to pikepdf.
+    /// </remarks>
+    public static IReadOnlyList<(string Path, string Password, string Title, int Revision)> EncryptedFixtures =>
     [
-        (EncryptedRc4, string.Empty, "Encrypted sample R2"),
-        (EncryptedRc4Large, EncryptedUserPassword, "Encrypted sample R3"),
-        (EncryptedAes128, EncryptedUserPassword, "Encrypted sample R4"),
-        (EncryptedAes256R5, string.Empty, "Encrypted sample R5"),
-        (EncryptedNonAscii, EncryptedNonAsciiPassword, "Encrypted sample non-ASCII"),
-        (EncryptedClearMetadata, EncryptedUserPassword, "Encrypted sample clear metadata"),
-        (Encrypted, EncryptedUserPassword, "Encrypted sample"),
+        (EncryptedRc4, string.Empty, "Encrypted sample R2", 2),
+        (EncryptedRc4Large, EncryptedUserPassword, "Encrypted sample R3", 3),
+        (EncryptedAes128, EncryptedUserPassword, "Encrypted sample R4", 4),
+        (EncryptedAes256R5, string.Empty, "Encrypted sample R5", 5),
+        (EncryptedNonAscii, EncryptedNonAsciiPassword, "Encrypted sample non-ASCII", 4),
+        (EncryptedClearMetadata, EncryptedUserPassword, "Encrypted sample clear metadata", 4),
+        (Encrypted, EncryptedUserPassword, "Encrypted sample", 6),
     ];
 
     /// <summary>Gets every fixture.</summary>

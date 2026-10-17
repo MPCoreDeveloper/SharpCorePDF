@@ -24,7 +24,7 @@ internal static partial class PdfDocumentInspection
     {
         ArgumentNullException.ThrowIfNull(reader);
 
-        var warnings = new List<string>(reader.Warnings);
+        var warnings = new List<PdfWarning>(reader.Warnings);
         var encrypted = reader.IsEncrypted;
 
         // A document is readable when it is not encrypted, or when the engine opened its encryption
@@ -35,8 +35,9 @@ internal static partial class PdfDocumentInspection
 
         if (!readable)
         {
-            warnings.Add(
-                $"'{reader.SourceName}': the document is encrypted and could not be opened, so its page tree cannot be read and it cannot be merged.");
+            warnings.Add(new(
+                PdfWarningKind.EncryptionNotOpened,
+                $"'{reader.SourceName}': the document is encrypted and could not be opened, so its page tree cannot be read and it cannot be merged."));
         }
 
         List<PdfPageInfo> pages = readable ? ReadPages(reader, warnings) : [];
@@ -48,6 +49,7 @@ internal static partial class PdfDocumentInspection
             PageCount = pages.Count,
             IsEncrypted = encrypted,
             RequiresPassword = reader.RequiresPassword,
+            SecurityHandlerRevision = reader.DeclaredSecurityHandlerRevision,
             IsReadable = readable,
             Metadata = readable ? ReadMetadata(reader) : PdfMetadata.Empty,
             Pages = pages,

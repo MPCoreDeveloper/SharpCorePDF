@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using SharpCorePDF.Domain.ValueObjects;
 
 // Reading a document whose security handler is revision 2 to 4 is impossible without MD5 and RC4,
 // which the specification defines as the cryptography of those revisions. The algorithms themselves
@@ -137,13 +138,20 @@ internal sealed class PdfSecurityHandler
 
         // Both AES methods store a random initialization vector as the first sixteen bytes of the value,
         // with the ciphertext behind it. AES-256 uses the file key itself instead of a derived one.
-        return data.Length < PdfStandardSecurity.AesBlockSize
-            ? []
-            : PdfStandardSecurity.DecryptAesCbc(
-                method == PdfCryptMethod.AesV2 ? ObjectKey(objectNumber, generation, salted: true) : fileKey,
-                data[..PdfStandardSecurity.AesBlockSize],
-                data[PdfStandardSecurity.AesBlockSize..],
-                removePadding: true);
+        if (data.Length < PdfStandardSecurity.AesBlockSize)
+        {
+            return [];
+        }
+
+        var key = method == PdfCryptMethod.AesV2
+            ? ObjectKey(objectNumber, generation, salted: true)
+            : fileKey;
+
+        return PdfStandardSecurity.DecryptAesCbc(
+            key,
+            data[..PdfStandardSecurity.AesBlockSize],
+            data[PdfStandardSecurity.AesBlockSize..],
+            removePadding: true);
     }
 
     /// <summary>
@@ -171,7 +179,7 @@ internal sealed class PdfSecurityHandler
         ReadOnlySpan<byte> fileIdentifier,
         string sourceName,
         string? password,
-        List<string> warnings)
+        List<PdfWarning> warnings)
     {
         ArgumentNullException.ThrowIfNull(encryption);
         ArgumentNullException.ThrowIfNull(warnings);
@@ -180,15 +188,17 @@ internal sealed class PdfSecurityHandler
 
         if (!string.Equals(filter, "Standard", StringComparison.Ordinal))
         {
-            warnings.Add(
-                $"'{sourceName}': the document is encrypted with the '{filter}' security handler, which the engine does not implement, so its pages cannot be read.");
+            warnings.Add(new(
+                PdfWarningKind.EncryptionHandlerUnsupported,
+                $"'{sourceName}': the document is encrypted with the '{filter}' security handler, which the engine does not implement, so its pages cannot be read."));
             return PdfDecryptionResult.Closed;
         }
 
         if (encryption.ContainsKey("SubFilter"))
         {
-            warnings.Add(
-                $"'{sourceName}': the document declares a security handler sub-filter, which the engine does not implement, so its pages cannot be read.");
+            warnings.Add(new(
+                PdfWarningKind.EncryptionHandlerUnsupported,
+                $"'{sourceName}': the document declares a security handler sub-filter, which the engine does not implement, so its pages cannot be read."));
             return PdfDecryptionResult.Closed;
         }
 
@@ -197,8 +207,9 @@ internal sealed class PdfSecurityHandler
 
         if (version is < 1 or > 5 || revision is < 2 or > 6)
         {
-            warnings.Add(
-                $"'{sourceName}': the document is encrypted with security handler /V {version} /R {revision}, which the engine does not implement, so its pages cannot be read.");
+            warnings.Add(new(
+                PdfWarningKind.EncryptionRevisionUnsupported,
+                $"'{sourceName}': the document is encrypted with security handler /V {version} /R {revision}, which the engine does not implement, so its pages cannot be read."));
             return PdfDecryptionResult.Closed;
         }
 
@@ -209,8 +220,9 @@ internal sealed class PdfSecurityHandler
 
         if (GetBytes(encryption, "O") is not { } ownerEntry || GetBytes(encryption, "U") is not { } userEntry)
         {
-            warnings.Add(
-                $"'{sourceName}': the encryption dictionary has no /O or /U entry, so the document cannot be read.");
+            warnings.Add(new(
+                PdfWarningKind.EncryptionDictionaryIncomplete,
+                $"'{sourceName}': the encryption dictionary has no /O or /U entry, so the document cannot be read."));
             return PdfDecryptionResult.Closed;
         }
 
@@ -227,8 +239,9 @@ internal sealed class PdfSecurityHandler
         {
             if (stringMethod == PdfCryptMethod.AesV3 || streamMethod == PdfCryptMethod.AesV3)
             {
-                warnings.Add(
-                    $"'{sourceName}': the document declares the AES-256 crypt filter with security handler /V {version}, which is not a combination the engine can make sense of.");
+                warnings.Add(new(
+                    PdfWarningKind.EncryptionCombinationUnsupported,
+                    $"'{sourceName}': the document declares the AES-256 crypt filter with security handler /V {version}, which is not a combination the engine can make sense of."));
                 return PdfDecryptionResult.Closed;
             }
 
@@ -242,8 +255,9 @@ internal sealed class PdfSecurityHandler
                 || GetBytes(encryption, "UE") is not { } userKey
                 || GetBytes(encryption, "OE") is not { } ownerKey)
             {
-                warnings.Add(
-                    $"'{sourceName}': the encryption dictionary of a /V 5 document is incomplete, so the document cannot be read.");
+                warnings.Add(new(
+                    PdfWarningKind.EncryptionDictionaryIncomplete,
+                    $"'{sourceName}': the encryption dictionary of a /V 5 document is incomplete, so the document cannot be read."));
                 return PdfDecryptionResult.Closed;
             }
 
@@ -257,8 +271,9 @@ internal sealed class PdfSecurityHandler
             return new PdfDecryptionResult(null, RequiresPassword: true);
         }
 
-        warnings.Add(
-            $"'{sourceName}': the document is encrypted; it was opened and its strings and streams are read decrypted.");
+        warnings.Add(new(
+            PdfWarningKind.EncryptionOpened,
+            $"'{sourceName}': the document is encrypted; it was opened and its strings and streams are read decrypted."));
 
         return new PdfDecryptionResult(
             new PdfSecurityHandler(fileKey, stringMethod, streamMethod, objectKeyLength, encryptsMetadata),
@@ -288,7 +303,7 @@ internal sealed class PdfSecurityHandler
         PdfDictionary encryption,
         int version,
         string sourceName,
-        List<string> warnings,
+        List<PdfWarning> warnings,
         out PdfCryptMethod stringMethod,
         out PdfCryptMethod streamMethod,
         out int? cryptFilterBits)
@@ -335,7 +350,7 @@ internal sealed class PdfSecurityHandler
         string entryName,
         PdfDictionary? filters,
         string sourceName,
-        List<string> warnings,
+        List<PdfWarning> warnings,
         out PdfCryptMethod method,
         out int? keyBits)
     {
@@ -353,8 +368,9 @@ internal sealed class PdfSecurityHandler
 
         if (filters?.GetDictionary(filterName) is not { } filter)
         {
-            warnings.Add(
-                $"'{sourceName}': the encryption dictionary names the crypt filter '{filterName}' in /{entryName} but does not define it, so its pages cannot be read.");
+            warnings.Add(new(
+                PdfWarningKind.CryptFilterUndefined,
+                $"'{sourceName}': the encryption dictionary names the crypt filter '{filterName}' in /{entryName} but does not define it, so its pages cannot be read."));
             return false;
         }
 
@@ -376,8 +392,9 @@ internal sealed class PdfSecurityHandler
                 return true;
 
             default:
-                warnings.Add(
-                    $"'{sourceName}': the crypt filter '{filterName}' uses the method '{filter.GetName("CFM")}', which the engine does not implement, so its pages cannot be read.");
+                warnings.Add(new(
+                    PdfWarningKind.CryptFilterMethodUnsupported,
+                    $"'{sourceName}': the crypt filter '{filterName}' uses the method '{filter.GetName("CFM")}', which the engine does not implement, so its pages cannot be read."));
                 return false;
         }
 

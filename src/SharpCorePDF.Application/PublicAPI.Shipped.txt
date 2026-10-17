@@ -1,0 +1,52 @@
+#nullable enable
+override SharpCorePDF.Application.Ports.MergeEngineRequest.Equals(object? obj) -> bool
+override SharpCorePDF.Application.Ports.MergeEngineRequest.GetHashCode() -> int
+override SharpCorePDF.Application.Ports.MergeEngineRequest.ToString() -> string!
+override SharpCorePDF.Application.Ports.ResolvedPdfSource.Equals(object? obj) -> bool
+override SharpCorePDF.Application.Ports.ResolvedPdfSource.GetHashCode() -> int
+override SharpCorePDF.Application.Ports.ResolvedPdfSource.ToString() -> string!
+SharpCorePDF.Application.Extensions.PdfMergerExtensions
+SharpCorePDF.Application.Extensions.PdfMergerExtensions.extension(SharpCorePDF.Domain.Ports.IPdfMerger!)
+SharpCorePDF.Application.Extensions.PdfMergerExtensions.extension(SharpCorePDF.Domain.Ports.IPdfMerger!).MergeAsync(System.Collections.Generic.IEnumerable<SharpCorePDF.Domain.Ports.IPdfContentSource!>! sources, System.IO.Stream! destination, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.MergeResult!>!
+SharpCorePDF.Application.Extensions.PdfMergerExtensions.extension(SharpCorePDF.Domain.Ports.IPdfMerger!).MergeToBytesAsync(SharpCorePDF.Domain.Aggregates.MergePlan! plan, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<byte[]!>!
+SharpCorePDF.Application.Extensions.PdfMergerExtensions.extension(SharpCorePDF.Domain.Ports.IPdfMerger!).MergeToFileAsync(SharpCorePDF.Domain.Aggregates.MergePlan! plan, string! destinationPath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.MergeResult!>!
+SharpCorePDF.Application.Ports.IPdfDocumentReader
+SharpCorePDF.Application.Ports.IPdfDocumentReader.ReadAsync(string! sourceName, System.IO.Stream! content, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfDocumentInfo!>!
+SharpCorePDF.Application.Ports.IPdfMergeEngine
+SharpCorePDF.Application.Ports.IPdfMergeEngine.MergeAsync(SharpCorePDF.Application.Ports.MergeEngineRequest! request, System.IO.Stream! destination, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.MergeResult!>!
+SharpCorePDF.Application.Ports.MergeEngineRequest
+SharpCorePDF.Application.Ports.MergeEngineRequest.<Clone>$() -> SharpCorePDF.Application.Ports.MergeEngineRequest!
+SharpCorePDF.Application.Ports.MergeEngineRequest.Equals(SharpCorePDF.Application.Ports.MergeEngineRequest? other) -> bool
+SharpCorePDF.Application.Ports.MergeEngineRequest.MergeEngineRequest() -> void
+SharpCorePDF.Application.Ports.MergeEngineRequest.Output.get -> SharpCorePDF.Domain.ValueObjects.MergeOutputOptions!
+SharpCorePDF.Application.Ports.MergeEngineRequest.Output.init -> void
+SharpCorePDF.Application.Ports.MergeEngineRequest.PrimarySourceId.get -> SharpCorePDF.Domain.ValueObjects.PdfSourceId
+SharpCorePDF.Application.Ports.MergeEngineRequest.PrimarySourceId.init -> void
+SharpCorePDF.Application.Ports.MergeEngineRequest.Sources.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Application.Ports.ResolvedPdfSource!>!
+SharpCorePDF.Application.Ports.MergeEngineRequest.Sources.init -> void
+SharpCorePDF.Application.Ports.MergeEngineRequest.TotalPageCount.get -> int
+SharpCorePDF.Application.Ports.ResolvedPdfSource
+SharpCorePDF.Application.Ports.ResolvedPdfSource.<Clone>$() -> SharpCorePDF.Application.Ports.ResolvedPdfSource!
+SharpCorePDF.Application.Ports.ResolvedPdfSource.Content.get -> System.IO.Stream!
+SharpCorePDF.Application.Ports.ResolvedPdfSource.Content.init -> void
+SharpCorePDF.Application.Ports.ResolvedPdfSource.Equals(SharpCorePDF.Application.Ports.ResolvedPdfSource? other) -> bool
+SharpCorePDF.Application.Ports.ResolvedPdfSource.Info.get -> SharpCorePDF.Domain.ReadModels.PdfDocumentInfo!
+SharpCorePDF.Application.Ports.ResolvedPdfSource.Info.init -> void
+SharpCorePDF.Application.Ports.ResolvedPdfSource.Pages.get -> System.Collections.Generic.IReadOnlyList<int>!
+SharpCorePDF.Application.Ports.ResolvedPdfSource.Pages.init -> void
+SharpCorePDF.Application.Ports.ResolvedPdfSource.ResolvedPdfSource() -> void
+SharpCorePDF.Application.Ports.ResolvedPdfSource.Source.get -> SharpCorePDF.Domain.Entities.PdfSource!
+SharpCorePDF.Application.Ports.ResolvedPdfSource.Source.init -> void
+SharpCorePDF.Application.Services.PdfInspectorService
+SharpCorePDF.Application.Services.PdfInspectorService.InspectAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfDocumentInfo!>!
+SharpCorePDF.Application.Services.PdfInspectorService.PdfInspectorService(SharpCorePDF.Application.Ports.IPdfDocumentReader! reader) -> void
+SharpCorePDF.Application.Services.PdfMergerService
+SharpCorePDF.Application.Services.PdfMergerService.MergeAsync(SharpCorePDF.Domain.Aggregates.MergePlan! plan, System.IO.Stream! destination, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.MergeResult!>!
+SharpCorePDF.Application.Services.PdfMergerService.PdfMergerService(SharpCorePDF.Application.Ports.IPdfDocumentReader! reader, SharpCorePDF.Application.Ports.IPdfMergeEngine! engine) -> void
+static SharpCorePDF.Application.Extensions.PdfMergerExtensions.MergeAsync(this SharpCorePDF.Domain.Ports.IPdfMerger! merger, System.Collections.Generic.IEnumerable<SharpCorePDF.Domain.Ports.IPdfContentSource!>! sources, System.IO.Stream! destination, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.MergeResult!>!
+static SharpCorePDF.Application.Extensions.PdfMergerExtensions.MergeToBytesAsync(this SharpCorePDF.Domain.Ports.IPdfMerger! merger, SharpCorePDF.Domain.Aggregates.MergePlan! plan, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<byte[]!>!
+static SharpCorePDF.Application.Extensions.PdfMergerExtensions.MergeToFileAsync(this SharpCorePDF.Domain.Ports.IPdfMerger! merger, SharpCorePDF.Domain.Aggregates.MergePlan! plan, string! destinationPath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.MergeResult!>!
+static SharpCorePDF.Application.Ports.MergeEngineRequest.operator !=(SharpCorePDF.Application.Ports.MergeEngineRequest? left, SharpCorePDF.Application.Ports.MergeEngineRequest? right) -> bool
+static SharpCorePDF.Application.Ports.MergeEngineRequest.operator ==(SharpCorePDF.Application.Ports.MergeEngineRequest? left, SharpCorePDF.Application.Ports.MergeEngineRequest? right) -> bool
+static SharpCorePDF.Application.Ports.ResolvedPdfSource.operator !=(SharpCorePDF.Application.Ports.ResolvedPdfSource? left, SharpCorePDF.Application.Ports.ResolvedPdfSource? right) -> bool
+static SharpCorePDF.Application.Ports.ResolvedPdfSource.operator ==(SharpCorePDF.Application.Ports.ResolvedPdfSource? left, SharpCorePDF.Application.Ports.ResolvedPdfSource? right) -> bool

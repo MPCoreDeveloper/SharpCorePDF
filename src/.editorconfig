@@ -26,3 +26,23 @@ dotnet_diagnostic.CA1720.severity = none
 [**/ValueObjects/PageSelection.cs]
 # CA1720: Single is the natural name for "exactly one page", matching Enumerable.Single.
 dotnet_diagnostic.CA1720.severity = none
+
+# The three SonarCloud rules this repository answers with a decision rather than a change. Each silence is
+# scoped to the file that carries the decision and each line carries // NOSONAR as well, so the server side
+# of the gate reaches the same conclusion as a local build. Anything else the analyzer reports is a finding
+# to fix, not to configure away.
+
+# S101: the product name is SharpCorePDF, with PDF in capitals, so the type that registers it is named for
+# the product. Renaming it would break the published API to satisfy an acronym heuristic.
+[**/SharpCorePDFServiceCollectionExtensions.cs]
+dotnet_diagnostic.S101.severity = none
+
+# S1694: PdfObject is a closed hierarchy of file-level values. An interface would let any type claim to be
+# one, while the parser, the writer and the copier all switch over the sealed set they know.
+[**/Pdf/PdfObject.cs]
+dotnet_diagnostic.S1694.severity = none
+
+# S4790: MD5 is not a choice here. The PDF standard's encryption algorithms 1, 2, 3 and 5 specify it, and a
+# reader that wrote SHA-256 instead could not open a document encrypted by any other producer.
+[**/Pdf/PdfStandardSecurity.cs]
+dotnet_diagnostic.S4790.severity = none

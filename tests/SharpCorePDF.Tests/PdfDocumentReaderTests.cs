@@ -25,6 +25,7 @@ public sealed class PdfDocumentReaderTests
         Assert.Equal(6, info.PageCount);
         Assert.Equal(PdfVersion.V1_7, info.Version);
         Assert.False(info.IsEncrypted);
+        Assert.Null(info.SecurityHandlerRevision);
         Assert.Equal("Document 2.docx", info.Metadata.Title);
         Assert.Equal("Michel Posseth", info.Metadata.Author);
         Assert.Equal("Microsoft: Print To PDF", info.Metadata.Producer);
@@ -76,17 +77,18 @@ public sealed class PdfDocumentReaderTests
         Assert.Empty(info.Warnings);
     }
 
-    /// <summary>An encrypted document is described, not rejected.</summary>
+    /// <summary>An encrypted document is described, not rejected, and still says what it declares.</summary>
     [Fact]
     public async Task Describes_an_encrypted_document_without_throwing()
     {
         var info = await ReadAsync(TestAssets.Encrypted);
 
         Assert.True(info.IsEncrypted);
+        Assert.Equal(6, info.SecurityHandlerRevision);
         Assert.Equal(0, info.PageCount);
         Assert.Empty(info.Pages);
         Assert.Equal(PdfMetadata.Empty, info.Metadata);
-        Assert.Contains(info.Warnings, warning => warning.Contains("encrypted", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(info.Warnings, warning => warning.Kind == PdfWarningKind.EncryptionNotOpened);
     }
 
     /// <summary>A stream that does not hold a PDF document is rejected with a domain exception.</summary>

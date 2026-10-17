@@ -33,7 +33,12 @@ public sealed record MergeResult
     /// Gets non-fatal remarks about the merge, for example that a damaged cross-reference table had
     /// to be reconstructed, or that content of a secondary source was intentionally not carried over.
     /// </summary>
-    public IReadOnlyList<string> Warnings { get; init; } = [];
+    /// <remarks>
+    /// A remark is identified by its <see cref="PdfWarning.Kind"/>; its text is for humans and may be
+    /// reworded. The remarks of every source document are folded in here, so a warning a caller would
+    /// have seen on <see cref="PdfDocumentInfo.Warnings"/> appears in the result as well.
+    /// </remarks>
+    public IReadOnlyList<PdfWarning> Warnings { get; init; } = [];
 
     /// <summary>Formats the result for diagnostics.</summary>
     /// <returns>The formatted result.</returns>

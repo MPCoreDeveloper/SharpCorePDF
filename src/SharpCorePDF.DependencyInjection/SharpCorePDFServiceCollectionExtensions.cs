@@ -17,7 +17,7 @@ namespace SharpCorePDF.DependencyInjection;
 /// Every service is stateless, so all of them are registered as singletons; a merge executes on its
 /// own context and can therefore run concurrently with other merges.
 /// </remarks>
-public static class SharpCorePDFServiceCollectionExtensions
+public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the product spells PDF in capitals
 {
     /// <summary>The configuration section read when no other name is given.</summary>
     public const string DefaultConfigurationSection = "SharpCorePDF";

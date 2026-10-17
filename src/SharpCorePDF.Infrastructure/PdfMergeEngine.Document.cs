@@ -94,8 +94,9 @@ public sealed partial class PdfMergeEngine
 
             if (otherNames?.Get("Dests") is not null || other.Reader.Catalog?.Get("Dests") is not null)
             {
-                context.Warnings.Add(
-                    $"'{other.DisplayName}': its named destinations were not carried over, because named destinations are merged from the primary source only.");
+                context.Warnings.Add(new(
+                    PdfWarningKind.NamedDestinationsDropped,
+                    $"'{other.DisplayName}': its named destinations were not carried over, because named destinations are merged from the primary source only."));
             }
         }
     }

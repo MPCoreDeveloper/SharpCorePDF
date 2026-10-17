@@ -1,5 +1,6 @@
 using System.Text;
 using SharpCorePDF.Domain.Exceptions;
+using SharpCorePDF.Domain.ValueObjects;
 
 namespace SharpCorePDF.Infrastructure.Pdf;
 
@@ -39,8 +40,9 @@ internal sealed partial class PdfCrossReferenceReader
         }
 
         table.WasReconstructed = true;
-        warnings.Add(
-            $"'{sourceName}': the cross-reference table was rebuilt by scanning the file ({found} object header(s) found). The document may be damaged.");
+        warnings.Add(new(
+            PdfWarningKind.CrossReferenceRebuilt,
+            $"'{sourceName}': the cross-reference table was rebuilt by scanning the file ({found} object header(s) found). The document may be damaged."));
     }
 
     private int ScanForObjects()
@@ -141,15 +143,11 @@ internal sealed partial class PdfCrossReferenceReader
     /// <returns>A synthesised trailer, or <see langword="null"/>.</returns>
     private PdfDictionary? FindCatalogTrailer()
     {
-        foreach (var entry in table.Entries.OrderBy(entry => entry.Key))
+        foreach (var xref in table.Entries
+            .OrderBy(entry => entry.Key)
+            .Select(entry => entry.Value)
+            .Where(xref => xref.Type == XrefEntryType.Uncompressed))
         {
-            var xref = entry.Value;
-
-            if (xref.Type != XrefEntryType.Uncompressed)
-            {
-                continue;
-            }
-
             var parser = new PdfObjectParser(data, sourceName, (int)xref.Offset, null, options.MaxNestingDepth);
 
             if (!parser.TryReadIndirectHeader(out var objectNumber, out var generation)

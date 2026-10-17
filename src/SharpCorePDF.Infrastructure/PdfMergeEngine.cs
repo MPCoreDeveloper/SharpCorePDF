@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using SharpCorePDF.Application.Ports;
 using SharpCorePDF.Domain.ReadModels;
+using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure.Pdf;
 
 namespace SharpCorePDF.Infrastructure;
@@ -168,8 +169,9 @@ public sealed partial class PdfMergeEngine : IPdfMergeEngine
                     $"The merged document reports {reader.Pages.Count} page(s) but {expected} page(s) were written.");
             }
 
-            context.Warnings.Add(
-                $"the merged document was read back and contains {reader.Pages.Count} page(s), as expected.");
+            context.Warnings.Add(new(
+                PdfWarningKind.OutputVerified,
+                $"the merged document was read back and contains {reader.Pages.Count} page(s), as expected."));
         }
         catch (InvalidOperationException)
         {

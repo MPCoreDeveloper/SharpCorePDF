@@ -26,8 +26,9 @@ public sealed partial class PdfMergeEngine
         {
             foreach (var source in context.Sources.Where(source => source.Resolved.Info.HasOutlines))
             {
-                context.Warnings.Add(
-                    $"'{source.DisplayName}': its {source.Resolved.Info.OutlineItemCount} bookmark(s) were dropped by the configured outline policy.");
+                context.Warnings.Add(new(
+                    PdfWarningKind.OutlinesDroppedByPolicy,
+                    $"'{source.DisplayName}': its {source.Resolved.Info.OutlineItemCount} bookmark(s) were dropped by the configured outline policy."));
             }
 
             return null;
@@ -113,8 +114,9 @@ public sealed partial class PdfMergeEngine
 
         if (reference is null)
         {
-            context.Warnings.Add(
-                $"'{source.DisplayName}': a bookmark that is not stored as an indirect object was skipped.");
+            context.Warnings.Add(new(
+                PdfWarningKind.BookmarkSkipped,
+                $"'{source.DisplayName}': a bookmark that is not stored as an indirect object was skipped."));
             return nodes;
         }
 
@@ -133,8 +135,9 @@ public sealed partial class PdfMergeEngine
 
         if (nodes.Count >= MaxOutlineItems)
         {
-            context.Warnings.Add(
-                $"'{source.DisplayName}': more than {MaxOutlineItems} bookmarks were found; the rest was skipped.");
+            context.Warnings.Add(new(
+                PdfWarningKind.BookmarksTruncated,
+                $"'{source.DisplayName}': more than {MaxOutlineItems} bookmarks were found; the rest was skipped."));
         }
 
         return nodes;
@@ -277,8 +280,9 @@ public sealed partial class PdfMergeEngine
         if (!placement.IsPrimary && bookmark.Get("Dest") is PdfName or PdfString)
         {
             bookmark.Remove("Dest");
-            context.Warnings.Add(
-                $"'{source.DisplayName}': a bookmark that used a named destination was kept without its destination, because named destinations are merged from the primary source only.");
+            context.Warnings.Add(new(
+                PdfWarningKind.BookmarkDestinationDropped,
+                $"'{source.DisplayName}': a bookmark that used a named destination was kept without its destination, because named destinations are merged from the primary source only."));
         }
 
         return bookmark;

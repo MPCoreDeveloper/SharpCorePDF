@@ -11,7 +11,7 @@ internal static partial class PdfDocumentInspection
     /// <summary>The largest number of outline items that are counted, as a guard against damaged trees.</summary>
     private const int MaxOutlineItems = 100_000;
 
-    private static List<PdfPageInfo> ReadPages(PdfFileReader reader, List<string> warnings)
+    private static List<PdfPageInfo> ReadPages(PdfFileReader reader, List<PdfWarning> warnings)
     {
         var pages = new List<PdfPageInfo>(reader.Pages.Count);
 
@@ -22,8 +22,9 @@ internal static partial class PdfDocumentInspection
 
             if (size is null)
             {
-                warnings.Add(
-                    $"'{reader.SourceName}': page {number} has no readable /MediaBox; it is described as A4.");
+                warnings.Add(new(
+                    PdfWarningKind.PageSizeAssumed,
+                    $"'{reader.SourceName}': page {number} has no readable /MediaBox; it is described as A4."));
                 size = PdfPageSize.A4;
             }
 
@@ -72,7 +73,7 @@ internal static partial class PdfDocumentInspection
         var value = ReadNumber(reader, page.Dictionary.Get("Rotate"))
             ?? ReadNumber(reader, page.Inherited.Get("Rotate"));
 
-        if (value is not { } degrees)
+        if (value is null)
         {
             return PageRotation.None;
         }

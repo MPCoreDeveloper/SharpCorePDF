@@ -1,0 +1,43 @@
+#nullable enable
+override SharpCorePDF.Domain.ValueObjects.PdfWarning.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfWarning.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfWarning.ToString() -> string!
+SharpCorePDF.Domain.ReadModels.MergeResult.Warnings.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfWarning!>!
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.SecurityHandlerRevision.get -> int?
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.SecurityHandlerRevision.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.Warnings.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfWarning!>!
+SharpCorePDF.Domain.ValueObjects.PdfWarning
+SharpCorePDF.Domain.ValueObjects.PdfWarning.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfWarning!
+SharpCorePDF.Domain.ValueObjects.PdfWarning.Equals(SharpCorePDF.Domain.ValueObjects.PdfWarning? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfWarning.Kind.get -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarning.Message.get -> string!
+SharpCorePDF.Domain.ValueObjects.PdfWarning.PdfWarning(SharpCorePDF.Domain.ValueObjects.PdfWarningKind kind, string! message) -> void
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.BookmarkDestinationDropped = 24 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.BookmarkSkipped = 22 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.BookmarksTruncated = 23 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.CrossReferenceEntryMismatch = 1 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.CrossReferenceRebuilt = 0 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.CryptFilterMethodUnsupported = 18 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.CryptFilterUndefined = 17 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionCombinationUnsupported = 15 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionDictionaryIncomplete = 16 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionDictionaryUnreadable = 11 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionHandlerUnsupported = 13 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionNotOpened = 12 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionOpened = 19 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionRevisionUnsupported = 14 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.InlinePageSkipped = 9 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.NamedDestinationsDropped = 20 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ObjectStreamTruncated = 3 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ObjectStreamUnreadable = 2 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.OutlinesDroppedByPolicy = 21 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.OutputVerified = 25 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageSizeAssumed = 10 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeBranchUnreadable = 7 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeChildNotANode = 8 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeCycle = 6 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeMissing = 4 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeTooDeep = 5 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+static SharpCorePDF.Domain.ValueObjects.PdfWarning.operator !=(SharpCorePDF.Domain.ValueObjects.PdfWarning? left, SharpCorePDF.Domain.ValueObjects.PdfWarning? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfWarning.operator ==(SharpCorePDF.Domain.ValueObjects.PdfWarning? left, SharpCorePDF.Domain.ValueObjects.PdfWarning? right) -> bool

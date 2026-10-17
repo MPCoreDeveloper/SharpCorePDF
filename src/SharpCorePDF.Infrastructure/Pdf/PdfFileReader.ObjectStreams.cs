@@ -1,3 +1,5 @@
+using SharpCorePDF.Domain.ValueObjects;
+
 namespace SharpCorePDF.Infrastructure.Pdf;
 
 /// <summary>
@@ -34,8 +36,9 @@ internal sealed partial class PdfFileReader
 
             if (Resolve(containerObjectNumber) is not PdfStream stream)
             {
-                warnings.Add(
-                    $"'{SourceName}': object {containerObjectNumber} should be an object stream but is not; its objects are treated as missing.");
+                warnings.Add(new(
+                    PdfWarningKind.ObjectStreamUnreadable,
+                    $"'{SourceName}': object {containerObjectNumber} should be an object stream but is not; its objects are treated as missing."));
                 return;
             }
 
@@ -57,7 +60,9 @@ internal sealed partial class PdfFileReader
             {
                 if (!header.TryReadInteger(out var number) || !header.TryReadInteger(out var offset))
                 {
-                    warnings.Add($"'{SourceName}': object stream {containerObjectNumber} declares {count} objects but its header ends early.");
+                    warnings.Add(new(
+                        PdfWarningKind.ObjectStreamTruncated,
+                        $"'{SourceName}': object stream {containerObjectNumber} declares {count} objects but its header ends early."));
                     break;
                 }
 

@@ -41,7 +41,7 @@ internal sealed class PdfStream : PdfObject
 }
 
 /// <summary>An indirect reference to another object, written as <c>12 0 R</c>.</summary>
-internal sealed class PdfReference : PdfObject
+internal sealed class PdfReference : PdfObject, IEquatable<PdfReference>
 {
     /// <summary>Initializes a new instance of the <see cref="PdfReference"/> class.</summary>
     /// <param name="objectNumber">The object number.</param>

@@ -1,0 +1,63 @@
+#nullable enable
+override SharpCorePDF.Infrastructure.PdfEngineOptions.Equals(object? obj) -> bool
+override SharpCorePDF.Infrastructure.PdfEngineOptions.GetHashCode() -> int
+override SharpCorePDF.Infrastructure.PdfEngineOptions.ToString() -> string!
+override SharpCorePDF.Infrastructure.Sources.PdfByteArraySource.ToString() -> string!
+override SharpCorePDF.Infrastructure.Sources.PdfFileSource.ToString() -> string!
+override SharpCorePDF.Infrastructure.Sources.PdfStreamSource.ToString() -> string!
+SharpCorePDF.Infrastructure.Extensions.MergePlanExtensions
+SharpCorePDF.Infrastructure.Extensions.MergePlanExtensions.extension(SharpCorePDF.Domain.Aggregates.MergePlan!)
+SharpCorePDF.Infrastructure.Extensions.MergePlanExtensions.extension(SharpCorePDF.Domain.Aggregates.MergePlan!).AddBytes(byte[]! content, string! displayName, string? pages = null, string? password = null) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+SharpCorePDF.Infrastructure.Extensions.MergePlanExtensions.extension(SharpCorePDF.Domain.Aggregates.MergePlan!).AddContent(SharpCorePDF.Domain.Ports.IPdfContentSource! content, string? pages = null, string? password = null) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+SharpCorePDF.Infrastructure.Extensions.MergePlanExtensions.extension(SharpCorePDF.Domain.Aggregates.MergePlan!).AddFile(string! path, string? pages = null, string? displayName = null, string? password = null) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+SharpCorePDF.Infrastructure.Extensions.MergePlanExtensions.extension(SharpCorePDF.Domain.Aggregates.MergePlan!).AddStream(System.IO.Stream! content, string! displayName, string? pages = null, string? password = null) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+SharpCorePDF.Infrastructure.PdfDocumentReader
+SharpCorePDF.Infrastructure.PdfDocumentReader.Options.get -> SharpCorePDF.Infrastructure.PdfEngineOptions!
+SharpCorePDF.Infrastructure.PdfDocumentReader.PdfDocumentReader(SharpCorePDF.Infrastructure.PdfEngineOptions? options = null) -> void
+SharpCorePDF.Infrastructure.PdfDocumentReader.ReadAsync(string! sourceName, System.IO.Stream! content, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfDocumentInfo!>!
+SharpCorePDF.Infrastructure.PdfEngineOptions
+SharpCorePDF.Infrastructure.PdfEngineOptions.<Clone>$() -> SharpCorePDF.Infrastructure.PdfEngineOptions!
+SharpCorePDF.Infrastructure.PdfEngineOptions.Equals(SharpCorePDF.Infrastructure.PdfEngineOptions? other) -> bool
+SharpCorePDF.Infrastructure.PdfEngineOptions.MaxNestingDepth.get -> int
+SharpCorePDF.Infrastructure.PdfEngineOptions.MaxNestingDepth.init -> void
+SharpCorePDF.Infrastructure.PdfEngineOptions.MaxPagesPerSource.get -> int
+SharpCorePDF.Infrastructure.PdfEngineOptions.MaxPagesPerSource.init -> void
+SharpCorePDF.Infrastructure.PdfEngineOptions.MaxSourceBytes.get -> long
+SharpCorePDF.Infrastructure.PdfEngineOptions.MaxSourceBytes.init -> void
+SharpCorePDF.Infrastructure.PdfEngineOptions.PdfEngineOptions() -> void
+SharpCorePDF.Infrastructure.PdfEngineOptions.ReconstructCrossReferenceOnFailure.get -> bool
+SharpCorePDF.Infrastructure.PdfEngineOptions.ReconstructCrossReferenceOnFailure.init -> void
+SharpCorePDF.Infrastructure.PdfEngineOptions.Validate() -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Infrastructure.PdfEngineOptions.VerifyOutput.get -> bool
+SharpCorePDF.Infrastructure.PdfEngineOptions.VerifyOutput.init -> void
+SharpCorePDF.Infrastructure.PdfEngineOptions.WriteBinaryMarker.get -> bool
+SharpCorePDF.Infrastructure.PdfEngineOptions.WriteBinaryMarker.init -> void
+SharpCorePDF.Infrastructure.PdfMergeEngine
+SharpCorePDF.Infrastructure.PdfMergeEngine.MergeAsync(SharpCorePDF.Application.Ports.MergeEngineRequest! request, System.IO.Stream! destination, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.MergeResult!>!
+SharpCorePDF.Infrastructure.PdfMergeEngine.Options.get -> SharpCorePDF.Infrastructure.PdfEngineOptions!
+SharpCorePDF.Infrastructure.PdfMergeEngine.PdfMergeEngine(SharpCorePDF.Infrastructure.PdfEngineOptions? options = null) -> void
+SharpCorePDF.Infrastructure.Sources.PdfByteArraySource
+SharpCorePDF.Infrastructure.Sources.PdfByteArraySource.Bytes.get -> System.ReadOnlyMemory<byte>
+SharpCorePDF.Infrastructure.Sources.PdfByteArraySource.DisplayName.get -> string!
+SharpCorePDF.Infrastructure.Sources.PdfByteArraySource.Length.get -> long?
+SharpCorePDF.Infrastructure.Sources.PdfByteArraySource.OpenReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.IO.Stream!>
+SharpCorePDF.Infrastructure.Sources.PdfByteArraySource.PdfByteArraySource(byte[]! bytes, string! displayName) -> void
+SharpCorePDF.Infrastructure.Sources.PdfFileSource
+SharpCorePDF.Infrastructure.Sources.PdfFileSource.DisplayName.get -> string!
+SharpCorePDF.Infrastructure.Sources.PdfFileSource.Length.get -> long?
+SharpCorePDF.Infrastructure.Sources.PdfFileSource.OpenReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.IO.Stream!>
+SharpCorePDF.Infrastructure.Sources.PdfFileSource.Path.get -> string!
+SharpCorePDF.Infrastructure.Sources.PdfFileSource.PdfFileSource(string! path, string? displayName = null) -> void
+SharpCorePDF.Infrastructure.Sources.PdfStreamSource
+SharpCorePDF.Infrastructure.Sources.PdfStreamSource.DisplayName.get -> string!
+SharpCorePDF.Infrastructure.Sources.PdfStreamSource.Length.get -> long?
+SharpCorePDF.Infrastructure.Sources.PdfStreamSource.OpenReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.IO.Stream!>
+SharpCorePDF.Infrastructure.Sources.PdfStreamSource.PdfStreamSource(System.IO.Stream! content, string! displayName) -> void
+static SharpCorePDF.Infrastructure.Extensions.MergePlanExtensions.AddBytes(this SharpCorePDF.Domain.Aggregates.MergePlan! plan, byte[]! content, string! displayName, string? pages = null, string? password = null) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+static SharpCorePDF.Infrastructure.Extensions.MergePlanExtensions.AddContent(this SharpCorePDF.Domain.Aggregates.MergePlan! plan, SharpCorePDF.Domain.Ports.IPdfContentSource! content, string? pages = null, string? password = null) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+static SharpCorePDF.Infrastructure.Extensions.MergePlanExtensions.AddFile(this SharpCorePDF.Domain.Aggregates.MergePlan! plan, string! path, string? pages = null, string? displayName = null, string? password = null) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+static SharpCorePDF.Infrastructure.Extensions.MergePlanExtensions.AddStream(this SharpCorePDF.Domain.Aggregates.MergePlan! plan, System.IO.Stream! content, string! displayName, string? pages = null, string? password = null) -> SharpCorePDF.Domain.Aggregates.MergePlan!
+static SharpCorePDF.Infrastructure.PdfEngineOptions.Default.get -> SharpCorePDF.Infrastructure.PdfEngineOptions!
+static SharpCorePDF.Infrastructure.PdfEngineOptions.operator !=(SharpCorePDF.Infrastructure.PdfEngineOptions? left, SharpCorePDF.Infrastructure.PdfEngineOptions? right) -> bool
+static SharpCorePDF.Infrastructure.PdfEngineOptions.operator ==(SharpCorePDF.Infrastructure.PdfEngineOptions? left, SharpCorePDF.Infrastructure.PdfEngineOptions? right) -> bool
+static SharpCorePDF.Infrastructure.Sources.PdfFileSource.From(string! path, string? displayName = null) -> SharpCorePDF.Infrastructure.Sources.PdfFileSource!

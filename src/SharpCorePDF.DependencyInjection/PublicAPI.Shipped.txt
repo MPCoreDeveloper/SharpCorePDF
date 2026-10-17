@@ -1,0 +1,6 @@
+#nullable enable
+const SharpCorePDF.DependencyInjection.SharpCorePDFServiceCollectionExtensions.DefaultConfigurationSection = "SharpCorePDF" -> string!
+SharpCorePDF.DependencyInjection.SharpCorePDFServiceCollectionExtensions
+static SharpCorePDF.DependencyInjection.SharpCorePDFServiceCollectionExtensions.AddSharpCorePDF(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, string! sectionName = "SharpCorePDF") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static SharpCorePDF.DependencyInjection.SharpCorePDFServiceCollectionExtensions.AddSharpCorePDF(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, SharpCorePDF.Infrastructure.PdfEngineOptions! engineOptions) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static SharpCorePDF.DependencyInjection.SharpCorePDFServiceCollectionExtensions.AddSharpCorePDF(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

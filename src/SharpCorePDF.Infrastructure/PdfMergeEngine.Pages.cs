@@ -49,12 +49,9 @@ public sealed partial class PdfMergeEngine
 
         // Pages that were not selected are folded onto the first page the source contributes, so a
         // bookmark, a link or a form field that points at them still points at a real page.
-        foreach (var page in pages)
+        foreach (var page in pages.Where(page => !source.PageTargets.ContainsKey(page.Index + 1)))
         {
-            if (!source.PageTargets.ContainsKey(page.Index + 1))
-            {
-                source.Copier.Redirect(page.ObjectNumber, source.FirstPageTarget);
-            }
+            source.Copier.Redirect(page.ObjectNumber, source.FirstPageTarget);
         }
 
         // The page tree of the source is replaced by the single page tree node of the merged document,
@@ -82,12 +79,9 @@ public sealed partial class PdfMergeEngine
 
         // Attributes the page inherited from its ancestors travel with the page, because the merged
         // document has one flat page tree; the page's own entries always win.
-        foreach (var entry in inherited.Entries)
+        foreach (var entry in inherited.Entries.Where(entry => !copy.ContainsKey(entry.Key)))
         {
-            if (!copy.ContainsKey(entry.Key))
-            {
-                page.Set(entry.Key, source.Copier.Clone(entry.Value));
-            }
+            page.Set(entry.Key, source.Copier.Clone(entry.Value));
         }
 
         foreach (var entry in copy.Entries)

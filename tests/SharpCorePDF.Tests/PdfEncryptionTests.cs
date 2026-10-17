@@ -22,16 +22,16 @@ public sealed class PdfEncryptionTests
     private static readonly PdfEngineOptions Options = PdfEngineOptions.Default;
     private static readonly PdfDocumentReader Reader = new(Options);
 
-    /// <summary>The encrypted fixtures, with the password and the title each of them is read with.</summary>
-    public static TheoryData<string, string, string> EncryptedFixtures
+    /// <summary>The encrypted fixtures, with the password, the title and the revision each is read with.</summary>
+    public static TheoryData<string, string, string, int> EncryptedFixtures
     {
         get
         {
-            var data = new TheoryData<string, string, string>();
+            var data = new TheoryData<string, string, string, int>();
 
-            foreach (var (path, password, title) in TestAssets.EncryptedFixtures)
+            foreach (var (path, password, title, revision) in TestAssets.EncryptedFixtures)
             {
-                data.Add(path, password, title);
+                data.Add(path, password, title, revision);
             }
 
             return data;
@@ -40,24 +40,27 @@ public sealed class PdfEncryptionTests
 
     /// <summary>
     /// Every revision of the standard security handler opens, and what comes back is the document that
-    /// was encrypted: one page that carries content, and the title that only the password reveals.
+    /// was encrypted: one page that carries content, the title that only the password reveals, and the
+    /// revision the document itself declares.
     /// </summary>
     [Theory]
     [MemberData(nameof(EncryptedFixtures))]
     public async Task Opens_every_revision_of_the_standard_security_handler(
         string path,
         string password,
-        string title)
+        string title,
+        int revision)
     {
         var info = await ReadAsync(path, password);
 
         Assert.True(info.IsEncrypted);
         Assert.True(info.IsReadable);
         Assert.False(info.RequiresPassword);
+        Assert.Equal(revision, info.SecurityHandlerRevision);
         Assert.Equal(1, info.PageCount);
         Assert.True(info.Pages[0].HasContent);
         Assert.Equal(title, info.Metadata.Title);
-        Assert.Contains(info.Warnings, warning => warning.Contains("opened", StringComparison.Ordinal));
+        Assert.Contains(info.Warnings, warning => warning.Kind == PdfWarningKind.EncryptionOpened);
     }
 
     /// <summary>
@@ -67,12 +70,13 @@ public sealed class PdfEncryptionTests
     /// </summary>
     [Theory]
     [MemberData(nameof(EncryptedFixtures))]
-    public async Task Opens_a_document_with_the_owner_password(string path, string _, string title)
+    public async Task Opens_a_document_with_the_owner_password(string path, string _, string title, int revision)
     {
         var info = await ReadAsync(path, TestAssets.EncryptedOwnerPassword);
 
         Assert.True(info.IsReadable);
         Assert.False(info.RequiresPassword);
+        Assert.Equal(revision, info.SecurityHandlerRevision);
         Assert.Equal(1, info.PageCount);
         Assert.Equal(title, info.Metadata.Title);
     }
@@ -110,7 +114,7 @@ public sealed class PdfEncryptionTests
         Assert.Equal(0, info.PageCount);
         Assert.Empty(info.Pages);
         Assert.Equal(PdfMetadata.Empty, info.Metadata);
-        Assert.Contains(info.Warnings, warning => warning.Contains("could not be opened", StringComparison.Ordinal));
+        Assert.Contains(info.Warnings, warning => warning.Kind == PdfWarningKind.EncryptionNotOpened);
     }
 
     /// <summary>
@@ -118,18 +122,19 @@ public sealed class PdfEncryptionTests
     /// password, because no password would help.
     /// </summary>
     [Theory]
-    [InlineData("<</Filter/Adobe.PubSec/V 4/R 4/O <00>/U <00>>>")]
-    [InlineData("<</Filter/Standard/V 9/R 9/O <00>/U <00>>>")]
-    [InlineData("<</Filter/Standard/V 2/R 2>>")]
-    public async Task Leaves_an_encryption_it_does_not_implement_closed(string encryption)
+    [InlineData("<</Filter/Adobe.PubSec/V 4/R 4/O <00>/U <00>>>", 4)]
+    [InlineData("<</Filter/Standard/V 9/R 9/O <00>/U <00>>>", 9)]
+    [InlineData("<</Filter/Standard/V 2/R 2>>", 2)]
+    public async Task Leaves_an_encryption_it_does_not_implement_closed(string encryption, int revision)
     {
         var info = await ReadAsync(MinimalDocument(encryption), password: null);
 
         Assert.True(info.IsEncrypted);
         Assert.False(info.RequiresPassword);
         Assert.False(info.IsReadable);
+        Assert.Equal(revision, info.SecurityHandlerRevision);
         Assert.Equal(0, info.PageCount);
-        Assert.Contains(info.Warnings, warning => warning.Contains("encrypted", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(info.Warnings, warning => warning.Kind == PdfWarningKind.EncryptionNotOpened);
     }
 
     /// <summary>A trailer that points at something other than an encryption dictionary is reported.</summary>
@@ -140,8 +145,9 @@ public sealed class PdfEncryptionTests
 
         Assert.True(info.IsEncrypted);
         Assert.False(info.IsReadable);
+        Assert.Null(info.SecurityHandlerRevision);
         Assert.Equal(0, info.PageCount);
-        Assert.Contains(info.Warnings, warning => warning.Contains("could not be read", StringComparison.Ordinal));
+        Assert.Contains(info.Warnings, warning => warning.Kind == PdfWarningKind.EncryptionDictionaryUnreadable);
     }
 
     /// <summary>

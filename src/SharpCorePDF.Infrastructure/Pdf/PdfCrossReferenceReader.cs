@@ -1,3 +1,5 @@
+using SharpCorePDF.Domain.ValueObjects;
+
 namespace SharpCorePDF.Infrastructure.Pdf;
 
 /// <summary>
@@ -12,7 +14,7 @@ internal sealed partial class PdfCrossReferenceReader
     private readonly byte[] data;
     private readonly string sourceName;
     private readonly PdfEngineOptions options;
-    private readonly List<string> warnings;
+    private readonly List<PdfWarning> warnings;
     private readonly PdfCrossReferenceTable table = new();
 
     /// <summary>Initializes a new instance of the <see cref="PdfCrossReferenceReader"/> class.</summary>
@@ -20,7 +22,7 @@ internal sealed partial class PdfCrossReferenceReader
     /// <param name="sourceName">The name of the source, used in diagnostics.</param>
     /// <param name="options">The engine options.</param>
     /// <param name="warnings">The list that receives non-fatal remarks.</param>
-    public PdfCrossReferenceReader(byte[] data, string sourceName, PdfEngineOptions options, List<string> warnings)
+    public PdfCrossReferenceReader(byte[] data, string sourceName, PdfEngineOptions options, List<PdfWarning> warnings)
     {
         this.data = data ?? throw new ArgumentNullException(nameof(data));
         this.sourceName = sourceName;

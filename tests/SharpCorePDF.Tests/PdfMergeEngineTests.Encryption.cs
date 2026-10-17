@@ -1,6 +1,7 @@
 using System.Text;
 using SharpCorePDF.Domain.Aggregates;
 using SharpCorePDF.Domain.Exceptions;
+using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure.Extensions;
 using SharpCorePDF.Infrastructure.Pdf;
 
@@ -43,7 +44,7 @@ public sealed partial class PdfMergeEngineTests
         Assert.Equal(PageContent, DecodePageContent(merged.Raw, pageIndex: 0));
         Assert.Contains(
             merged.Result.Warnings,
-            warning => warning.Contains("encrypted", StringComparison.OrdinalIgnoreCase));
+            warning => warning.Kind == PdfWarningKind.EncryptionOpened);
     }
 
     /// <summary>Reads and decompresses the content of one page of a document.</summary>
