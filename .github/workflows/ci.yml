@@ -160,10 +160,11 @@ jobs:
       # `end`, which is the last step -- by then the build and both test legs have run, and the message
       # ("You are running CI analysis while Automatic Analysis is enabled") names a cause that is a page on
       # sonarcloud.io rather than a line in this repository. Reading the switch up front turns that into a
-      # failure at the setting, with the page in the error. Nothing here can flip it: the Web API exposes
-      # the value read-only, so the switch is a human's click. A token that cannot read project settings
-      # (an analysis-only token) answers 401/403, which is a note here and not a failure -- `end` still
-      # reports the conflict if there is one.
+      # failure at the setting, with the page in the error. Nothing here can flip it: the value is readable
+      # but not writable, and `api/settings/set` answers with "Setting 'sonar.autoscan.enabled' cannot be
+      # set on a Project", so the switch is a human's click. A token that cannot read project settings (an
+      # analysis-only token) answers 401/403, which is a note here and not a failure -- `end` still reports
+      # the conflict if there is one.
       - name: Check that Automatic Analysis is off
         if: needs.check-sonar-token.outputs.has-token == 'true'
         env:
@@ -178,7 +179,7 @@ jobs:
             exit 0
           fi
           if grep -Eq '"value": *"true"' "$body"; then
-            echo "::error::Automatic Analysis is on for MPCoreDeveloper_SharpCorePDF, so a CI analysis cannot upload. Turn it off under Administration -> Analysis Method: https://sonarcloud.io/project/settings?id=MPCoreDeveloper_SharpCorePDF#analysis_method"
+            echo "::error::Automatic Analysis is on for MPCoreDeveloper_SharpCorePDF, so a CI analysis cannot upload. Turn it off in the project's Administration -> Analysis Method: https://sonarcloud.io/project/analysis_method?id=MPCoreDeveloper_SharpCorePDF"
             exit 1
           fi
           echo "Automatic Analysis is off; this run owns the analysis."

@@ -75,7 +75,10 @@ output in a pull request is worth more than a description of it.
    edited, so 90% means a copy of it bound to the project — which is why a change that lowers the number is a
    red run rather than a suggestion. A change under `src/` without a test that exercises it
    is what the new-code condition exists to catch, and test code contributes no lines to the number,
-   because a suite covering itself is not coverage of anything.
+   because a suite covering itself is not coverage of anything. One red step is not about your change at
+   all: if it is named *Check that Automatic Analysis is off*, the project's analysis method is set to
+   Automatic Analysis on sonarcloud.io, which refuses a CI analysis and cannot be turned off through the
+   API — a maintainer has to click it off under Administration → Analysis Method, and the step links there.
 5. **PDF fixtures stay binary.** `.gitattributes` marks `*.pdf binary` on purpose: two AES fixtures carry
    no byte Git detects as binary, so without that rule a checkout rewrites them (1119 → 1155 bytes) and
    every cross-reference offset in them moves.
