@@ -1,4 +1,4 @@
-# Continuous integration: the build, both test legs, and the SonarCloud analysis.
+# Continuous integration: the build, both test legs, coverage, and the SonarCloud analysis.
 #
 # This workflow and publish.yml answer different questions and are deliberately separate. publish.yml
 # answers "does this version reach the feed, and is it the version the tag names", and it runs on a tag
@@ -32,10 +32,22 @@
 # Coverage"`, `--logger trx`, `--blame-hang`) are rejected there; the xUnit v3 host registers no coverage
 # extension either. The collector's `xml` format is the Visual Studio coverage XML that
 # `sonar.cs.vscoveragexml.reportsPaths` reads, and the cobertura copy of the same run is uploaded as an
-# artifact so the number can be read without opening SonarCloud.
+# artifact and sent to Codecov, so the number can be read without opening either service.
 #
-# The quality gate is reported, not waited on: nothing here passes `sonar.qualitygate.wait`, so a red gate
-# shows up on the badge and in SonarCloud without failing a build whose tests passed.
+# The measurement is not shared between the tools by accident: Sonar and Codecov read the same report from
+# the same run, so "the gate is green" and "the badge says 92%" cannot disagree about what was measured.
+#
+# Both halves of the quality gate are now enforced rather than reported:
+#
+#   SonarCloud  `sonar.qualitygate.wait` on `end`. The step fails when the gate fails.
+#   Codecov     codecov.yml asks for 90% on the project and 90% on the change, and the upload step passes
+#               `fail_ci_if_error`, so a report that never lands is a red run rather than a missing number.
+#
+# Neither can fail a fork's run: both upload steps are gated on a secret, exactly like the scan, so a pull
+# request from a fork builds, tests and reports coverage without asking for credentials it does not have.
+#
+# Actions are pinned to commit hashes, not tags, because a tag is a moving reference and these steps run
+# with a token in scope. The `# vN` comment is what a person reads; Dependabot is what moves it.
 
 name: CI
 
@@ -50,13 +62,15 @@ permissions:
   contents: read
 
 jobs:
-  # A job-level `if` cannot read secrets, so the token's presence is decided here and consumed through
-  # `needs` below. This is the gate ServiceMq's workflow uses.
-  check-sonar-token:
-    name: Check SONAR_TOKEN
+  # A job-level `if` cannot read secrets, so the presence of each token is decided here and consumed
+  # through `needs` below. This is the gate ServiceMq's workflow uses, extended by one output: Codecov
+  # needs its own token, and the two uploads are independent of each other.
+  check-quality-tokens:
+    name: Check the quality-gate tokens
     runs-on: ubuntu-latest
     outputs:
       has-token: ${{ steps.check.outputs.defined }}
+      has-codecov-token: ${{ steps.codecov.outputs.defined }}
     steps:
       - id: check
         env:
@@ -68,59 +82,72 @@ jobs:
             echo "defined=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - id: codecov
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          if [ -n "$CODECOV_TOKEN" ]; then
+            echo "defined=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "defined=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build-test-sonar:
     name: Build, test and analyse
     runs-on: ubuntu-latest
-    needs: check-sonar-token
+    needs: check-quality-tokens
     timeout-minutes: 45
 
     steps:
       # SonarCloud attributes findings to commits and decorates a pull request from the git history, which
       # a shallow clone does not carry.
       - name: Check out
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
       # Both SDKs, for the reason publish.yml records: the .NET 11 SDK is not on the hosted images yet,
       # and the 11.0 SDK on its own cannot produce the net10.0 app host the test project needs (MSB3030).
       - name: Install the .NET SDKs
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: |
             11.0.x
             10.0.x
 
       # The scanner engine is a Java process. The hosted image happens to carry a JDK; pinning one is what
-      # keeps the scan from depending on that.
+      # keeps the scan from depending on that. `zulu` and a 17 toolchain are still first-class in v5; what
+      # v5 retired is the legacy `adopt*` distributions, which this line never named.
       - name: Set up the JDK the scanner engine runs on
-        if: needs.check-sonar-token.outputs.has-token == 'true'
-        uses: actions/setup-java@v4
+        if: needs.check-quality-tokens.outputs.has-token == 'true'
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: 'zulu'
           java-version: '17'
 
       - name: Cache the SonarCloud cache
-        if: needs.check-sonar-token.outputs.has-token == 'true'
-        uses: actions/cache@v4
+        if: needs.check-quality-tokens.outputs.has-token == 'true'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
       # Installed into ./.tools rather than globally, so that every later step names the exact binary it
-      # runs. Both are git-ignored.
-      - name: Install the SonarScanner and the coverage collector
-        if: needs.check-sonar-token.outputs.has-token == 'true'
-        run: |
-          dotnet tool install --tool-path ./.tools dotnet-sonarscanner
-          dotnet tool install --tool-path ./.tools dotnet-coverage
+      # runs. Both are git-ignored. The collector is installed unconditionally, because coverage is measured
+      # and reported on every run, including one where no SonarCloud token exists.
+      - name: Install the coverage collector
+        run: dotnet tool install --tool-path ./.tools dotnet-coverage
+
+      - name: Install the SonarScanner
+        if: needs.check-quality-tokens.outputs.has-token == 'true'
+        run: dotnet tool install --tool-path ./.tools dotnet-sonarscanner
 
       # On a pull request the analysis is a pull-request analysis, which is what makes SonarCloud decorate
       # the pull request; on a branch it is a branch analysis. The array keeps both shapes in one step, the
       # way ServiceMq's workflow does.
       - name: Begin the SonarCloud analysis
-        if: needs.check-sonar-token.outputs.has-token == 'true'
+        if: needs.check-quality-tokens.outputs.has-token == 'true'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -140,7 +167,9 @@ jobs:
             "/d:sonar.sourceEncoding=UTF-8"
             "/d:sonar.scm.provider=git"
             "/d:sonar.exclusions=**/bin/**,**/obj/**,**/artifacts/**,**/TestResults/**,**/.sonarqube/**,**/_bmad/**,**/_bmad-output/**,**/.cline/**,**/docs/**,**/tools/**,**/examples/**"
-            "/d:sonar.cs.vscoveragexml.reportsPaths=artifacts/coverage/*.xml"
+            # Exactly one file. The glob that used to sit here also matched the cobertura conversion, which
+            # Sonar would then have tried to read as Visual Studio coverage XML.
+            "/d:sonar.cs.vscoveragexml.reportsPaths=artifacts/coverage/net11.0.xml"
           )
           if [ -n "$PR_NUMBER" ]; then
             args+=(
@@ -156,14 +185,10 @@ jobs:
       - name: Build
         run: dotnet build ./SharpCorePDF.slnx -c Release --no-incremental
 
-      # The instrumented run replaces the plain one instead of following it: the collector has to wrap the
-      # test host, so collecting and then testing again would run the suite twice for one number.
-      - name: Test on net11.0
-        if: needs.check-sonar-token.outputs.has-token != 'true'
-        run: dotnet test ./tests/SharpCorePDF.Tests/SharpCorePDF.Tests.csproj -c Release -p:TargetFramework=net11.0
-
+      # One instrumented run rather than a plain one followed by a measured one: the collector has to wrap
+      # the test host, so testing and then collecting would run the suite twice for one number. Nothing
+      # gates this step, because the number is reported to Codecov whether or not SonarCloud has a token.
       - name: Test on net11.0, under the coverage collector
-        if: needs.check-sonar-token.outputs.has-token == 'true'
         run: |
           mkdir -p ./artifacts/coverage
           ./.tools/dotnet-coverage collect \
@@ -178,27 +203,43 @@ jobs:
         run: dotnet test ./tests/SharpCorePDF.Tests/SharpCorePDF.Tests.csproj -c Release -p:TargetFramework=net10.0 -r linux-x64
 
       # One binary report, converted twice: `xml` is the Visual Studio coverage XML Sonar reads, cobertura
-      # is the shape the uploaded artifact carries.
+      # is the shape the artifact and the Codecov upload carry.
       - name: Convert the coverage report
-        if: needs.check-sonar-token.outputs.has-token == 'true'
         run: |
           ./.tools/dotnet-coverage merge -f xml -o ./artifacts/coverage/net11.0.xml ./artifacts/coverage/net11.0.coverage
           ./.tools/dotnet-coverage merge -f cobertura -o ./artifacts/coverage/net11.0.cobertura.xml ./artifacts/coverage/net11.0.coverage
           ls -l ./artifacts/coverage
 
       - name: Upload the coverage report
-        if: needs.check-sonar-token.outputs.has-token == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: coverage-net11.0
           path: artifacts/coverage/net11.0.*
           if-no-files-found: ignore
           retention-days: 14
 
+      # codecov.yml holds the target (90% on the project, 90% on the change) and the ignore list that keeps
+      # the test project, the examples and the tooling out of the number. `fail_ci_if_error` is what turns
+      # that target into a gate: a report that never lands fails this run instead of leaving a stale badge.
+      - name: Upload to Codecov
+        if: needs.check-quality-tokens.outputs.has-codecov-token == 'true'
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
+        with:
+          files: artifacts/coverage/net11.0.cobertura.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          verbose: true
+
       # Last, and only when everything before it succeeded: `end` uploads the analysis, and an analysis of
       # a build that failed is not worth a report.
       - name: End the SonarCloud analysis
-        if: needs.check-sonar-token.outputs.has-token == 'true'
+        if: needs.check-quality-tokens.outputs.has-token == 'true'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./.tools/dotnet-sonarscanner end "/d:sonar.token=$SONAR_TOKEN"
+        # `qualitygate.wait` is the difference between a badge and a gate: the step waits for the analysis
+        # to be processed and fails when the gate fails, so a red SonarCloud run is a red build.
+        run: |
+          ./.tools/dotnet-sonarscanner end \
+            "/d:sonar.token=$SONAR_TOKEN" \
+            "/d:sonar.qualitygate.wait=true" \
+            "/d:sonar.qualitygate.timeout=600"

@@ -1,0 +1,65 @@
+# Dependency updates, opened as pull requests and reviewed like any other change.
+#
+# What this file cannot do, and what still has to be switched on in the repository settings (Settings →
+# Code security): Dependabot *alerts* for a vulnerable dependency, and Dependabot *security updates*. This
+# file only schedules routine version updates. The distinction is worth knowing before assuming the box is
+# ticked: an alert can fire without this file, and this file can open a pull request without an alert.
+#
+# One entry per directory rather than one for "/": the repository's solution is SharpCorePDF.slnx, and
+# Dependabot's NuGet updater looks for a .sln or a project file in the directory it is pointed at. It does
+# not discover the projects from the .slnx, so a single "/" entry finds no manifest and reports nothing to
+# update.
+#
+# The groups keep a routine Microsoft.Extensions.* bump to one pull request instead of one per package,
+# because those move together and are tested together.
+# https://docs.github.com/code-security/dependabot/dependabot-options-reference
+
+version: 2
+
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/src"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      microsoft-extensions:
+        patterns:
+          - "Microsoft.Extensions.*"
+      analyzers:
+        patterns:
+          - "Microsoft.CodeAnalysis.*"
+
+  - package-ecosystem: "nuget"
+    directory: "/tests"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      xunit:
+        patterns:
+          - "xunit*"
+          - "Microsoft.Testing.*"
+      analyzers:
+        patterns:
+          - "Microsoft.CodeAnalysis.*"
+
+  - package-ecosystem: "nuget"
+    directory: "/examples"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: "nuget"
+    directory: "/tools"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+
+  # The workflows pin their actions (NuGet/login is pinned to a commit), and a pinned action is exactly the
+  # kind of dependency that goes stale quietly.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
