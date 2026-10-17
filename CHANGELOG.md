@@ -46,9 +46,10 @@ therefore the tree as it stands rather than a diff against a release that happen
 - **The trusted publishing policy needs two subjects, not one.** `SharpCorePDF.*` matches the four layers
   and does not match `SharpCorePDF` itself, which has no dot after the product name; a policy holding only
   the glob pushes four packages and refuses the fifth.
-- **`ci.yml` enforces the SonarCloud quality gate instead of reporting it.** The scan's `end` step passes
-  `sonar.qualitygate.wait`, so a failing gate fails the run, and the gate's coverage condition reads the
-  report this run produced: `dotnet-coverage collect` measures the net11.0 leg, and the Visual Studio XML
+- **`ci.yml` enforces the SonarCloud quality gate instead of reporting it.** The scan passes
+  `sonar.qualitygate.wait` to `begin` — the `end` phase rejects every property but the token — so a failing
+  gate fails the run, and the gate's coverage condition reads the report this run produced:
+  `dotnet-coverage collect` measures the net11.0 leg, and the Visual Studio XML
   it yields is named exactly (`artifacts/coverage/net11.0.xml`) instead of by a glob. Coverage is measured
   on every run rather than only when a SonarCloud token exists, and every action is pinned to a commit hash
   rather than a tag.

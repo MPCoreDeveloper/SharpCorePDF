@@ -219,6 +219,8 @@ Two consequences worth stating before a release:
    the default gate, whose only coverage condition is `new_coverage < 80` — so until 90% is entered there,
    `sonar.qualitygate.wait` enforces 80% faithfully, and a green gate is a true statement about the wrong
    number. The same gate asks for 100% of new security hotspots reviewed, which is a click in the UI and not
-   something a build can do for itself.
+   something a build can do for itself. Nor is the 90% a click on the gate as it stands: `Sonar way` is built
+   in and cannot be edited, so 90% means copying it into a gate of this project's own and binding the project
+   to that copy.
 
 

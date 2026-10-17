@@ -37,9 +37,10 @@
 # be read without opening SonarCloud.
 #
 # SonarCloud holds the whole gate, coverage included, and the gate is enforced rather than reported:
-# `sonar.qualitygate.wait` on `end` makes the step wait for the analysis and fail when the gate fails, so a
-# change that lowers coverage is a red run rather than a stale badge. The threshold itself lives in the
-# quality gate on sonarcloud.io -- Sonar's default is 80% on new code, and this repository wants 90% there
+# `sonar.qualitygate.wait`, passed to `begin`, makes the scan wait for the analysis and fail when the gate
+# fails, so a change that lowers coverage is a red run rather than a stale badge. It is asked for there and
+# not on `end`, because post-processing rejects every property but the token. The threshold itself lives in
+# the quality gate on sonarcloud.io -- Sonar's default is 80% on new code, and this repository wants 90% there
 # instead -- because a number declared in this repository would be a message to nobody.
 #
 # The scan is gated on a secret, so a pull request from a fork builds and tests without asking for

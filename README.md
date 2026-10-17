@@ -340,9 +340,10 @@ The gate fails the run:
 | --- | --- | --- |
 | SonarCloud quality gate | the project on sonarcloud.io: the conditions are entered there — the coverage floor this repository wants on new code is 90%, above Sonar's 80% default — plus the exclusions in `sonar.exclusions` | the analysis was uploaded and the gate failed |
 
-`sonar.qualitygate.wait` on the scanner's `end` step is what turns it from a badge into a gate: the step
-waits for the analysis to be processed and fails when the gate fails, so a green badge is a run that passed
-rather than a run that is not finished yet. The 90% is a setting on that gate, not a property of this tree:
+`sonar.qualitygate.wait`, passed to the scanner's `begin` step, is what turns it from a badge into a gate:
+the scan waits for the analysis to be processed and fails when the gate fails, so a green badge is a run
+that passed rather than a run that is not finished yet. It goes on `begin` because the `end` phase rejects
+every property but the token. The 90% is a setting on that gate, not a property of this tree:
 until it is entered there, the step enforces Sonar's 80% and is telling the truth about the wrong number.
 
 Two things switch the analysis on, and both live outside this repository:

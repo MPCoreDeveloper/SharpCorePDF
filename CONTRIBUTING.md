@@ -71,8 +71,9 @@ output in a pull request is worth more than a description of it.
 4. **The change keeps the 90% coverage target.** The SonarCloud quality gate fails a pull request whose new
    code is below 90% covered, and `ci.yml` waits for that verdict (`sonar.qualitygate.wait`) instead of
    reporting it. The threshold is a condition on the gate, set on sonarcloud.io — this repository wants 90%
-   on new code, above Sonar's 80% default, and cannot declare it itself — which is why a change that lowers
-   the number is a red run rather than a suggestion. A change under `src/` without a test that exercises it
+   on new code, above Sonar's 80% default, and cannot declare it itself. `Sonar way` is built in and cannot be
+   edited, so 90% means a copy of it bound to the project — which is why a change that lowers the number is a
+   red run rather than a suggestion. A change under `src/` without a test that exercises it
    is what the new-code condition exists to catch, and test code contributes no lines to the number,
    because a suite covering itself is not coverage of anything.
 5. **PDF fixtures stay binary.** `.gitattributes` marks `*.pdf binary` on purpose: two AES fixtures carry
