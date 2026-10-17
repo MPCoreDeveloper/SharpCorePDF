@@ -9,7 +9,9 @@
   github.com/.../badge.svg is not on nuget.org's trusted list, while shields.io answers the same
   question from a host that is. Read them as:
 
-    nuget.org version  the vpre endpoint, so it reads 1.0.0-preview.3 now and 1.0.0 once that ships
+    nuget.org version  the vpre endpoint for the entry-point id, which reads "unknown" until the first
+                       `SharpCorePDF` push and 1.0.0 after it; the four layer ids already resolve, at
+                       1.0.0-preview.1
     tests              the ci.yml runs: the build, both test legs and the SonarCloud analysis
     quality gate       the SonarCloud project MPCoreDeveloper_SharpCorePDF, which is also where the
                        coverage number is read; it reads "unknown" until the first analysis lands, the way
@@ -139,14 +141,18 @@ stands in the way, so a caller can ask for one instead of being told the documen
 
 The package to install is `SharpCorePDF`. It is the product name and the only name to remember: it
 carries no code of its own and depends on the four layers below, so one `dotnet add package` pulls in the
-whole library. The version is still a preview, so `--prerelease` is required until 1.0.0 ships:
+whole library:
 
 ```powershell
-dotnet add package SharpCorePDF --prerelease
+dotnet add package SharpCorePDF
 ```
 
 If you would rather take one layer on its own — `SharpCorePDF.Domain` has no dependency at all — the four
-are published separately and install the same way.
+are published separately under the same version, so they install the same way and stay in step with the
+entry point. Before 1.0.0 the only ids on the feed were the layers, at `1.0.0-preview.1`; that is why an
+older instruction may tell you to add `SharpCorePDF.DependencyInjection` by name, and why `--prerelease`
+was needed then. `dotnet add package SharpCorePDF` replaces both.
+
 
 The XML documentation ships inside the packages, so every public type and member is described in
 IntelliSense without leaving the editor.
@@ -158,7 +164,7 @@ or pack all five into a local feed and install them from there:
 ```powershell
 dotnet pack .\SharpCorePDF.slnx -c Release -o $env:TEMP\SharpCorePDF-feed
 dotnet nuget add source $env:TEMP\SharpCorePDF-feed --name SharpCorePDF
-dotnet add package SharpCorePDF --prerelease
+dotnet add package SharpCorePDF --version 1.0.0
 ```
 
 Every package carries the logo as its package icon and embeds this README, so the page a feed shows for
@@ -419,11 +425,12 @@ Publishing then happens one of two ways:
   legs run, every package is checked, and the packages are pushed into a throwaway local feed as a
   handshake. Set `publish` to true to carry on to nuget.org.
 * **Push a `v*` tag** —
-  `git tag v1.0.0-preview.3 && git push origin v1.0.0-preview.3`. The tag is a `v` followed by the
-  exact `<Version>` in
+  `git tag v1.0.0 && git push origin v1.0.0`. The tag is a `v` followed by the exact `<Version>` in
   [`src/Directory.Build.props`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/src/Directory.Build.props),
-  prerelease suffix included, because a tagged run refuses to publish a version the tag does not name:
-  `v1.0.0` against the current `1.0.0-preview.3` fails the check instead of publishing.
+  because a tagged run refuses to publish a version the tag does not name: `v1.0.0-preview.1` against a
+  `<Version>` of `1.0.0` fails the check instead of publishing. The first tag that did publish was
+  `v1.0.0-preview.1`, which put the four layers on the feed on 2026-10-15; `v1.0.0` is the tag that adds
+  the entry point.
 
 Nothing reaches a feed until the packages pass that check: every `.nupkg` must carry both `lib/net10.0`
 and `lib/net11.0`, which is the promise made in `src/Directory.Build.props`.

@@ -8,16 +8,18 @@ is where a hole in that claim gets reported.
 
 | Version | Supported |
 | --- | --- |
-| `1.0.0-preview.*` | yes — pre-release; a fix lands on `main` and ships in the next preview |
-| anything older | nothing older exists: no version of this package has been published to a feed |
+| `1.0.0` | yes — current; a fix lands on `main` and ships as `1.0.1` |
+| `1.0.0-preview.1` | no — superseded, though the four layer ids remain on the feed at this version; a fix ships in `1.0.x`, never back-ported to it |
+| anything older | nothing older exists: `1.0.0-preview.1` (2026-10-15) was the first version published |
 
 There is one codebase and one supported line. A fix is not back-ported, because there is nothing behind
 it to port to.
 
 ## What is in scope
 
-Every package in this repository — `SharpCorePDF.Domain`, `SharpCorePDF.Application`,
-`SharpCorePDF.Infrastructure`, `SharpCorePDF.DependencyInjection` — and in particular:
+Every package in this repository — `SharpCorePDF` (the entry point, which carries no assemblies),
+`SharpCorePDF.Domain`, `SharpCorePDF.Application`, `SharpCorePDF.Infrastructure`,
+`SharpCorePDF.DependencyInjection` — and in particular:
 
 - **Any input that turns into more than an exception.** Code execution, a crash the caller cannot catch,
   memory or time that grows with the document rather than with its size, or a byte written outside the
@@ -58,8 +60,8 @@ Two private channels, in this order:
 
 A report is most useful with:
 
-- the package and version (`1.0.0-preview.3` and later — the exact `<Version>` matters, the surface is
-  still moving), and the target framework (`net10.0` or `net11.0`);
+- the package and version (`1.0.0` and later — the exact `<Version>` matters, because the feed carries a
+  `1.0.0-preview.1` of the four layers as well), and the target framework (`net10.0` or `net11.0`);
 - the call that produced the result — the type and method, not a code review;
 - whether the document was encrypted, and which revision if you know it;
 - the document itself, or the smallest prefix of it that still reproduces the result. It can be generated

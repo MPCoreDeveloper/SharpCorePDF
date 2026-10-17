@@ -33,7 +33,7 @@
     <Deterministic>true</Deterministic>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
 
-    <Version>1.0.0-preview.3</Version>
+    <Version>1.0.0</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
     <Authors>MPCoreDeveloper</Authors>
@@ -45,6 +45,13 @@
     <RepositoryUrl>https://github.com/MPCoreDeveloper/SharpCorePDF</RepositoryUrl>
     <PackageProjectUrl>https://github.com/MPCoreDeveloper/SharpCorePDF</PackageProjectUrl>
     <PackageTags>pdf;merge;combine;pdf-merge;concatenate;ddd;dependency-injection;dotnet;net10;net11</PackageTags>
+
+    <!--
+      nuget.org renders this as the Release notes tab on every package page, and it is the one block a
+      consumer reads before downloading. It stays a pointer rather than a copy: the changelog is the
+      detail, and two copies of the same notes drift the moment one of them is edited.
+    -->
+    <PackageReleaseNotes>1.0.0 - SharpCorePDF is the package to install: it depends on the four layers and carries no assemblies of its own. Both legs (net10.0, net11.0) ship in one package. Details: https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/CHANGELOG.md</PackageReleaseNotes>
   </PropertyGroup>
 
   <!--

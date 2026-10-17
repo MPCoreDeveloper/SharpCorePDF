@@ -39,8 +39,8 @@ first — because stars, forks and outside issues are what the committee reads a
 | Commits | one authored line of history plus checkpoint commits | young, and produced in bursts |
 | Issues open / closed | 0 / 0 | the tracker is public but has not been used |
 | Pull requests open / closed | 0 / 0 | — |
-| Releases | 1 tag (`v1.0.0-preview.1`), **0 published packages** | nothing to download |
-| Packages | 0 on nuget.org (404 for `sharpcorepdf` and `sharpcorepdf.domain`) | — |
+| Releases | 1 tag (`v1.0.0-preview.1`), **4 packages at `1.0.0-preview.1`** | downloadable since 2026-10-15; no stable release |
+| Packages | 4 ids on nuget.org — `.Domain`, `.Application`, `.Infrastructure`, `.DependencyInjection`; `sharpcorepdf` itself 404 | the entry point is the one id 1.0.0 claims |
 
 None of this is a defect in the code; it is the arithmetic of a project that started two days ago. It
 is also the reason an application now would be judged on intent rather than on evidence.

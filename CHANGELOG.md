@@ -7,12 +7,23 @@ follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). A versi
 before it is tagged, not after: `docs/release-checklist.md` G3 refuses a release whose notes do not exist,
 and a version with no notes is a version a consumer cannot evaluate.
 
-**Nothing in this file has been published to nuget.org yet.** `<Version>` moved from `1.0.0-preview.1` to
-`1.0.0-preview.2` to `1.0.0-preview.3` while no feed ever saw them, so only one tag exists
-(`v1.0.0-preview.1`, 2026-10-15) and none of the three names a published package. The first entry below is
-therefore the tree as it stands rather than a diff against a release that happened.
+**`1.0.0-preview.1` was published to nuget.org on 2026-10-15**, as four packages — `SharpCorePDF.Domain`,
+`.Application`, `.Infrastructure` and `.DependencyInjection` — pushed by `publish.yml` from tag
+`v1.0.0-preview.1`. The `SharpCorePDF` entry point did not exist in that tree, so the only id on the feed
+that a consumer could have installed was a layer. `1.0.0-preview.2` and `1.0.0-preview.3` were bumped here
+and never pushed, which is why this file keeps no entries for them: there is no consumer of a version no
+feed ever served.
+
+`1.0.0` is therefore the first version that changes the *shape* of the install rather than only the
+contents of the layers, and the entry below is written against the published `preview.1` rather than
+against an empty feed.
 
 ## [Unreleased]
+
+Nothing yet. A change that a consumer can see lands here first and is folded into the version that ships
+it; `PULL_REQUEST_TEMPLATE.md` asks for the entry, and G3 refuses a tag whose version has none.
+
+## [1.0.0] - 2026-10-17
 
 ### Added
 
@@ -65,16 +76,28 @@ therefore the tree as it stands rather than a diff against a release that happen
   the walker that uses them, and `PdfReference` now implements `IEquatable<PdfReference>`, so the
   `Equals` overload it already carried is the one a generic comparer calls.
 
-### Notes for a consumer of a preview
+### Known limits at 1.0.0
 
-The preview is a preview because the public surface has not stopped moving
-(`docs/release-checklist.md` G1). Two things are known and deliberately not promised: there is no symbol
-package yet, so a debugger shows no source for a stack trace, and nothing is code-signed. Both are gates
-in the release checklist rather than intentions.
+Two things are known and deliberately not promised: there is no symbol package yet, so a debugger shows no
+source for a stack trace, and nothing is code-signed. Both are gates in the release checklist rather than
+intentions. Neither affects what the packages contain or what the assemblies do.
 
-## [1.0.0-preview.3], [1.0.0-preview.2], [1.0.0-preview.1]
+The shipped leg is two, not one: `lib/net10.0` and `lib/net11.0` carry the same API, as `preview.1`
+already advertised, because a 1.0.0 that narrowed to a single framework would withdraw a target the feed
+has promised since 2026-10-15 (`docs/release-checklist.md` G2). The public surface is the one frozen by
+`PublicAPI.Shipped.txt` — additions after this version go through `PublicAPI.Unshipped.txt` and a minor
+version, not through a silent change to a shipped signature.
 
-Never pushed. `1.0.0-preview.1` was tagged on 2026-10-15; no feed has seen any of the three, so there is
-nothing to keep for them and no download history to preserve. The number that matters is the first one
-that actually reaches nuget.org, and `docs/release-checklist.md` G7 is what makes it the number the tag
-names.
+## [1.0.0-preview.3], [1.0.0-preview.2]
+
+Never pushed. Both names exist only as values the repository's `<Version>` passed through, so no feed ever
+served them, nothing was downloaded from them, and skipping them broke no promise to anyone.
+
+## [1.0.0-preview.1] - 2026-10-15
+
+The first and — until 1.0.0 — only published version: `SharpCorePDF.Domain`, `.Application`,
+`.Infrastructure` and `.DependencyInjection` at `1.0.0-preview.1`, from tag `v1.0.0-preview.1`. No entry
+was written here for it at the time, and this heading does not invent one after the fact; it records that
+the four ids are live and immutable, which is why their next version is `1.0.0` and not a re-cut of
+`preview.1`.
+

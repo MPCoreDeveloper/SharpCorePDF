@@ -18,7 +18,7 @@ body:
     attributes:
       label: Version
       description: The package version, as `dotnet list package` reports it.
-      placeholder: "1.0.0-preview.3"
+      placeholder: "1.0.0"
     validations:
       required: true
 

@@ -15,29 +15,41 @@ symbols story" — so the gate reads without it, and nothing here depends on a d
 
 | Fact | State |
 | --- | --- |
-| Current `<Version>` | `1.0.0-preview.3` (`src/Directory.Build.props`) |
-| Published on nuget.org | **nothing.** `api.nuget.org/v3/registration5-semver1/sharpcorepdf/index.json` and `.../sharpcorepdf.domain/index.json` both return 404 |
-| Tags | `v1.0.0-preview.1` (2026-10-15); no feed has seen the version it names |
-| Packages `dotnet pack` would produce | five: `SharpCorePDF` (the entry point, no assemblies) plus `SharpCorePDF.Domain`, `.Application`, `.Infrastructure`, `.DependencyInjection` |
+| Current `<Version>` | `1.0.0` (`src/Directory.Build.props`) |
+| Published on nuget.org | **four packages at `1.0.0-preview.1`**, listed since 2026-10-15: `SharpCorePDF.Domain`, `.Application`, `.Infrastructure`, `.DependencyInjection`. `sharpcorepdf` itself is 404, so the id this release is built around is still unclaimed |
+| Tags | `v1.0.0-preview.1` (2026-10-15) — the only tag, and the source of the four published packages |
+| Packages `dotnet pack` would produce | five at `1.0.0`: `SharpCorePDF` (the entry point, no assemblies) plus `SharpCorePDF.Domain`, `.Application`, `.Infrastructure`, `.DependencyInjection` |
 | Build | `dotnet build SharpCorePDF.slnx -t:Rebuild` → 0 warnings, 0 errors, `net10.0` and `net11.0` |
 | Tests | 447 pass on each leg |
 | Coverage | 92% of the shipped assemblies, imported into SonarCloud by the scan; the 90% floor is a condition on the quality gate, where the suite's own 99% is not counted |
-| External prerequisites | the trusted publishing policy and the `NUGET_USERNAME` secret — unverifiable from this repository |
+| External prerequisites | the trusted publishing policy — which now needs a subject matching the bare `SharpCorePDF`, not only the `SharpCorePDF.*` glob — and the `NUGET_USERNAME` secret; both unverifiable from this repository |
 
-Because nothing has been published, **no version number has been spent.** `preview.2` and
-`preview.3` were bumped without a feed ever seeing them, so either of those numbers can still be
-attached to whatever content the tree holds when the first publish happens. That freedom ends at the
-first successful push: a version on nuget.org is immutable, and the package id is owned by the account
-that first pushed it.
+**How to read the feed, because this page got it wrong once.** The earlier version of this table reported
+"nothing published" on the strength of a 404 from
+`api.nuget.org/v3/registration5-semver1/sharpcorepdf.domain/index.json`. That endpoint serves the SemVer1
+view, and a package whose only versions are SemVer2 prereleases — `1.0.0-preview.1` has a dot in its
+prerelease label, which is what makes it SemVer2 — is invisible there: the blob 404s while the package is
+live, listed and downloadable. The endpoints that answer the question are
+`api.nuget.org/v3-flatcontainer/<id>/index.json` and `.../registration5-gz-semver2/<id>/index.json`; a 404
+from *those* is the evidence of an unpublished id. Four packages sat on nuget.org for two days behind a
+false negative.
+
+**What that costs, in version numbers.** `1.0.0-preview.1` is spent: it is on the feed, immutable, and the
+four ids carry download history and a licence grant attached to it. So the next version for those four is
+`1.0.0`, and the numbers this page previously called free — `preview.2` and `preview.3` — stay unused
+because nothing needs them: a version nobody was served is a version nobody has to be told about. The
+freedom that remains is the one that matters here — `SharpCorePDF` has never been pushed by anyone, so
+1.0.0 is the first time the entry-point id is claimed, and G0 is what decides it.
+
 
 ## The gates
 
 | # | Gate | Why it exists | True today? | Closed by |
 | --- | --- | --- | --- | --- |
 | G0 | The package id is the one we want to own forever | the first push claims the id; renaming later means a new id and no download history | **Yes — decided 2026-10-17**, see G0 below | — |
-| G1 | The public surface has stopped moving | a preview is a promise a consumer builds against | **No** — 1 of 12 surface stories is in review | the remaining surface stories |
+| G1 | The public surface has stopped moving | a preview is a promise a consumer builds against | **No** — 1 of 12 surface stories is in review; 1.0.0 was cut over it, see the sequence below | the remaining surface stories |
 | G2 | One shipped leg, `net11.0` | 1.0 must not withdraw a target framework it once advertised | **No** — packages carry `lib/net10.0` and `lib/net11.0`, and `publish.yml` asserts both | the story that narrows the shipped leg |
-| G3 | `CHANGELOG.md` exists and describes the version being published | a version with no notes is a version nobody can evaluate | **Yes, 2026-10-17** — the file exists and holds an `[Unreleased]` entry | keep the entry current in the commit that bumps `<Version>` |
+| G3 | `CHANGELOG.md` exists and describes the version being published | a version with no notes is a version nobody can evaluate | **Yes, 2026-10-17** — the file holds a `[1.0.0]` entry, written in the same commit as the bump | keep the entry current in the commit that bumps `<Version>` |
 | G4 | Symbols reach a debugger, and the build is proven reproducible | a stack trace from a consumer is useless without source mapping | **Partly** — `<Deterministic>true</Deterministic>` is set and Source Link rides on `RepositoryUrl`, but no symbol package is packed and no two builds are compared | the changelog and symbols story |
 | G5 | Trusted publishing policy and `NUGET_USERNAME` exist | without them the workflow can publish nothing | **Unknown** — outside the repository | nuget.org → Trusted Publishing; repository secrets |
 | G6 | A dry run is green on the commit that will be tagged | the local-feed handshake is the only rehearsal available | **Not yet run for this commit** | Actions → publish → `publish: false` |
@@ -130,13 +142,17 @@ to introduce a first stable version.
 **The rule this produces:** publish the preview series *after* the leg is narrowed, or publish it knowingly
 as a two-leg preview and say so in the notes. Do not discover the difference after the fact.
 
+**What 1.0.0 did:** took the second option. It ships both legs, and the changelog and the release notes on
+every package page say so — the first option stopped being available on 2026-10-15, when `preview.1`
+advertised `net10.0` and `net11.0` on a public feed.
+
 ## G3, G4 — the file a consumer reads and the symbols a debugger needs
 
-`CHANGELOG.md` exists as of 2026-10-17, and it opens with the honest version of the situation: no version
-has ever been published, so the entry that matters is the first one that reaches a feed. From here the rule
-is the one G3 states — the entry is written in the same commit that bumps `<Version>`, and a first preview
-needs one entry that says what the version contains *and what it deliberately does not*, because the
-README's capability list is written for 1.0 and a preview is not 1.0.
+`CHANGELOG.md` exists as of 2026-10-17, and it opens with the honest version of the situation: four layer
+packages at `1.0.0-preview.1` are on the feed, the entry point is not, and the versions bumped in between
+never reached one. From here the rule is the one G3 states — the entry is written in the same commit that
+bumps `<Version>`, and `[1.0.0]` is that entry, including the two limits a consumer should know before
+installing (no symbol package, no signing) and the framework legs it does and does not carry.
 
 Symbols: nothing is packed for a debugger today. `IncludeSymbols` is absent, so no `.snupkg` is
 produced — `dotnet pack` was run on 2026-10-17 and produced five packages and zero symbol packages — and
@@ -167,19 +183,24 @@ only then spend a version number.
 
 ## The sequence, and the version numbers it produces
 
-1. Finish the surface work. The surface stops moving (G1).
-2. Narrow the shipped leg (G2), land the API snapshot (the files already exist in substance) and add the
-   changelog, symbols and package metadata (G3 and G4).
-3. Create the trusted publishing policy and `NUGET_USERNAME` (G5), then run the dry dispatch (G6).
-4. Bump `<Version>` and add the changelog entry in the same commit, tag `v` plus that exact version,
-   push the tag (G7).
-5. Verify (G8). The ApiCompat comparison now has a baseline and turns itself on.
-6. The independent-validation work, the local guards, the compatibility check and the docs pass → `1.0.0`.
+1. The surface stops moving (G1). **Open when 1.0.0 was cut** — 1 of 12 surface stories is in review, so
+   1.0.0 ships with the surface not formally settled. That is a decision recorded here rather than an
+   oversight: the alternative was a `preview.4` whose only difference from `1.0.0` is the label on it.
+2. Narrow the shipped leg (G2) and land the API snapshot. **Partly** — `PublicAPI.Shipped.txt` exists and
+   RS0016/RS0017 are build errors, but the packages still carry both legs, which is what `preview.1`
+   advertised; a 1.0.0 that dropped `net10.0` would withdraw a target the feed has already promised.
+3. Create the trusted publishing policy and `NUGET_USERNAME` (G5), then run the dry dispatch (G6). The
+   policy's subject list must now contain the bare `SharpCorePDF` as well as `SharpCorePDF.*`: the first
+   publish of the entry point is this one, and a 403 on it fails the run after the layers are packed.
+4. Bump `<Version>`, write the changelog entry in the same commit, tag `v` plus that exact version, push
+   the tag (G7). Then verify (G8), including that the `SharpCorePDF` page shows four dependencies and no
+   assemblies of its own.
+5. Symbols, signing and the reproducible-build comparison are what `1.0.1` or `1.1.0` still owe (G4).
 
-If the first publish happens **before** step 2 it is `1.0.0-preview.3`, the number the README badge
-already shows. If it happens **after**, bump to `1.0.0-preview.4` in the same commit as the changelog
-entry, because the shipped asset set is no longer what `preview.3` would have contained. Either way the
-number is honest about what is inside it, which is the one thing the badge cannot check for you.
+The preview numbers are settled by the feed rather than by intention: `preview.1` was published, so it is
+history and its four ids carry the version forward to `1.0.0`; `preview.2` and `preview.3` never reached a
+feed, so they are skipped rather than reused, and nothing needs to explain them to anyone.
+
 
 ## Two things people assume are gates and are not
 
