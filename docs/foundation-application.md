@@ -17,8 +17,8 @@ All eight, checked in this order. The state column is what the repository said o
 | 2 | No row of the eligibility table in `docs/foundation-readiness.md` sits below "Met" | **false** — three do (the CLA, automated dependency scanning, the public channel) | root-cause each: see that table |
 | 3 | GitHub Discussions is enabled, or another public channel is named in the README | **false** — Discussions is off (`has_discussions: false`) | Settings → Features → Discussions |
 | 4 | Private vulnerability reporting is enabled, so `SECURITY.md`'s first channel resolves | **unknown** — a settings switch, not a file | Settings → Code security |
-| 5 | At least one **stable** release is on nuget.org, not a preview only | **false** — only a prerelease so far: four packages at `1.0.0-preview.1` since 2026-10-15 | `docs/release-checklist.md`, G7 |
-| 6 | 90 days have passed since that first stable release | **false** — n/a until 5 | clock |
+| 5 | At least one **stable** release is on nuget.org, not a preview only | **true** — `1.0.0` is stable, listed since 2026-10-17, all five ids | done 2026-10-17 |
+| 6 | 90 days have passed since that first stable release | **false** — the clock started 2026-10-17, so 2027-01-15 | clock |
 | 7 | At least one issue or pull request exists from someone other than the maintainer | **false** — 0 / 0, one contributor | time, and a project people can find |
 | 8 | The five owner decisions in `docs/foundation-readiness.md` are answered in writing, in this repository | **false** — two answered on 2026-10-17 (package id, account shape); three remain | the owner |
 

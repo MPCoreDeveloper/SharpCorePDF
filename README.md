@@ -9,9 +9,9 @@
   github.com/.../badge.svg is not on nuget.org's trusted list, while shields.io answers the same
   question from a host that is. Read them as:
 
-    nuget.org version  the vpre endpoint for the entry-point id, which reads "unknown" until the first
-                       `SharpCorePDF` push and 1.0.0 after it; the four layer ids already resolve, at
-                       1.0.0-preview.1
+    nuget.org version  the vpre endpoint for the entry-point id, which read "unknown" until 1.0.0 was
+                       pushed on 2026-10-17, and reads 1.0.0 now; the four layer ids resolve too, at
+                       1.0.0 and 1.0.0-preview.1
     tests              the ci.yml runs: the build, both test legs and the SonarCloud analysis
     quality gate       the SonarCloud project MPCoreDeveloper_SharpCorePDF, which is also where the
                        coverage number is read; it reads "unknown" until the first analysis lands, the way
@@ -428,9 +428,9 @@ Publishing then happens one of two ways:
   `git tag v1.0.0 && git push origin v1.0.0`. The tag is a `v` followed by the exact `<Version>` in
   [`src/Directory.Build.props`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/src/Directory.Build.props),
   because a tagged run refuses to publish a version the tag does not name: `v1.0.0-preview.1` against a
-  `<Version>` of `1.0.0` fails the check instead of publishing. The first tag that did publish was
-  `v1.0.0-preview.1`, which put the four layers on the feed on 2026-10-15; `v1.0.0` is the tag that adds
-  the entry point.
+  `<Version>` of `1.0.0` fails the check instead of publishing. `v1.0.0-preview.1` put the four layers on
+  the feed on 2026-10-15; `v1.0.0` added the entry point on 2026-10-17, in the same push as the layers'
+  first stable version.
 
 Nothing reaches a feed until the packages pass that check: every `.nupkg` must carry both `lib/net10.0`
 and `lib/net11.0`, which is the promise made in `src/Directory.Build.props`.

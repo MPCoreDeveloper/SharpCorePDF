@@ -16,13 +16,13 @@ symbols story" — so the gate reads without it, and nothing here depends on a d
 | Fact | State |
 | --- | --- |
 | Current `<Version>` | `1.0.0` (`src/Directory.Build.props`) |
-| Published on nuget.org | **four packages at `1.0.0-preview.1`**, listed since 2026-10-15: `SharpCorePDF.Domain`, `.Application`, `.Infrastructure`, `.DependencyInjection`. `sharpcorepdf` itself is 404, so the id this release is built around is still unclaimed |
-| Tags | `v1.0.0-preview.1` (2026-10-15) — the only tag, and the source of the four published packages |
+| Published on nuget.org | **five packages at `1.0.0`**, listed since 2026-10-17: `SharpCorePDF` (the entry point) plus `SharpCorePDF.Domain`, `.Application`, `.Infrastructure`, `.DependencyInjection`. The four layers also still carry `1.0.0-preview.1` from 2026-10-15 |
+| Tags | `v1.0.0-preview.1` (2026-10-15) and `v1.0.0` (2026-10-17), the source of the five `1.0.0` packages |
 | Packages `dotnet pack` would produce | five at `1.0.0`: `SharpCorePDF` (the entry point, no assemblies) plus `SharpCorePDF.Domain`, `.Application`, `.Infrastructure`, `.DependencyInjection` |
 | Build | `dotnet build SharpCorePDF.slnx -t:Rebuild` → 0 warnings, 0 errors, `net10.0` and `net11.0` |
 | Tests | 447 pass on each leg |
 | Coverage | 92% of the shipped assemblies, imported into SonarCloud by the scan; the 90% floor is a condition on the quality gate, where the suite's own 99% is not counted |
-| External prerequisites | the trusted publishing policy — which now needs a subject matching the bare `SharpCorePDF`, not only the `SharpCorePDF.*` glob — and the `NUGET_USERNAME` secret; both unverifiable from this repository |
+| External prerequisites | the trusted publishing policy, whose subject list must hold a line for the bare `SharpCorePDF` as well as the `SharpCorePDF.*` glob — the glob alone refuses the entry point with 403 — and the `NUGET_USERNAME` secret. Both were confirmed the hard way on the first `1.0.0` attempt; neither is visible from this repository |
 
 **How to read the feed, because this page got it wrong once.** The earlier version of this table reported
 "nothing published" on the strength of a 404 from
@@ -38,8 +38,8 @@ false negative.
 four ids carry download history and a licence grant attached to it. So the next version for those four is
 `1.0.0`, and the numbers this page previously called free — `preview.2` and `preview.3` — stay unused
 because nothing needs them: a version nobody was served is a version nobody has to be told about. The
-freedom that remains is the one that matters here — `SharpCorePDF` has never been pushed by anyone, so
-1.0.0 is the first time the entry-point id is claimed, and G0 is what decides it.
+freedom that remains is the one that matters here — `SharpCorePDF` had never been pushed by anyone, so 1.0.0
+is the first time the entry-point id is claimed, and G0 is what decided it. It was claimed on 2026-10-17.
 
 
 ## The gates
@@ -51,10 +51,10 @@ freedom that remains is the one that matters here — `SharpCorePDF` has never b
 | G2 | One shipped leg, `net11.0` | 1.0 must not withdraw a target framework it once advertised | **No** — packages carry `lib/net10.0` and `lib/net11.0`, and `publish.yml` asserts both | the story that narrows the shipped leg |
 | G3 | `CHANGELOG.md` exists and describes the version being published | a version with no notes is a version nobody can evaluate | **Yes, 2026-10-17** — the file holds a `[1.0.0]` entry, written in the same commit as the bump | keep the entry current in the commit that bumps `<Version>` |
 | G4 | Symbols reach a debugger, and the build is proven reproducible | a stack trace from a consumer is useless without source mapping | **Partly** — `<Deterministic>true</Deterministic>` is set and Source Link rides on `RepositoryUrl`, but no symbol package is packed and no two builds are compared | the changelog and symbols story |
-| G5 | Trusted publishing policy and `NUGET_USERNAME` exist | without them the workflow can publish nothing | **Unknown** — outside the repository | nuget.org → Trusted Publishing; repository secrets |
+| G5 | Trusted publishing policy and `NUGET_USERNAME` exist | without them the workflow can publish nothing | **Yes, 2026-10-17** — the OIDC exchange minted a key that pushed all five (run `39025525848`); the first attempt was refused `403` on the bare id until its subject line was added to the policy | nuget.org → Trusted Publishing; repository secrets |
 | G6 | A dry run is green on the commit that will be tagged | the local-feed handshake is the only rehearsal available | **Yes, 2026-10-17** — dispatch `39023732538` with `publish: false` pushed all five `1.0.0` packages into the runner's local feed on `a1d8f6a` | Actions → publish → `publish: false` |
-| G7 | The tag equals `<Version>` | a tag must name the version, prerelease suffix included | mechanical — `publish.yml` refuses the mismatch | `v` + the exact `<Version>` |
-| G8 | The published packages install and open a document | the feed page is not the product | n/a until G7 | G8 below |
+| G7 | The tag equals `<Version>` | a tag must name the version, prerelease suffix included | **Yes** — `v1.0.0` names `<Version>` `1.0.0`, and `publish.yml` refuses a mismatch | `v` + the exact `<Version>` |
+| G8 | The published packages install and open a document | the feed page is not the product | **Not yet** — all five are on the feed since 2026-10-17, but nobody has installed `1.0.0` from nuget.org and opened a document with it | G8 below |
 | G9 | The quality gate is green on the commit being released | a release is the one build nobody re-runs; the coverage and the analysis have to be true of the tree, not of a branch it came from | **Yes, by construction** — `ci.yml` fails on the gate; see G9 below | keep it green; never tag a commit whose `ci.yml` run is red |
 
 ## G0 — the package id, decided before the first push, not after
@@ -108,13 +108,16 @@ cleaner result by hiding the thing that makes the layering worth publishing — 
 no dependency at all — and because the entry point's description, icon and README on the first result are
 enough to make the right name the obvious one without hiding the others.
 
-Two consequences the first push has to respect:
+Two consequences the first push had to respect. Both were exercised on 2026-10-17, the second the hard way:
 
 1. `SharpCorePDF` goes in the **first batch**, not in a later one. Until a version of it exists, nobody
    owns the id, and an unclaimed id named after a product is exactly what gets registered by someone else.
+   The five packages went out in one `dotnet nuget push`, so the id was claimed by the same run that
+   published the layers it depends on.
 2. The trusted publishing policy needs **both** `SharpCorePDF` and `SharpCorePDF.*`. The glob matches the
    four layers and not the bare id; a policy holding only the glob pushes four packages and refuses the
-   fifth.
+   fifth — which is exactly what the first attempt did, `403` on `SharpCorePDF.1.0.0.nupkg`, before any
+   other file was sent. Nothing was published by that attempt and no version was consumed.
 
 ## G1 — what "the surface has stopped moving" means concretely
 
