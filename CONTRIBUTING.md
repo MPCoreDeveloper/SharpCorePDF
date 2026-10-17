@@ -68,10 +68,13 @@ output in a pull request is worth more than a description of it.
    already covers nullable and the two snapshot rules, and the rest is a habit. A rule this repository
    decides not to follow is silenced per file in `src/.editorconfig`, with the reason, and the line carries
    `// NOSONAR` so the server agrees — never by turning the rule off globally.
-4. **The change keeps the 90% coverage target.** `codecov.yml` fails a pull request whose touched lines are
-   below 90% covered, or whose project number falls below 90%. A change under `src/` without a test that
-   exercises it is a change that fails the patch status; the test project's own coverage is excluded from
-   the number, because a suite covering itself is not coverage of anything.
+4. **The change keeps the 90% coverage target.** The SonarCloud quality gate fails a pull request whose new
+   code is below 90% covered, and `ci.yml` waits for that verdict (`sonar.qualitygate.wait`) instead of
+   reporting it. The threshold is a condition on the gate, set on sonarcloud.io — this repository wants 90%
+   on new code, above Sonar's 80% default, and cannot declare it itself — which is why a change that lowers
+   the number is a red run rather than a suggestion. A change under `src/` without a test that exercises it
+   is what the new-code condition exists to catch, and test code contributes no lines to the number,
+   because a suite covering itself is not coverage of anything.
 5. **PDF fixtures stay binary.** `.gitattributes` marks `*.pdf binary` on purpose: two AES fixtures carry
    no byte Git detects as binary, so without that rule a checkout rewrites them (1119 → 1155 bytes) and
    every cross-reference offset in them moves.

@@ -21,7 +21,7 @@ symbols story" — so the gate reads without it, and nothing here depends on a d
 | Packages `dotnet pack` would produce | five: `SharpCorePDF` (the entry point, no assemblies) plus `SharpCorePDF.Domain`, `.Application`, `.Infrastructure`, `.DependencyInjection` |
 | Build | `dotnet build SharpCorePDF.slnx -t:Rebuild` → 0 warnings, 0 errors, `net10.0` and `net11.0` |
 | Tests | 447 pass on each leg |
-| Coverage | 92% of the shipped assemblies (`codecov.yml` target: 90%); the suite itself measures 99% |
+| Coverage | 92% of the shipped assemblies, imported into SonarCloud by the scan; the 90% floor is a condition on the quality gate, where the suite's own 99% is not counted |
 | External prerequisites | the trusted publishing policy and the `NUGET_USERNAME` secret — unverifiable from this repository |
 
 Because nothing has been published, **no version number has been spent.** `preview.2` and
@@ -43,7 +43,7 @@ that first pushed it.
 | G6 | A dry run is green on the commit that will be tagged | the local-feed handshake is the only rehearsal available | **Not yet run for this commit** | Actions → publish → `publish: false` |
 | G7 | The tag equals `<Version>` | a tag must name the version, prerelease suffix included | mechanical — `publish.yml` refuses the mismatch | `v` + the exact `<Version>` |
 | G8 | The published packages install and open a document | the feed page is not the product | n/a until G7 | G8 below |
-| G9 | Both quality gates are green on the commit being released | a release is the one build nobody re-runs; the coverage and the analysis have to be true of the tree, not of a branch it came from | **Yes, by construction** — `ci.yml` fails on either gate; see G9 below | keep it green; never tag a commit whose `ci.yml` run is red |
+| G9 | The quality gate is green on the commit being released | a release is the one build nobody re-runs; the coverage and the analysis have to be true of the tree, not of a branch it came from | **Yes, by construction** — `ci.yml` fails on the gate; see G9 below | keep it green; never tag a commit whose `ci.yml` run is red |
 
 ## G0 — the package id, decided before the first push, not after
 
@@ -184,36 +184,39 @@ number is honest about what is inside it, which is the one thing the badge canno
 ## Two things people assume are gates and are not
 
 - **The SonarCloud quality gate, in `publish.yml`.** `ci.yml` enforces it — the scan's `end` step passes
-  `sonar.qualitygate.wait`, so a failing gate is a failing run — and Codecov's 90% is enforced the same
-  way by `fail_ci_if_error`. What is *not* enforced is the link between those runs and a release:
-  `publish.yml` never asks SonarCloud or Codecov whether the commit it is packing was green. A tag is
-  therefore trusted on its own merits, which is an argument for tagging a commit whose `ci.yml` run was
-  already green, not a mechanism that enforces it.
+  `sonar.qualitygate.wait`, so a failing gate is a failing run, coverage condition included. What is *not*
+  enforced is the link between that run and a release: `publish.yml` never asks SonarCloud whether the
+  commit it is packing was green. A tag is therefore trusted on its own merits, which is an argument for
+  tagging a commit whose `ci.yml` run was already green, not a mechanism that enforces it.
 - **A green `ci.yml` run.** `publish.yml` builds and tests the commit itself, but it does not wait for
   `ci.yml`. The two workflows answer different questions and are deliberately independent.
 
-## G9 — the quality gates, and what "90%" counts
+## G9 — the quality gate, and what "90%" counts
 
-Two services hold a number about this repository, and both are red-run gates in `ci.yml`:
+One service holds a number about this repository, and that number is a red-run gate in `ci.yml`:
 
 | Gate | Target | Rules live in | Measured by |
 | --- | --- | --- | --- |
-| SonarCloud | the project's quality gate on new code, plus the Sonar way profile over `src/` and `tests/` | the project on sonarcloud.io; local silences in `src/.editorconfig` | `dotnet-sonarscanner begin` before the build, `end` after the tests |
-| Codecov | 90% on the project, 90% on the lines a pull request touches | `codecov.yml` | the cobertura conversion of the same instrumented run |
+| SonarCloud | the project's quality gate on new code — the coverage floor this repository wants there is 90%, above Sonar's 80% default — plus the Sonar way profile over `src/` and `tests/` | the quality gate on sonarcloud.io; the exclusions in `sonar.exclusions` in `ci.yml`; local silences in `src/.editorconfig` | `dotnet-sonarscanner begin` before the build, `end` after the tests, reading `artifacts/coverage/net11.0.xml` |
 
-The 90% is deliberately *not* the whole tree. `codecov.yml` ignores `tests/`, `examples/`, `tools/` and
-`docs/`, so the number describes the four assemblies the packages ship plus the entry point. At the time
-of writing that is 92% (`SharpCorePDF.Infrastructure` 91%, `SharpCorePDF.Domain` 96%,
+The 90% is deliberately *not* the whole tree. The scan excludes the BMad bundle, `docs/`, `tools/`,
+`examples/`, `bin/`, `obj/` and `artifacts/`, and test code contributes no lines to a coverage metric, so
+the number describes the four assemblies the packages ship plus the entry point. At the time of writing
+that is 92% (`SharpCorePDF.Infrastructure` 91%, `SharpCorePDF.Domain` 96%,
 `SharpCorePDF.Application` 100%, `SharpCorePDF.DependencyInjection` 100%), while the suite that measures
 them sits at 99%. Counting the tests would raise the number and tell a reader nothing.
 
 Two consequences worth stating before a release:
 
-1. **A gate that is green is a gate that ran.** Neither upload can be skipped silently: a missing
-   `SONAR_TOKEN` or `CODECOV_TOKEN` skips its step, and a run where both are skipped proves nothing about
-   the analysis. The badge is the evidence that the step ran, which is why it is worth checking the run
-   rather than the diff.
+1. **A gate that is green is a gate that ran.** The scan cannot be skipped silently: a missing
+   `SONAR_TOKEN` skips its steps, and a run where they were skipped proves nothing about the analysis. The
+   badge is the evidence that the scan ran, which is why it is worth checking the run rather than the diff.
 2. **The target is a floor under refactoring, not a goal.** A change that adds a hundred uncovered lines
-   and keeps the project at 91% fails the patch status, which is the status that would have caught it.
+   and leaves the project at 91% fails the new-code condition, which is the condition that would have
+   caught it.
+3. **The 90% is a setting, not a property of the tree.** Nothing in this repository declares it: it is
+   entered on the quality gate at sonarcloud.io, where Sonar's default is 80% on new code. Until it is
+   entered, `sonar.qualitygate.wait` enforces 80% faithfully, and a green gate is a true statement about
+   the wrong number.
 
 

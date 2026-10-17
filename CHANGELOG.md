@@ -29,10 +29,6 @@ therefore the tree as it stands rather than a diff against a release that happen
   and the build, test and review bar a change has to clear.
 - **`.github/`**: issue forms for a defect and a feature request, a pull request template, and a
   Dependabot configuration for the NuGet packages and the workflow actions.
-- **`codecov.yml`**, which declares the coverage this repository holds itself to: 90% on the project and
-  90% on the lines a pull request touches, measured over the shipped assemblies only. `ci.yml` uploads the
-  cobertura conversion of the same instrumented run that SonarCloud reads, so the badge and the quality
-  gate cannot disagree about what was measured.
 - **`SonarAnalyzer.CSharp` in the build** (`src/Directory.Build.props`, dev-time only). The rules
   SonarCloud applies now run in `dotnet build`, at the line that causes them. The three rules this
   repository answers with a decision rather than a change (`S101`, `S1694`, `S4790`) are silenced per file
@@ -50,11 +46,19 @@ therefore the tree as it stands rather than a diff against a release that happen
 - **The trusted publishing policy needs two subjects, not one.** `SharpCorePDF.*` matches the four layers
   and does not match `SharpCorePDF` itself, which has no dot after the product name; a policy holding only
   the glob pushes four packages and refuses the fifth.
-- **`ci.yml` enforces both quality gates instead of reporting them.** The scan's `end` step passes
-  `sonar.qualitygate.wait`, so a failing SonarCloud gate fails the run, and the Codecov upload passes
-  `fail_ci_if_error`. Coverage is measured on every run rather than only when a SonarCloud token exists,
-  the report Sonar reads is named exactly (`artifacts/coverage/net11.0.xml`) instead of by a glob that also
-  matched the cobertura conversion, and every action is pinned to a commit hash rather than a tag.
+- **`ci.yml` enforces the SonarCloud quality gate instead of reporting it.** The scan's `end` step passes
+  `sonar.qualitygate.wait`, so a failing gate fails the run, and the gate's coverage condition reads the
+  report this run produced: `dotnet-coverage collect` measures the net11.0 leg, and the Visual Studio XML
+  it yields is named exactly (`artifacts/coverage/net11.0.xml`) instead of by a glob. Coverage is measured
+  on every run rather than only when a SonarCloud token exists, and every action is pinned to a commit hash
+  rather than a tag.
+- **Codecov is gone, and with it the second coverage report.** One service measuring the number is the
+  arrangement that cannot disagree with itself: `codecov.yml` asked for 90% on the project and on the
+  change, while SonarCloud was already importing the same measurement, so the gate holds the number and
+  the cobertura conversion that only Codecov read is no longer produced. The 90% is a condition to enter on
+  the quality gate on sonarcloud.io — above Sonar's 80% default on new code, and the only place it can be
+  enforced once the file that declared it is gone — and `README.md`, `CONTRIBUTING.md` and
+  `docs/release-checklist.md` say so instead of pointing at a file in the tree.
 - **The SonarCloud findings are fixed in the source, not silenced**: loops that read better as
   `Where`/`Select`/`Distinct`, a nested ternary in the AES object-key derivation, two helpers moved into
   the walker that uses them, and `PdfReference` now implements `IEquatable<PdfReference>`, so the

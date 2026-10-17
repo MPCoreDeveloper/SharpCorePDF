@@ -11,10 +11,9 @@
 
     nuget.org version  the vpre endpoint, so it reads 1.0.0-preview.3 now and 1.0.0 once that ships
     tests              the ci.yml runs: the build, both test legs and the SonarCloud analysis
-    quality gate       the SonarCloud project MPCoreDeveloper_SharpCorePDF. It reads "unknown" until
-                       the first analysis lands, the way the version badge did before the first push
-    coverage           the Codecov project, which carries the 90% target codecov.yml declares and the
-                       number ci.yml measures; it reads "unknown" until the first report lands too
+    quality gate       the SonarCloud project MPCoreDeveloper_SharpCorePDF, which is also where the
+                       coverage number is read; it reads "unknown" until the first analysis lands, the way
+                       the version badge did before the first push
     licence            LICENSE, MIT
     Sponsor            the funding page, which .github/FUNDING.yml puts on the repository page too
 -->
@@ -30,9 +29,6 @@
   </a>
   <a href="https://sonarcloud.io/dashboard?id=MPCoreDeveloper_SharpCorePDF">
     <img src="https://img.shields.io/sonar/quality_gate/MPCoreDeveloper_SharpCorePDF?server=https%3A%2F%2Fsonarcloud.io&amp;logo=sonarcloud&amp;logoColor=white" alt="SonarCloud quality gate" />
-  </a>
-  <a href="https://codecov.io/gh/MPCoreDeveloper/SharpCorePDF">
-    <img src="https://img.shields.io/codecov/c/github/MPCoreDeveloper/SharpCorePDF?logo=codecov&amp;logoColor=white" alt="coverage" />
   </a>
   <a href="https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/licence-MIT-blue" alt="licence: MIT" />
@@ -315,56 +311,54 @@ encrypted documents the merge engine writes were checked the same way with qpdf,
 
 [`ci.yml`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/.github/workflows/ci.yml) runs on
 every push to `main` and on every pull request: it builds the solution, runs both test legs under the
-coverage collector, uploads the measurement to Codecov and to SonarCloud, and fails the run when either
-quality gate fails. It is deliberately not the publishing workflow, so a pull request is checked without
-anything reaching a feed.
+coverage collector, scans with SonarCloud, and fails the run when the quality gate fails. It is
+deliberately not the publishing workflow, so a pull request is checked without anything reaching a feed.
 
 | What | Workflow | When |
 | --- | --- | --- |
-| Build, both test legs, coverage, static analysis, both gates | `ci.yml` | a push to `main`, a pull request, a manual dispatch |
+| Build, both test legs, coverage, static analysis, the gate | `ci.yml` | a push to `main`, a pull request, a manual dispatch |
 | Pack, the package check, the push to nuget.org | `publish.yml` | a `v*` tag, a manual dispatch with `publish: true` |
 
 The analysis runs in the runner rather than on SonarCloud's side, which is what lets it carry coverage:
 the scanner session opens before the build, the measured test leg runs inside it, and it closes after it,
 so the report describes the assemblies that run produced. Coverage comes from `dotnet-coverage collect`,
 because `global.json` pins Microsoft.Testing.Platform as the test runner and the VSTest-only switches
-(`--collect "XPlat Code Coverage"`) are rejected there. One binary report is converted twice: the Visual
-Studio XML that Sonar reads, and a cobertura copy that the artifact and the Codecov upload carry. Both
-services read the same measurement from the same run, so the gate and the badge cannot disagree about what
-was measured.
+(`--collect "XPlat Code Coverage"`) are rejected there. The collector's binary report is converted once, to
+the Visual Studio XML the scanner reads; the same file is kept as a build artifact, so the number can be
+read without opening SonarCloud.
 
-What the analysis reports on is `src/` and `tests/`. The BMad Method bundle (`_bmad`, `_bmad-output`,
-`.cline`), the Python tooling under `docs/`, the examples and the measurement harness are excluded,
-because the gate is about what the packages ship rather than about everything in the tree. Codecov is
-narrower still: `codecov.yml` ignores `tests/` as well, so its number is the coverage of the shipped
-assemblies. That number was 92% when this paragraph was written, against a declared target of 90%; the
-test project itself measures 99%, and a suite covering itself is not coverage of anything.
+What the scan reports on is `src/` and `tests/`, with the BMad Method bundle (`_bmad`, `_bmad-output`,
+`.cline`), the Python tooling under `docs/`, the examples and the measurement harness excluded, because the
+gate is about what the packages ship rather than about everything in the tree. The coverage condition
+counts the four layered assemblies and the entry point only: test code contributes no lines to it, so the
+number describes the shipped surface. It was 92% when this paragraph was written; the suite that measures
+it sits at 99%, and a suite covering itself is not coverage of anything.
 
-Both gates fail the run:
+The gate fails the run:
 
 | Gate | Where its rules live | What a red run means |
 | --- | --- | --- |
-| SonarCloud quality gate | the project on sonarcloud.io, kept in step with `src/.editorconfig` | the analysis was uploaded and the gate failed |
-| Codecov: 90% on the project, 90% on the change | `codecov.yml` | the report arrived and a number is below its target |
+| SonarCloud quality gate | the project on sonarcloud.io: the conditions are entered there — the coverage floor this repository wants on new code is 90%, above Sonar's 80% default — plus the exclusions in `sonar.exclusions` | the analysis was uploaded and the gate failed |
 
-`sonar.qualitygate.wait` on the scanner's `end` step is what turns the first from a badge into a gate.
-`fail_ci_if_error` on the Codecov upload does the same for the second: a report that never lands fails the
-run instead of leaving a stale number behind.
+`sonar.qualitygate.wait` on the scanner's `end` step is what turns it from a badge into a gate: the step
+waits for the analysis to be processed and fails when the gate fails, so a green badge is a run that passed
+rather than a run that is not finished yet. The 90% is a setting on that gate, not a property of this tree:
+until it is entered there, the step enforces Sonar's 80% and is telling the truth about the wrong number.
 
-Three things switch the uploads on, and all three live outside this repository:
+Two things switch the analysis on, and both live outside this repository:
 
 1. **A project on SonarCloud** under the key `MPCoreDeveloper_SharpCorePDF` in the organisation
-   `mpcoredeveloper`, analysed through CI rather than by Automatic Analysis. A repository cannot be
-   analysed both ways at once, and Automatic Analysis cannot import coverage.
+   `mpcoredeveloper`, with **Automatic Analysis switched off** (Administration → Analysis Method). A
+   repository cannot be analysed both ways at once: with it on, the scanner's `end` step fails with "You
+   are running CI analysis while Automatic Analysis is enabled", and Automatic Analysis cannot import a
+   coverage report anyway — it never sees the test run.
 2. **The repository secret `SONAR_TOKEN`** (settings → Secrets and variables → Actions), a token from
    that SonarCloud account.
-3. **The repository secret `CODECOV_TOKEN`**, the upload token of the Codecov project for
-   `MPCoreDeveloper/SharpCorePDF`.
 
-Until a secret exists, the steps that need it are skipped and the workflow still builds, tests and
-measures coverage, because the gate is a small first job that checks both secrets — a job-level `if`
-cannot read one itself. That is what keeps a fork, or this repository before either project was created,
-from showing a red run that says nothing about the code.
+Until the secret exists, the scanning steps are skipped and the workflow still builds, tests and measures
+coverage, because the presence of the token is decided in a small first job — a job-level `if` cannot read
+a secret itself. That is what keeps a fork, or this repository before the project was created, from showing
+a red run that says nothing about the code.
 
 ### The same rules, locally
 
