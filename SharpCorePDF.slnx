@@ -4,6 +4,7 @@
     One entry point for everything that builds in this repository.
 
     src/      the four packages: Domain, Application, Infrastructure, DependencyInjection (net10.0;net11.0)
+              plus the SharpCorePDF entry point, which packs the four as one install
     tests/    the test project, which is the only caller of all four (net10.0;net11.0)
     examples/ the runnable examples behind README.md and examples/README.md (net11.0)
     tools/    the measurement harness behind docs/measurements.md (net11.0, never packed)
@@ -21,6 +22,7 @@
     <Project Path="src/SharpCorePDF.Application/SharpCorePDF.Application.csproj" />
     <Project Path="src/SharpCorePDF.DependencyInjection/SharpCorePDF.DependencyInjection.csproj" />
     <Project Path="src/SharpCorePDF.Domain/SharpCorePDF.Domain.csproj" />
+    <Project Path="src/SharpCorePDF/SharpCorePDF.csproj" />
     <Project Path="src/SharpCorePDF.Infrastructure/SharpCorePDF.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">

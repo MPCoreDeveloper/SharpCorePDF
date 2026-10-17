@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The package a consumer installs, named after the product.
+
+    Without it, "which of the four packages do I need" is a question nuget.org makes you answer by
+    reading three descriptions: a merge needs Infrastructure, which needs Application, which needs
+    Domain, plus DependencyInjection for the registration. With it, there is one name to type:
+
+        dotnet add package SharpCorePDF
+
+    This package carries no code of its own: IncludeBuildOutput is off, so it has no lib/ folder.
+    It exists so that the id a consumer searches for is the product's name, and its only content is
+    a dependency on the four packages that do the work. The layers stay separate assemblies with
+    separate API snapshots, which is what the layering is worth; only the entry point is unified.
+
+    The four stay installable on their own, so a caller who wants only the domain model can still
+    take only the domain model.
+  -->
+  <PropertyGroup>
+    <RootNamespace>SharpCorePDF</RootNamespace>
+    <AssemblyName>SharpCorePDF</AssemblyName>
+    <Title>SharpCorePDF</Title>
+    <Description>The package to install: a dependency-injection first, domain-driven PDF library for .NET 10 and .NET 11 that merges whole documents or selected pages with every PDF byte read and written in-house. Brings SharpCorePDF.Domain, .Application, .Infrastructure and .DependencyInjection in one step; AddSharpCorePDF() is the wiring.</Description>
+
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>false</SuppressDependenciesWhenPacking>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <IsPackable>true</IsPackable>
+
+    <!--
+      NU5128: the nuspec declares a dependency group per target framework and the package has no
+      lib/ or ref/ folder to match them against. That mismatch is the point of a meta package, not
+      a defect, so it is silenced here rather than worked around by shipping an empty assembly.
+    -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpCorePDF.Domain\SharpCorePDF.Domain.csproj" />
+    <ProjectReference Include="..\SharpCorePDF.Application\SharpCorePDF.Application.csproj" />
+    <ProjectReference Include="..\SharpCorePDF.Infrastructure\SharpCorePDF.Infrastructure.csproj" />
+    <ProjectReference Include="..\SharpCorePDF.DependencyInjection\SharpCorePDF.DependencyInjection.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -9,7 +9,7 @@
 # SharpCorePDF examples
 
 Nine runnable examples that show how the library is used, and the console app that runs them. Everything
-here is code that compiles and executes against the four packages, so nothing in the documentation is a
+here is code that compiles and executes against the package, so nothing in the documentation is a
 snippet that was never run.
 
 ```powershell

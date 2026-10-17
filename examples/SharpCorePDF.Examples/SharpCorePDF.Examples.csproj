@@ -7,7 +7,7 @@
     that compiles and executes. Running it with the project path executes all of the examples; examples
     can also be named on the command line, see Program.cs.
 
-    The four packages multi-target net10.0;net11.0; this app pins net11.0 (the newest target) so that
+    The four layer packages multi-target net10.0;net11.0; this app pins net11.0 (the newest target) so that
     running it needs no framework argument. Changing TargetFramework to net10.0 runs exactly the same
     examples on the older target.
 

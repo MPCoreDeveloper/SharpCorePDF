@@ -150,7 +150,9 @@ internal static class OptionExamples
 
         foreach (var warning in info.Warnings)
         {
-            Report.Line(warning);
+            // The kind is the contract: it names the condition, and the text explains it. A caller that
+            // reacts to a warning switches on the kind and never on the wording.
+            Report.Line($"{warning.Kind}: {warning.Message}");
         }
 
         Report.Heading("what the merge reports about its own work");
@@ -168,7 +170,7 @@ internal static class OptionExamples
 
         foreach (var warning in result.Warnings)
         {
-            Report.Line(warning);
+            Report.Line($"{warning.Kind}: {warning.Message}");
         }
 
         Report.Line("(one of these lines is the output self check that appsettings.json turns on)");

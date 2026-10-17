@@ -14,6 +14,10 @@
 # Only *, letters, digits, underscore, dot and dash are accepted on a line, and the temporary API
 # key is scoped to exactly the subjects listed there.
 #
+# Both lines are needed, not just the glob: SharpCorePDF.* covers the four layers, but the entry
+# point's id has no dot after the product name, so SharpCorePDF.* does not match it. A box holding
+# only the glob publishes four packages and refuses the fifth with 403 Forbidden.
+#
 # The policy is owned by a nuget.org user or organization, and it applies to every package that
 # owner owns, so the account named for the policy owns what this workflow publishes.
 #
@@ -51,7 +55,7 @@ jobs:
 
     steps:
       - name: Check out
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # The .NET 11 SDK is not on the hosted images yet. The "11.0.x" form takes the latest patch on
       # that channel, prereleases included, so it follows the RC to GA on its own once .NET 11 ships.
@@ -60,7 +64,7 @@ jobs:
       # MSB3030 (obj/Release/net10.0/apphost not found) and the net10.0 test run has nothing to start
       # on. global.json pins no SDK version, so the newest SDK still does the building.
       - name: Install the .NET SDKs
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: |
             11.0.x
@@ -81,7 +85,10 @@ jobs:
         run: dotnet pack ./SharpCorePDF.slnx -c Release -o ./artifacts
 
       # Guards the promise recorded in src/Directory.Build.props: every package ships both legs, and
-      # a tagged run may only publish the version the tag names.
+      # a tagged run may only publish the version the tag names. One package is checked differently:
+      # SharpCorePDF is the entry point and carries no assemblies of its own, so what has to hold is
+      # that it depends on all four layers. Every package, that one included, must carry the README
+      # nuget.org will render as its page.
       - name: Check the packages before they go anywhere
         shell: pwsh
         run: |
@@ -90,6 +97,14 @@ jobs:
           if ($packages.Count -eq 0) { throw 'nothing was packed' }
 
           $version = (Select-String -Path ./src/Directory.Build.props -Pattern '<Version>(.*?)</Version>').Matches[0].Groups[1].Value
+
+          $entryPoint = 'SharpCorePDF'
+          $layers = @(
+            'SharpCorePDF.Domain'
+            'SharpCorePDF.Application'
+            'SharpCorePDF.Infrastructure'
+            'SharpCorePDF.DependencyInjection'
+          )
 
           if ('${{ github.ref_type }}' -eq 'tag') {
             $tag = '${{ github.ref_name }}' -replace '^v', ''
@@ -100,12 +115,35 @@ jobs:
             $zip = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
             try {
               $entries = @($zip.Entries | ForEach-Object { $_.FullName })
-              foreach ($leg in 'lib/net10.0', 'lib/net11.0') {
-                if (-not ($entries | Where-Object { $_ -like "$leg/*.dll" })) {
-                  $failures += "$($package.Name) carries no $leg assembly"
+
+              $nuspecEntry = $zip.Entries | Where-Object { $_.FullName -like '*.nuspec' } | Select-Object -First 1
+              $reader = New-Object System.IO.StreamReader($nuspecEntry.Open())
+              [xml]$nuspec = $reader.ReadToEnd()
+              $reader.Dispose()
+              $id = $nuspec.package.metadata.id
+
+              if ($id -eq $entryPoint) {
+                $dependencies = @(
+                  $nuspec.package.metadata.dependencies.group |
+                    ForEach-Object { $_.dependency } |
+                    ForEach-Object { $_.id } |
+                    Sort-Object -Unique
+                )
+                foreach ($layer in $layers) {
+                  if ($dependencies -notcontains $layer) { $failures += "$id does not depend on $layer" }
                 }
               }
-              Write-Host "$($package.Name): $($entries -join ', ')"
+              else {
+                foreach ($leg in 'lib/net10.0', 'lib/net11.0') {
+                  if (-not ($entries | Where-Object { $_ -like "$leg/*.dll" })) {
+                    $failures += "$($package.Name) carries no $leg assembly"
+                  }
+                }
+              }
+
+              if (-not ($entries -contains 'README.md')) { $failures += "$id carries no README.md" }
+
+              Write-Host "$id -> $($entries -join ', ')"
             }
             finally {
               $zip.Dispose()
