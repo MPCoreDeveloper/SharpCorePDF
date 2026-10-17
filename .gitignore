@@ -3,6 +3,10 @@ bin/
 obj/
 artifacts/
 
+# Locally downloaded SDK installers -- a ~200 MB one-off, never part of the tree
+dotnet-sdk-*.exe
+dotnet-sdk-*.tar.gz
+
 # Test output (the test project and the measurement harness both write here)
 TestResults/
 *.trx
