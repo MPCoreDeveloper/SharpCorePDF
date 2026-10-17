@@ -23,6 +23,10 @@
 #
 # Nothing is published without a policy in place, and nothing is published from a manual run
 # unless the "publish" input is set to true.
+#
+# Nothing is published before the SonarCloud quality gate passes for the commit being published either.
+# The analysis itself runs in ci.yml; the sonar-gate job below reads its verdict from SonarCloud, and it
+# runs before the build and before the OIDC exchange, so a red gate costs this workflow nothing.
 
 name: publish
 
@@ -42,8 +46,87 @@ permissions:
   contents: read
 
 jobs:
+  # ci.yml runs the analysis, and `sonar.qualitygate.wait` makes it fail when the gate fails, so a green
+  # CI run is a necessary condition for a release rather than a sufficient one: the verdict belongs to
+  # the project on SonarCloud, not to that run. It can change after the run (a rule newly enabled, a
+  # finding on a file), the snapshot the run uploaded can be replaced by Automatic Analysis' one, which
+  # imports no coverage and so leaves the coverage condition unjudged, and a tag can point at a commit
+  # whose analysis is not the newest on main. So the verdict is asked for here, about the commit that is
+  # about to be published, at a point where nothing has been packed or pushed.
+  sonar-gate:
+    name: Check the SonarCloud quality gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the gate for the commit being published
+        shell: pwsh
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $project = 'MPCoreDeveloper_SharpCorePDF'
+          $api = 'https://sonarcloud.io/api'
+          $dashboard = "https://sonarcloud.io/dashboard?id=$project&branch=main"
+
+          if ([string]::IsNullOrWhiteSpace($env:SONAR_TOKEN)) {
+            throw "SONAR_TOKEN is not set, so the gate cannot be read. A release is not published on the assumption that the gate is green: add the secret (README -> Continuous integration)."
+          }
+
+          $headers = @{ Authorization = "Bearer $env:SONAR_TOKEN" }
+          function Read-Api([string] $path) { Invoke-RestMethod -Uri "$api/$path" -Headers $headers }
+
+          # 1. The analysis method. Automatic Analysis is a second analyser on SonarCloud's side, and the
+          #    snapshot it uploads carries no coverage report, so a gate read while it is on may be a gate
+          #    that never judged coverage. ci.yml refuses to scan while it is on; this refuses to publish.
+          #    Like ci.yml, the read is best-effort: an analysis-only token answers 401/403 here, and the
+          #    coverage condition below is what catches the consequence.
+          try {
+            $method = Read-Api "settings/values?component=$project&keys=sonar.autoscan.enabled"
+            $autoscan = @($method.settings | Where-Object { $_.key -eq 'sonar.autoscan.enabled' -and $_.value -eq 'true' })
+            if ($autoscan.Count -gt 0) {
+              throw "Automatic Analysis is on for $project, so the newest snapshot of main is not necessarily the one CI uploaded and carries no coverage. Turn it off in Administration -> Analysis Method: https://sonarcloud.io/project/analysis_method?id=$project"
+            }
+          }
+          catch [System.Net.Http.HttpRequestException] {
+            Write-Host "::notice::The analysis method could not be read ($($_.Exception.Message)); the coverage condition below still has to be present."
+          }
+
+          # 2. Whether the snapshot describes the commit being published. A tag can point at any commit,
+          #    including one that no analysis of main has seen, and the gate would then be somebody else's.
+          $analyses = @((Read-Api "project_analyses/search?project=$project&branch=main&ps=1").analyses)
+          if ($analyses.Count -eq 0) {
+            throw "SonarCloud holds no analysis of main for $project, so there is no gate to publish against. $dashboard"
+          }
+          if ($analyses[0].revision -ne $env:COMMIT) {
+            throw "The newest analysis of main is of commit $($analyses[0].revision) ($($analyses[0].date)), not of $env:COMMIT, which is the commit being published. Tag the commit that CI analysed last, then publish from a run of this workflow. $dashboard"
+          }
+
+          # 3. The gate itself, condition by condition, so a red run says which number was the problem.
+          $gate = (Read-Api "qualitygates/project_status?projectKey=$project&branch=main").projectStatus
+          $conditions = @($gate.conditions)
+          foreach ($condition in $conditions) {
+            $state = if ($condition.status -eq 'OK') { 'ok  ' } else { 'FAIL' }
+            Write-Host ("{0} {1} ({2} {3}, measured {4})" -f $state, $condition.metricKey, $condition.comparator, $condition.errorThreshold, $condition.actualValue)
+          }
+
+          # The condition the gate exists for, and the one a snapshot without a coverage report silently
+          # drops. A gate that answered without it answered a different question, so its answer is not
+          # taken as a pass here.
+          if (@($conditions | Where-Object { $_.metricKey -eq 'new_coverage' }).Count -eq 0) {
+            throw "The gate reports no new_coverage condition, so the analysis it judged carried no coverage report -- which is what Automatic Analysis produces. Run ci.yml on main and check that the report was uploaded. $dashboard"
+          }
+
+          if ($gate.status -ne 'OK') {
+            $failing = @($conditions | Where-Object { $_.status -ne 'OK' })
+            throw "The quality gate is $($gate.status) for $env:COMMIT: $($failing.Count) of $($conditions.Count) conditions fail. A release is not published on a red gate. $dashboard"
+          }
+
+          Write-Host "The quality gate is OK for $env:COMMIT, with $($conditions.Count) conditions and coverage among them: $dashboard"
+
   publish:
     runs-on: ubuntu-latest
+    needs: sonar-gate
 
     # Optional: gate publishing behind a protected environment (create it in repository settings,
     # add required reviewers, then set the policy's Environment field to the same name).

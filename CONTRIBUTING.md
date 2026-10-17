@@ -79,6 +79,9 @@ output in a pull request is worth more than a description of it.
    all: if it is named *Check that Automatic Analysis is off*, the project's analysis method is set to
    Automatic Analysis on sonarcloud.io, which refuses a CI analysis and cannot be turned off through the
    API — a maintainer has to click it off under Administration → Analysis Method, and the step links there.
+   The order a release follows is therefore: push, wait for `ci.yml` to be green, then tag the commit that run
+   analysed. `publish.yml` re-reads the gate for the tagged commit and stops before packing when the newest
+   analysis of `main` belongs to a different one, so a tag does not inherit a verdict about another tree.
 5. **PDF fixtures stay binary.** `.gitattributes` marks `*.pdf binary` on purpose: two AES fixtures carry
    no byte Git detects as binary, so without that rule a checkout rewrites them (1119 → 1155 bytes) and
    every cross-reference offset in them moves.

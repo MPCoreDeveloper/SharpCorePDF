@@ -29,6 +29,11 @@
 # best-effort: a token that cannot see project settings produces a note rather than a failure, and `end`
 # stays the authority on the conflict.
 #
+# The analysis this run uploads is not the last word on the project: while Automatic Analysis is on, it
+# reanalyses main on SonarCloud's side and replaces the snapshot this run produced, coverage and all. So
+# the switch, and whether the newest snapshot of main is the commit being released, are read once more by
+# publish.yml, before anything is packed. A green run here is where a release starts, not what decides it.
+#
 # SONAR_TOKEN gates the scan, and the gate is decided in a small first job because a job-level `if` cannot
 # read a secret. A fork, or a repository where the secret has not been added yet, still gets a green run
 # for the build and the tests; it simply gets no analysis. ServiceMq carries the same gate in a workflow
@@ -48,6 +53,10 @@
 # not on `end`, because post-processing rejects every property but the token. The threshold itself lives in
 # the quality gate on sonarcloud.io -- Sonar's default is 80% on new code, and this repository wants 90% there
 # instead -- because a number declared in this repository would be a message to nobody.
+#
+# The wait is what makes this run red when the gate is red, and it is not a lock on the release: publish.yml
+# asks SonarCloud again, for the commit it is about to publish, because a verdict can age and a snapshot can
+# be replaced after this run ends.
 #
 # The scan is gated on a secret, so a pull request from a fork builds and tests without asking for
 # credentials it does not have.

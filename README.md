@@ -323,7 +323,7 @@ deliberately not the publishing workflow, so a pull request is checked without a
 | What | Workflow | When |
 | --- | --- | --- |
 | Build, both test legs, coverage, static analysis, the gate | `ci.yml` | a push to `main`, a pull request, a manual dispatch |
-| Pack, the package check, the push to nuget.org | `publish.yml` | a `v*` tag, a manual dispatch with `publish: true` |
+| The gate read for the tagged commit, the pack, the package check, the push to nuget.org | `publish.yml` | a `v*` tag, a manual dispatch with `publish: true` |
 
 The analysis runs in the runner rather than on SonarCloud's side, which is what lets it carry coverage:
 the scanner session opens before the build, the measured test leg runs inside it, and it closes after it,
@@ -351,6 +351,14 @@ the scan waits for the analysis to be processed and fails when the gate fails, s
 that passed rather than a run that is not finished yet. It goes on `begin` because the `end` phase rejects
 every property but the token. The 90% is a setting on that gate, not a property of this tree:
 until it is entered there, the step enforces Sonar's 80% and is telling the truth about the wrong number.
+
+`publish.yml` does not take that verdict on trust, and a green badge is not enough to publish with. Before it
+builds or packs anything, a `sonar-gate` job asks SonarCloud three questions about the commit the tag names:
+whether Automatic Analysis is off, whether the newest analysis of `main` is of that commit, and whether the
+gate is green with a `new_coverage` condition among the ones it judged. The middle question is the one this
+repository learned the hard way — an Automatic Analysis run replaced a CI analysis that carried coverage, and
+the gate went red again on a finding that had already been fixed, because the snapshot it judged was a tree
+without its tests.
 
 Two things switch the analysis on, and both live outside this repository:
 
@@ -385,6 +393,11 @@ and no API key is stored anywhere. The workflow asks GitHub for an OIDC token, e
 nuget.org for a temporary API key that lives for one hour, and pushes. nuget.org performs that
 exchange only when the token matches a **trusted publishing policy** for this repository, so the
 workflow can publish nothing until that policy exists.
+
+A tag publishes nothing before SonarCloud says the quality gate is green for the commit it names either:
+`publish.yml` reads that verdict in a `sonar-gate` job that runs before the build, before the pack and before
+the OIDC exchange. See [Continuous integration](#continuous-integration) above and G9 in
+[`docs/release-checklist.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/release-checklist.md).
 
 The policy lives at nuget.org → your username → **Trusted Publishing**, and its fields are the ones
 the workflow's header comment records:

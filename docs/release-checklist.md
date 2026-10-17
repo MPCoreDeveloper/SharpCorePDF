@@ -22,7 +22,7 @@ symbols story" — so the gate reads without it, and nothing here depends on a d
 | Build | `dotnet build SharpCorePDF.slnx -t:Rebuild` → 0 warnings, 0 errors, `net10.0` and `net11.0` |
 | Tests | 447 pass on each leg |
 | Coverage | 92% of the shipped assemblies, imported into SonarCloud by the scan; the 90% floor is a condition on the quality gate, where the suite's own 99% is not counted |
-| External prerequisites | the trusted publishing policy, whose subject list must hold a line for the bare `SharpCorePDF` as well as the `SharpCorePDF.*` glob — the glob alone refuses the entry point with 403 — and the `NUGET_USERNAME` secret. Both were confirmed the hard way on the first `1.0.0` attempt; neither is visible from this repository |
+| External prerequisites | the trusted publishing policy, whose subject list must hold a line for the bare `SharpCorePDF` as well as the `SharpCorePDF.*` glob — the glob alone refuses the entry point with 403 — and the `NUGET_USERNAME` secret. Both were confirmed the hard way on the first `1.0.0` attempt; neither is visible from this repository. **Automatic Analysis being off** on sonarcloud.io belongs in this row for the same reason: no file here sets it, and both workflows stop while it is on |
 
 **How to read the feed, because this page got it wrong once.** The earlier version of this table reported
 "nothing published" on the strength of a 404 from
@@ -55,7 +55,7 @@ is the first time the entry-point id is claimed, and G0 is what decided it. It w
 | G6 | A dry run is green on the commit that will be tagged | the local-feed handshake is the only rehearsal available | **Yes, 2026-10-17** — dispatch `39023732538` with `publish: false` pushed all five `1.0.0` packages into the runner's local feed on `a1d8f6a` | Actions → publish → `publish: false` |
 | G7 | The tag equals `<Version>` | a tag must name the version, prerelease suffix included | **Yes** — `v1.0.0` names `<Version>` `1.0.0`, and `publish.yml` refuses a mismatch | `v` + the exact `<Version>` |
 | G8 | The published packages install and open a document | the feed page is not the product | **Yes, 2026-10-17** — `1.0.0` installed from nuget.org into an empty `net11.0` console app; `AddSharpCorePDF()`, a merge of two sources (3 pages, 1,976 bytes, PDF 1.7, 0 warnings) and an inspection of the output that reported it readable with outlines | G8 below |
-| G9 | The quality gate is green on the commit being released | a release is the one build nobody re-runs; the coverage and the analysis have to be true of the tree, not of a branch it came from | **Yes, by construction** — `ci.yml` fails on the gate; see G9 below | keep it green; never tag a commit whose `ci.yml` run is red |
+| G9 | The quality gate is green on the commit being released | a release is the one build nobody re-runs; the coverage and the analysis have to be true of the tree, not of a branch it came from | **Yes, enforced twice** — `ci.yml` fails on the gate, and `publish.yml` reads it again for the tagged commit before it packs anything; see G9 below | keep it green; tag the commit whose analysis is the newest on `main` |
 
 ## G0 — the package id, decided before the first push, not after
 
@@ -195,25 +195,45 @@ only then spend a version number.
 3. Create the trusted publishing policy and `NUGET_USERNAME` (G5), then run the dry dispatch (G6). The
    policy's subject list must now contain the bare `SharpCorePDF` as well as `SharpCorePDF.*`: the first
    publish of the entry point is this one, and a 403 on it fails the run after the layers are packed.
-4. Bump `<Version>`, write the changelog entry in the same commit, tag `v` plus that exact version, push
-   the tag (G7). Then verify (G8), including that the `SharpCorePDF` page shows four dependencies and no
-   assemblies of its own.
-5. Symbols, signing and the reproducible-build comparison are what `1.0.1` or `1.1.0` still owe (G4).
+4. Bump `<Version>`, write the changelog entry in the same commit, and push it. Wait for that commit's
+   `ci.yml` run: the analysis it uploads is the one the gate is read from, so the tag has to name the commit
+   that run analysed and no later one (G9).
+5. Tag `v` plus that exact `<Version>` and push the tag (G7). `publish.yml` re-reads the gate for that commit
+   before it packs anything, so a red gate costs the release nothing but the push. Then verify (G8), including
+   that the `SharpCorePDF` page shows four dependencies and no assemblies of its own.
+6. Symbols, signing and the reproducible-build comparison are what `1.0.1` or `1.1.0` still owe (G4).
 
 The preview numbers are settled by the feed rather than by intention: `preview.1` was published, so it is
 history and its four ids carry the version forward to `1.0.0`; `preview.2` and `preview.3` never reached a
 feed, so they are skipped rather than reused, and nothing needs to explain them to anyone.
 
 
-## Two things people assume are gates and are not
+## What `publish.yml` holds, and what it still does not
 
-- **The SonarCloud quality gate, in `publish.yml`.** `ci.yml` enforces it — the scan's `end` step passes
-  `sonar.qualitygate.wait`, so a failing gate is a failing run, coverage condition included. What is *not*
-  enforced is the link between that run and a release: `publish.yml` never asks SonarCloud whether the
-  commit it is packing was green. A tag is therefore trusted on its own merits, which is an argument for
-  tagging a commit whose `ci.yml` run was already green, not a mechanism that enforces it.
-- **A green `ci.yml` run.** `publish.yml` builds and tests the commit itself, but it does not wait for
-  `ci.yml`. The two workflows answer different questions and are deliberately independent.
+`publish.yml` asks SonarCloud about the commit a tag names, in a `sonar-gate` job that runs before the
+build, before the pack and before the OIDC exchange. Each of the three questions has been answered wrongly
+here at least once:
+
+| Question | Read from | Publishing stops when |
+| --- | --- | --- |
+| Is Automatic Analysis off? | `api/settings/values` → `sonar.autoscan.enabled` | it is on — the snapshot it uploads carries no coverage report, so the coverage condition is never judged |
+| Is the newest analysis of `main` of this commit? | `api/project_analyses/search?branch=main` → `revision` | it is not — the green gate belongs to a different tree |
+| Is the gate green, coverage included? | `api/qualitygates/project_status?branch=main` | `status` is not `OK`, or the conditions hold no `new_coverage` |
+
+- **The SonarCloud quality gate is a gate on a release now, not only on a run.** `ci.yml` still enforces it
+  as it did — `sonar.qualitygate.wait` makes a red gate a red run — and what was missing was the link from
+  that run to a tag: a tag could name any commit, and the badge says nothing about which one. The gate job
+  closes it by asking for the verdict on the commit being published, and the freshness check is the part
+  that makes the other two mean something, because the gate API answers about the newest snapshot of `main`
+  and about nothing else.
+- **The cost of that check is a rule for tagging:** tag the commit whose analysis is the newest on `main`,
+  not a commit that four more have landed on since. A tag on an older commit is refused before anything is
+  packed, which is the point — the alternative is publishing a version whose gate was decided by a tree it
+  does not contain.
+- **A green `ci.yml` run is still not a gate.** `publish.yml` builds and tests the commit itself, and does
+  not wait for `ci.yml`, because the two workflows answer different questions and a manual dispatch may not
+  have a `ci.yml` run to wait for. What the gate job adds is narrower: the verdict *for the tagged commit*,
+  which is the one a release needs.
 
 ## G9 — the quality gate, and what "90%" counts
 
@@ -251,6 +271,15 @@ A few consequences worth stating before a release:
    from here or from the API — `api/settings/set` answers "Setting `sonar.autoscan.enabled` cannot be set on a
    Project". `ci.yml` reads it first and fails on the step named *Check that Automatic Analysis is off*, which
    means a run in that state has not built or tested anything; the fix is the toggle under the project's
-   Administration → Analysis Method, and the error links to it.
+   Administration → Analysis Method, and the error links to it. `publish.yml` reads the same switch and stops
+   before it packs, so a project left on Automatic Analysis can neither be analysed by CI nor released — which
+   is the right pair of failures, because a CI analysis is the only one that carries a coverage report.
+5. **The snapshot a gate was read from can be replaced after the run that produced it.** `ci.yml` uploads an
+   analysis of `main` with coverage; Automatic Analysis, while it is on, uploads another one of the same branch
+   without coverage, and the project keeps the newer one. That is how a green 15:43 analysis became a red 16:14
+   gate on 2026-10-17, on a finding that had already been fixed: the verdict was true of a snapshot that
+   described the tree without its tests. So `publish.yml` reads neither a badge nor a previous run's
+   conclusion — it asks for the newest analysis of `main`, checks that its revision is the commit the tag
+   names, checks that its conditions include `new_coverage`, and only then reads the verdict.
 
 

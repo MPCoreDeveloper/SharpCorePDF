@@ -20,8 +20,22 @@ against an empty feed.
 
 ## [Unreleased]
 
-Nothing yet. A change that a consumer can see lands here first and is folded into the version that ships
-it; `PULL_REQUEST_TEMPLATE.md` asks for the entry, and G3 refuses a tag whose version has none.
+### Fixed
+
+- **The examples no longer contain a password.** The encryption example in `examples/` wrote a literal user
+  password and a literal owner password into the document it demonstrates — the kind of constant a static
+  analysis scanner reports as a hardcoded credential, and the kind a reader copies into their own code. Both
+  are now made per run, the user password is printed so the document can still be opened, and the example
+  opens it with the value it just wrote. No package changes with this; the finding is what turned the
+  project's security rating red.
+
+### Changed
+
+- **A release waits for the quality gate, on the commit being released.** `publish.yml` reads the SonarCloud
+  verdict in a `sonar-gate` job that runs before the build, before the pack and before the OIDC exchange, and
+  stops when the gate is red, when the snapshot it judged carried no coverage report, or when the newest
+  analysis of `main` is of a different commit than the tag. It changes when a version appears on the feed,
+  not what is in it; the rule it adds is that a tag goes on the commit whose analysis is the newest on `main`.
 
 ## [1.0.0] - 2026-10-17
 
