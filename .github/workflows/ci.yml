@@ -156,6 +156,12 @@ jobs:
             "/d:sonar.exclusions=**/bin/**,**/obj/**,**/artifacts/**,**/TestResults/**,**/.sonarqube/**,**/_bmad/**,**/_bmad-output/**,**/.cline/**,**/docs/**,**/tools/**,**/examples/**"
             # Exactly one file: this is the only coverage report the run produces.
             "/d:sonar.cs.vscoveragexml.reportsPaths=artifacts/coverage/net11.0.xml"
+            # Asked for here rather than on `end`: the post-processing phase accepts no property but the
+            # token and stops with "not valid in the end phase" for anything else. Set here it reaches the
+            # engine, which waits for the compute engine and fails the step when the gate fails — the
+            # difference between a badge and a gate.
+            "/d:sonar.qualitygate.wait=true"
+            "/d:sonar.qualitygate.timeout=600"
           )
           if [ -n "$PR_NUMBER" ]; then
             args+=(
@@ -209,10 +215,8 @@ jobs:
         if: needs.check-sonar-token.outputs.has-token == 'true'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        # `qualitygate.wait` is the difference between a badge and a gate: the step waits for the analysis
-        # to be processed and fails when the gate fails, so a red SonarCloud run is a red build.
+        # Only the token: this phase validates its properties and rejects everything it did not define,
+        # so the gate settings live on `begin` above.
         run: |
           ./.tools/dotnet-sonarscanner end \
-            "/d:sonar.token=$SONAR_TOKEN" \
-            "/d:sonar.qualitygate.wait=true" \
-            "/d:sonar.qualitygate.timeout=600"
+            "/d:sonar.token=$SONAR_TOKEN"
