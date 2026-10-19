@@ -2,6 +2,7 @@
 bin/
 obj/
 artifacts/
+docs/manual/build/
 
 # Locally downloaded SDK installers -- a ~200 MB one-off, never part of the tree
 dotnet-sdk-*.exe

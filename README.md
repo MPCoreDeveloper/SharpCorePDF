@@ -74,10 +74,12 @@ await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
   reordering possible.
 * **Bookmarks of every source** are merged into one tree whose top level items follow the source order.
 * **Document level features** — viewer preferences, page layout and mode, the interactive form, named
-  destinations, embedded files, page labels, XMP metadata — are carried over from the primary source,
-  because they cannot sensibly exist twice in one document.
+  destinations and embedded files — are carried over from the primary source, because they cannot
+  sensibly exist twice in one document; page labels are dropped by default and XMP metadata is kept
+  unless `MetadataPolicy` says otherwise.
 * **Document information** is taken from the primary source, merged from all sources, or suppressed;
-  an explicit override always wins. Fix `ModificationDate` and the output is reproducible byte for byte.
+  an explicit `MetadataOverride` wins for the fields it can set. `Producer` and `ModificationDate` are
+  output options, not override fields, and fixing the date makes the output reproducible byte for byte.
 * **Encrypted sources are opened, not refused.** The standard security handler is implemented for
   revisions 2 to 6 — RC4, AES-128 and AES-256, including the hardened hash revision 6 introduced — so a
   source is merged with its user or owner password and every string and stream of it is read in the
@@ -199,6 +201,21 @@ The examples generate the documents they merge, so nothing else is needed to run
 results in a folder under the temporary directory for you to open.
 [`examples/README.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/examples/README.md)
 walks through each one.
+
+## Documentation
+
+The [manual](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md) is the long-form
+guide to the 1.0.0 API: thirteen chapters, from the first merge to encryption, inspection, dependency
+injection, the architecture and a cookbook of complete recipes. Read it as
+[a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.0.0.pdf)
+or chapter by chapter as Markdown, starting with
+[Installation and First Merge](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/manual/src/03-installation.md).
+The [documentation index](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md)
+links every chapter and the supporting measurement, release and governance documents.
+
+This README remains the short tour: what the library does, how to install it, and how the repository is
+built, tested and published. The manual is where the behaviour of each option, the warning kinds and the
+recipes live.
 
 ## How it is put together
 

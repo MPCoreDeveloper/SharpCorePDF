@@ -1,0 +1,366 @@
+/* ============================================================================
+   SharpCorePDF manual - print stylesheet
+   Rendered by Chrome (--headless=new --print-to-pdf) through build-manual.py.
+   A4, 17mm side margins, deep-navy cover, teal rules, mint code blocks.
+   ========================================================================== */
+
+@page {
+  size: A4;
+  margin: 20mm 17mm 18mm 17mm;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  font-size: 10pt;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Segoe UI Variable Text", Calibri, "Helvetica Neue", sans-serif;
+  color: #16232d;
+  line-height: 1.5;
+  text-rendering: geometricPrecision;
+}
+
+/* ---------------------------------------------------------------- cover --- */
+
+.cover {
+  margin: -20mm -17mm;
+  padding: 30mm 22mm 18mm;
+  height: 297mm;
+  background:
+    radial-gradient(120mm 90mm at 78% 12%, rgba(45, 212, 191, 0.30), transparent 70%),
+    radial-gradient(100mm 80mm at 18% 82%, rgba(74, 222, 128, 0.20), transparent 72%),
+    linear-gradient(158deg, #050d17 0%, #081a29 46%, #0a2635 100%);
+  color: #eef8fb;
+  break-after: page;
+  position: relative;
+}
+
+.cover .logo {
+  width: 64mm;
+  display: block;
+  margin: 0 auto 8mm;
+  border-radius: 3mm;
+}
+
+.cover .rule {
+  height: 1.2mm;
+  width: 46mm;
+  background: linear-gradient(90deg, #5eead4, #2dd4bf);
+  margin: 0 0 9mm;
+}
+
+.cover h1.title {
+  font-size: 34pt;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 4mm;
+  font-weight: 700;
+  color: #ffffff;
+  break-before: auto;
+}
+
+.cover .subtitle {
+  font-size: 14pt;
+  font-weight: 300;
+  color: #cfecf1;
+  margin: 0 0 12mm;
+  line-height: 1.35;
+}
+
+.cover .version {
+  font-size: 10pt;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #5eead4;
+  margin: 0 0 6mm;
+}
+
+.cover .promise {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 10.5pt;
+  color: #e4f5f8;
+}
+
+.cover .promise li {
+  padding: 1.6mm 0 1.6mm 7mm;
+  border-top: 0.3mm solid rgba(94, 234, 212, 0.26);
+  position: relative;
+}
+
+.cover .promise li::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: #5eead4;
+}
+
+.cover .imprint {
+  position: absolute;
+  left: 22mm;
+  right: 22mm;
+  bottom: 16mm;
+  font-size: 8.5pt;
+  color: #a9c6cf;
+  border-top: 0.3mm solid rgba(94, 234, 212, 0.26);
+  padding-top: 3mm;
+}
+
+/* ------------------------------------------------------------- headings --- */
+
+h1, h2, h3, h4 {
+  font-weight: 600;
+  color: #0f3042;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.manual-body > h1 {
+  break-before: page;
+  page-break-before: always;
+  font-size: 21pt;
+  letter-spacing: -0.01em;
+  margin: 0 0 1mm;
+  padding-bottom: 2.5mm;
+  border-bottom: 1.1mm solid #2dd4bf;
+  color: #0b2a3a;
+}
+
+h2 {
+  font-size: 13.5pt;
+  margin: 7mm 0 2mm;
+  color: #115e64;
+}
+
+h3 {
+  font-size: 11pt;
+  margin: 5mm 0 1.5mm;
+  color: #0f766e;
+  letter-spacing: 0.005em;
+}
+
+h4 {
+  font-size: 10pt;
+  margin: 4mm 0 1mm;
+  color: #0f766e;
+}
+
+h1 + p, h2 + p, h3 + p { margin-top: 1.5mm; }
+
+p { margin: 0 0 2.6mm; orphans: 2; widows: 2; }
+strong { color: #0b3a46; }
+em { color: #2b4a55; }
+
+/* ---------------------------------------------------------------- links --- */
+
+a { color: #0f766e; text-decoration: none; }
+
+a[href^="http"]::after {
+  content: " <" attr(href) ">";
+  font-size: 7.4pt;
+  color: #6f9099;
+  word-break: break-all;
+}
+
+/* ---------------------------------------------------------------- lists --- */
+
+ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+li { margin: 0 0 1.2mm; }
+li > ul, li > ol { margin-top: 1.2mm; }
+
+/* --------------------------------------------------------------- tables --- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2mm 0 4mm;
+  font-size: 8.4pt;
+  line-height: 1.35;
+}
+
+thead { display: table-header-group; }
+tr { break-inside: avoid; page-break-inside: avoid; }
+
+th {
+  text-align: left;
+  background: #e8f7f5;
+  color: #0b3a46;
+  font-weight: 600;
+  padding: 1.6mm 2mm;
+  border-bottom: 0.4mm solid #a7d8d3;
+  vertical-align: bottom;
+}
+
+td {
+  padding: 1.4mm 2mm;
+  border-bottom: 0.25mm solid #dceced;
+  vertical-align: top;
+}
+
+tbody tr:nth-child(even) td { background: #f7fcfc; }
+
+td code, th code { font-size: 7.8pt; }
+
+/* ----------------------------------------------------------- inline code --- */
+
+code {
+  font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+  font-size: 8.6pt;
+  background: #eef8f6;
+  color: #0f5f62;
+  padding: 0.3mm 1.1mm;
+  border-radius: 1mm;
+  overflow-wrap: break-word;
+}
+
+/* ------------------------------------------------------------ code blocks --- */
+
+.codeblock {
+  background: #f7fcfc;
+  border: 0.25mm solid #dceced;
+  border-left: 1.1mm solid #2dd4bf;
+  border-radius: 1mm;
+  margin: 2mm 0 4mm;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.codeblock.wrap { break-inside: auto; page-break-inside: auto; }
+
+.codeblock .lang {
+  display: block;
+  font-size: 6.4pt;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #0f766e;
+  background: #e8f7f5;
+  border-bottom: 0.25mm solid #dceced;
+  padding: 1mm 2.4mm;
+}
+
+.codeblock pre {
+  margin: 0;
+  padding: 2.2mm 3mm;
+  font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+  font-size: 7.9pt;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  tab-size: 4;
+}
+
+.codeblock pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Pygments tokens */
+.codeblock .k, .codeblock .kd, .codeblock .kt, .codeblock .kn, .codeblock .kr { color: #0f766e; font-weight: 600; }
+.codeblock .s, .codeblock .s1, .codeblock .s2, .codeblock .sb, .codeblock .se, .codeblock .sr { color: #15803d; }
+.codeblock .c, .codeblock .c1, .codeblock .cm, .codeblock .cs { color: #78909c; font-style: italic; }
+.codeblock .m, .codeblock .mi, .codeblock .mf, .codeblock .mh { color: #b45309; }
+.codeblock .n, .codeblock .nf, .codeblock .nc, .codeblock .nn { color: #1f2937; }
+.codeblock .na { color: #0369a1; }
+.codeblock .nt { color: #0f766e; }
+.codeblock .p { color: #33505a; }
+.codeblock .err { color: #b91c1c; }
+
+/* ------------------------------------------------------------ callouts --- */
+
+blockquote {
+  margin: 3mm 0 4mm;
+  padding: 2.4mm 3.4mm;
+  background: #f2fbfa;
+  border-left: 1.1mm solid #7dd3c7;
+  color: #2b4a55;
+  break-inside: avoid;
+}
+
+blockquote p:last-child { margin-bottom: 0; }
+blockquote code { background: #ddf3ef; }
+
+hr {
+  border: none;
+  border-top: 0.25mm solid #dceced;
+  margin: 5mm 0;
+}
+
+/* ---------------------------------------------------------------- cover TOC --- */
+
+.toc-page { break-after: page; page-break-after: always; }
+
+.toc-page > h1 {
+  font-size: 21pt;
+  margin: 0 0 6mm;
+  padding-bottom: 2.5mm;
+  border-bottom: 1.1mm solid #2dd4bf;
+  color: #0b2a3a;
+}
+
+.toc-entry {
+  display: flex;
+  align-items: baseline;
+  font-size: 9pt;
+  line-height: 1.55;
+  color: #24343d;
+}
+
+.toc-entry.lvl1 {
+  font-weight: 600;
+  font-size: 9.6pt;
+  color: #0b3a46;
+  margin-top: 2.6mm;
+}
+
+.toc-entry.lvl2 { padding-left: 6mm; }
+
+.toc-entry .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.toc-entry .dots {
+  flex: 1 1 auto;
+  border-bottom: 0.2mm dotted #b9d6d7;
+  margin: 0 1.6mm 0.6mm;
+  min-width: 6mm;
+}
+
+.toc-entry .pg {
+  font-variant-numeric: tabular-nums;
+  color: #0f766e;
+  min-width: 7mm;
+  text-align: right;
+}
+
+.toc-note {
+  margin: 6mm 0 0;
+  padding-top: 2.5mm;
+  border-top: 0.25mm solid #dceced;
+  font-size: 8pt;
+  color: #607d86;
+}
+
+/* ------------------------------------------------------------ utilities --- */
+
+.small { font-size: 8.6pt; }
+.muted { color: #607d86; }
+.center { text-align: center; }
+
+.lead {
+  font-size: 11pt;
+  line-height: 1.45;
+  color: #2b4a55;
+  margin-bottom: 4mm;
+}
+
+dl { margin: 0 0 3mm; }
+dt { font-weight: 600; color: #0b3a46; margin-top: 2.4mm; }
+dd { margin: 0.6mm 0 0 0; padding-left: 4mm; border-left: 0.25mm solid #dceced; }
+
+.keep { break-inside: avoid; page-break-inside: avoid; }

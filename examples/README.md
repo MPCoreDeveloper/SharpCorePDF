@@ -24,9 +24,9 @@ dotnet run --project .\examples\SharpCorePDF.Examples -- select-pages
 dotnet run --project .\examples\SharpCorePDF.Examples -- errors options
 ```
 
-The examples write their documents to `%TEMP%\SharpCorePDF.Examples` (printed at the start of every run) and
-leave them there, so the merged files can be opened in a viewer afterwards. The exit code is `0` when every
-example ran and `1` when one failed.
+The examples write their documents to `%TEMP%\SharpCorePDF.Examples\output` (printed at the start of every
+run) and leave them there, so the merged files can be opened in a viewer afterwards. The exit code is `0`
+when every example ran, `1` when one failed, and `2` when a name on the command line matched no example.
 
 ## What each example shows
 
@@ -86,8 +86,8 @@ var plan = MergePlan.Create()
 var result = await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
 var bytes  = await merger.MergeToBytesAsync(plan);
 
-// 3. Find out what a document contains before merging it. A document that cannot be read is reported, not thrown:
-//    IsReadable is false, and RequiresPassword says whether a password is what stands in the way.
+// 3. Find out what a document contains before merging it. An encrypted document that cannot be opened is
+//    reported, not thrown: IsReadable is false, and RequiresPassword says whether a password is the obstacle.
 var info = await inspector.InspectAsync(PdfFileSource.From(path));
 
 if (!info.IsReadable) { /* unusable as it stands, and the merge would say so too */ }
