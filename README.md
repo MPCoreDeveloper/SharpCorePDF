@@ -128,6 +128,7 @@ services.AddSharpCorePDF(configuration, "My:Pdf:Section");       // from a secti
 
 var merger = provider.GetRequiredService<IPdfMerger>();
 var inspector = provider.GetRequiredService<IPdfInspector>();
+var reader = provider.GetRequiredService<IPdfContentReader>();
 ```
 
 Every package targets `net10.0` and `net11.0` and carries both legs: NuGet hands a `net10.0` app the
@@ -140,6 +141,22 @@ bookmarks, embedded files, form presence, warnings — and opens an encrypted on
 given instead of throwing. A document whose encryption stays closed is reported with
 `PdfDocumentInfo.IsReadable` cleared and `PdfDocumentInfo.RequiresPassword` set when a password is what
 stands in the way, so a caller can ask for one instead of being told the document is simply unusable.
+
+`IPdfContentReader` reads what the document already contains, without changing it. `ReadImagesAsync`
+returns every distinct image a page range paints, naming every page that draws it and the position of its
+first draw; `ReadAnnotationsAsync` returns comments, highlights, stamps and links with their geometry, text
+and resolved target; `ReadFormFieldsAsync` returns the interactive form with fully-qualified field names;
+`ReadOutlineAsync` returns the bookmark tree; `ReadEmbeddedFilesAsync` returns the attachments with a
+distinct identifier each; `ReadMetadataAsync` returns the XMP packet byte-exact beside the values parsed
+from it; `ReadTextAsync` returns the text the pages draw as blocks of words of glyphs, ordered the way a
+reader takes them, with the coordinates and the font each glyph was drawn in; and `ReadPageDetailsAsync`
+yields one page at a time, so a 200-page index never holds a report for the whole document. Every read is a
+`PdfReadResult<T>` — the records plus the warnings that name what could not be read, instead of an
+exception. Bytes travel inside a record only within
+`PdfEngineOptions.MaxInlineContentBytes` (256 KiB by default); above that the record says so, `ByteLength`
+stays truthful, and `CopyImageDataAsync` / `CopyImageMaskDataAsync` / `CopyEmbeddedFileDataAsync` write the
+payload to a stream you supply, with `ReadImageDataAsync`, `SaveImageDataAsync`, `ReadEmbeddedFileDataAsync`
+and `SaveEmbeddedFileAsync` as the byte helpers beside them.
 
 The package to install is `SharpCorePDF`. It is the product name and the only name to remember: it
 carries no code of its own and depends on the four layers below, so one `dotnet add package` pulls in the
@@ -225,9 +242,9 @@ nuget.org.
 | Package | Contents |
 | --- | --- |
 | [`SharpCorePDF`](https://www.nuget.org/packages/SharpCorePDF) | The one to install. Carries no assembly of its own: its only content is a dependency on the four below, so `dotnet add package SharpCorePDF` is the whole install. |
-| [`SharpCorePDF.Domain`](https://www.nuget.org/packages/SharpCorePDF.Domain) | The `MergePlan` aggregate, the `PdfSource` entity, value objects (`PageSelection`, `PageRange`, `PdfMetadata`, `PdfVersion`, `PdfPageSize`, `PageRotation`, the policies), the read models and the ports (`IPdfMerger`, `IPdfInspector`, `IPdfContentSource`). No I/O, no third-party code. |
-| [`SharpCorePDF.Application`](https://www.nuget.org/packages/SharpCorePDF.Application) | The use cases: `PdfMergerService` (validate, open, inspect, resolve selections, hand over to the engine, release every stream) and `PdfInspectorService`, plus the extension methods callers use. |
-| [`SharpCorePDF.Infrastructure`](https://www.nuget.org/packages/SharpCorePDF.Infrastructure) | The engine: the object model, the lexer, the object parser, the filter decoders, cross-reference tables, cross-reference streams, object streams, the page tree walk, the object copier, `PdfMergeEngine`, `PdfDocumentReader`, the writer and the content sources. |
+| [`SharpCorePDF.Domain`](https://www.nuget.org/packages/SharpCorePDF.Domain) | The `MergePlan` aggregate, the `PdfSource` entity, value objects (`PageSelection`, `PageRange`, `PdfMetadata`, `PdfVersion`, `PdfPageSize`, `PageRotation`, the policies), the read models (document and page info, `PdfReadResult<T>`, image, mask, annotation, destination, form field, widget, bookmark, embedded file, text block, word, glyph, page detail and XMP) and the ports (`IPdfMerger`, `IPdfInspector`, `IPdfContentReader`, `IPdfContentSource`). No I/O, no third-party code. |
+| [`SharpCorePDF.Application`](https://www.nuget.org/packages/SharpCorePDF.Application) | The use cases: `PdfMergerService` (validate, open, inspect, resolve selections, hand over to the engine, release every stream), `PdfInspectorService` and `PdfContentReaderService` (resolve the source, open it once, call the engine's page-content port), plus the extension methods callers use (`PdfMergerExtensions`, `PdfContentReaderExtensions`). |
+| [`SharpCorePDF.Infrastructure`](https://www.nuget.org/packages/SharpCorePDF.Infrastructure) | The engine: the object model, the lexer, the object parser, the filter decoders, cross-reference tables, cross-reference streams, object streams, the page tree walk, the object copier, `PdfMergeEngine`, `PdfDocumentReader`, `PdfPageContentReader` (one partial file per capability, with `PdfTextCollector` for the glyphs), the content scanner, the writer and the content sources. |
 | [`SharpCorePDF.DependencyInjection`](https://www.nuget.org/packages/SharpCorePDF.DependencyInjection) | `AddSharpCorePDF()` registration. |
 
 The domain and the application layer know nothing about PDF syntax; the engine implements their ports.
@@ -350,8 +367,8 @@ because `global.json` pins Microsoft.Testing.Platform as the test runner and the
 the Visual Studio XML the scanner reads; the same file is kept as a build artifact, so the number can be
 read without opening SonarCloud.
 
-What the scan reports on is `src/` and `tests/`, with the BMad Method bundle (`_bmad`, `_bmad-output`,
-`.cline`), the Python tooling under `docs/`, the examples and the measurement harness excluded, because the
+What the scan reports on is `src/` and `tests/`, with the Spec Kit tooling (`.specify`, `.clinerules`),
+the Python tooling under `docs/`, the examples and the measurement harness excluded, because the
 gate is about what the packages ship rather than about everything in the tree. The coverage condition
 counts the four layered assemblies and the entry point only: test code contributes no lines to it, so the
 number describes the shipped surface. It was 92% when this paragraph was written; the suite that measures

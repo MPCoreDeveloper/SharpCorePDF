@@ -65,7 +65,10 @@ internal static partial class PdfFilters
         return decoded ?? stream.Raw.ToArray();
     }
 
-    private static List<string> ReadFilterNames(PdfDictionary dictionary)
+    /// <summary>Reads the names of the filters a stream declares, in the order it applies them.</summary>
+    /// <param name="dictionary">The stream dictionary.</param>
+    /// <returns>The filter names, without their abbreviations being expanded.</returns>
+    public static List<string> ReadFilterNames(PdfDictionary dictionary)
     {
         var names = new List<string>();
 
@@ -90,7 +93,10 @@ internal static partial class PdfFilters
         return names;
     }
 
-    private static List<PdfDictionary?> ReadDecodeParameters(PdfDictionary dictionary)
+    /// <summary>Reads the decode parameters that belong to each filter a stream declares.</summary>
+    /// <param name="dictionary">The stream dictionary.</param>
+    /// <returns>One entry per parameter dictionary, in filter order; a filter without one has none.</returns>
+    public static List<PdfDictionary?> ReadDecodeParameters(PdfDictionary dictionary)
     {
         var parameters = new List<PdfDictionary?>();
 

@@ -4,8 +4,11 @@ using System.Runtime.InteropServices;
 using System.Text;
 using SharpCorePDF.Application.Services;
 using SharpCorePDF.Domain.Aggregates;
+using SharpCorePDF.Domain.Ports;
+using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure;
 using SharpCorePDF.Infrastructure.Extensions;
+using SharpCorePDF.Infrastructure.Sources;
 using SharpCorePDF.Measure;
 
 // The §7.1 / §7.2 harness of addendum A7. Run it from the repository root:
@@ -25,6 +28,16 @@ const int TotalInputBytes = 1_000_000;
 const int LargeInputBytes = 1_000_000;
 const int Warmups = 2;
 const int Iterations = 5;
+
+// The content-reading rows answer a different question — what a read costs, not what a merge costs — so
+// they run on their own and generate the two documents they need:
+//
+//   dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --content
+if (args.Contains("--content"))
+{
+    await ContentReading();
+    return;
+}
 
 var assets = Path.Combine(RepositoryRoot(), "tests", "SharpCorePDF.Tests", "Assets");
 var scratch = Path.Combine(Path.GetTempPath(), "scpdf-assets");
@@ -292,6 +305,157 @@ static async Task Single(string label, long inputBytes, PdfMergerService merger,
         + $"live after GC {ManagedHeapBytes() / 1024.0 / 1024.0,5:N1} MB, "
         + $"process peak working set {Process.GetCurrentProcess().PeakWorkingSet64 / 1024.0 / 1024.0,6:N1} MB, "
         + $"server GC {GCSettings.IsServerGC}, output {measured.OutputBytes:N0} B");
+}
+
+/// <summary>Measures the two content-reading shapes the manual and <c>docs/measurements.md</c> quote.</summary>
+static async Task ContentReading()
+{
+    var reader = new PdfContentReaderService(new PdfPageContentReader());
+
+    Console.WriteLine(
+        $"environment: {RuntimeInformation.FrameworkDescription}, {RuntimeInformation.OSArchitecture}, "
+        + $"{Environment.ProcessorCount} logical cores, server GC {GCSettings.IsServerGC}");
+    Console.WriteLine(
+        "content: page details, text extraction and payload copies; the documents are generated before the measured window");
+    Console.WriteLine();
+
+    var indexed = new PdfByteArraySource(ContentFixtures.Indexed(200), "indexed-200.pdf");
+
+    // One warm-up, so JIT compilation is not part of the first row.
+    await CountPages(indexed, reader, 200);
+
+    await ContentRow("200 pages, every page enumerated", "pages", 1, () => CountPages(indexed, reader, 200));
+    await ContentRow("200 pages, abandoned after 10", "pages", 1, () => CountPages(indexed, reader, 10));
+
+    // The same 200 pages read for their text: one document whose pages draw a heading and six lines each,
+    // so the row pays for the glyphs, the words and the blocks rather than for the page structure alone.
+    var written = new PdfByteArraySource(ContentFixtures.Text(200), "text-200.pdf");
+
+    await CountWords(written, reader, PageRange.All);
+
+    await ContentRow("200 pages of text, every block read", "words", 1, () => CountWords(written, reader, PageRange.All));
+    await ContentRow(
+        "200 pages of text, ten pages read",
+        "words",
+        1,
+        () => CountWords(written, reader, PageRange.FromTo(1, 10)));
+
+    foreach (var megabytes in new[] { 1, 10, 50 })
+    {
+        var document = new PdfByteArraySource(
+            ContentFixtures.Attachment(megabytes * 1024 * 1024),
+            $"payload-{megabytes}mb.pdf");
+
+        var files = await reader.ReadEmbeddedFilesAsync(document);
+        var file = files.Items[0];
+
+        // One copy outside the measured window, so the first measured copy is not the first code path.
+        await CopyPayload(document, reader, file);
+
+        await ContentRow(
+            $"{megabytes,2} MB payload through the copy route",
+            "MB",
+            1024.0 * 1024.0,
+            () => CopyPayload(document, reader, file));
+
+        Console.WriteLine(
+            $"{"",46}   source {document.Length:N0} B, payload {file.ByteLength:N0} B, "
+            + $"buffered {file.IsBuffered}");
+    }
+}
+
+/// <summary>Enumerates page details, stopping after the requested number of pages.</summary>
+/// <param name="source">The document to read.</param>
+/// <param name="reader">The reader to read it with.</param>
+/// <param name="stopAfter">The number of pages after which the enumeration is abandoned.</param>
+/// <returns>The number of pages that were yielded.</returns>
+static async Task<long> CountPages(IPdfContentSource source, PdfContentReaderService reader, int stopAfter)
+{
+    var seen = 0;
+
+    await foreach (var page in reader.ReadPageDetailsAsync(
+        source,
+        PageRange.All,
+        cancellationToken: CancellationToken.None))
+    {
+        seen++;
+
+        if (seen == stopAfter)
+        {
+            break;
+        }
+    }
+
+    return seen;
+}
+
+/// <summary>Reads the text of a page range and returns the number of words it produced.</summary>
+/// <param name="source">The document to read.</param>
+/// <param name="reader">The reader to read it with.</param>
+/// <param name="range">The pages whose text is wanted.</param>
+/// <returns>The number of words of every block the read returned.</returns>
+static async Task<long> CountWords(IPdfContentSource source, PdfContentReaderService reader, PageRange range)
+{
+    var text = await reader.ReadTextAsync(source, range, cancellationToken: CancellationToken.None);
+
+    return text.Items.Sum(block => (long)block.Words.Count);
+}
+
+/// <summary>Copies the payload of one attachment to a stream that counts and keeps nothing.</summary>
+/// <param name="source">The document to read.</param>
+/// <param name="reader">The reader to read it with.</param>
+/// <param name="file">The attachment to copy.</param>
+/// <returns>The number of bytes the copy route wrote.</returns>
+static async Task<long> CopyPayload(
+    IPdfContentSource source,
+    PdfContentReaderService reader,
+    SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo file)
+{
+    var destination = new CountingStream();
+
+    await reader.CopyEmbeddedFileDataAsync(source, file, destination);
+
+    return destination.Written;
+}
+
+/// <summary>Runs one content-reading row three times and prints the median of each number.</summary>
+/// <param name="label">The name of the row.</param>
+/// <param name="unit">The unit the rate is stated in.</param>
+/// <param name="unitScale">How many bytes one unit holds.</param>
+/// <param name="action">The read to measure.</param>
+static async Task ContentRow(string label, string unit, double unitScale, Func<Task<long>> action)
+{
+    const int Rounds = 3;
+
+    var allocated = new List<long>(Rounds);
+    var elapsed = new List<double>(Rounds);
+    var completed = 0L;
+
+    for (var index = 0; index < Rounds; index++)
+    {
+        CollectForMeasurement();
+
+        var before = GC.GetTotalAllocatedBytes(precise: true);
+        var watch = Stopwatch.StartNew();
+
+        completed = await action();
+
+        watch.Stop();
+        allocated.Add(GC.GetTotalAllocatedBytes(precise: true) - before);
+        elapsed.Add(watch.Elapsed.TotalMilliseconds);
+    }
+
+    allocated.Sort();
+    elapsed.Sort();
+
+    var medianAllocated = allocated[allocated.Count / 2];
+    var medianElapsed = elapsed[elapsed.Count / 2];
+    var rate = completed / unitScale / (medianElapsed / 1000.0);
+
+    Console.WriteLine(
+        $"{label,-46} : {medianAllocated / 1024.0,9:N0} KB  {medianElapsed,8:N2} ms  "
+        + $"{rate,7:N1} {unit}/s  live after GC {ManagedHeapBytes() / 1024.0 / 1024.0,5:N2} MB  "
+        + $"units {completed:N0}");
 }
 
 /// <summary>Finds the repository root by walking up to the folder that holds the fixture corpus.</summary>

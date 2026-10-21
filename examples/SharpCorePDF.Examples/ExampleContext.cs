@@ -15,11 +15,16 @@ namespace SharpCorePDF.Examples;
 /// </remarks>
 internal sealed class ExampleContext : IDisposable
 {
-    private ExampleContext(string root, ServiceProvider services, IReadOnlyList<string> documents)
+    private ExampleContext(
+        string root,
+        ServiceProvider services,
+        IReadOnlyList<string> documents,
+        string richContent)
     {
         this.services = services;
         Root = root;
         Documents = documents;
+        RichContent = richContent;
     }
 
     private readonly ServiceProvider services;
@@ -45,11 +50,17 @@ internal sealed class ExampleContext : IDisposable
     /// <summary>Gets a one page portrait document.</summary>
     public string Annex => Documents[2];
 
+    /// <summary>Gets the sample document whose pages carry an image, comments, a form and bookmarks.</summary>
+    public string RichContent { get; }
+
     /// <summary>Gets the merger, exactly as an application would resolve it.</summary>
     public IPdfMerger Merger => services.GetRequiredService<IPdfMerger>();
 
     /// <summary>Gets the inspector, exactly as an application would resolve it.</summary>
     public IPdfInspector Inspector => services.GetRequiredService<IPdfInspector>();
+
+    /// <summary>Gets the content reader, exactly as an application would resolve it.</summary>
+    public IPdfContentReader ContentReader => services.GetRequiredService<IPdfContentReader>();
 
     /// <summary>Creates the sample documents and the container the examples run against.</summary>
     /// <returns>The context; dispose it to release the container.</returns>
@@ -70,7 +81,11 @@ internal sealed class ExampleContext : IDisposable
         var input = Path.Combine(root, "input");
         Directory.CreateDirectory(Path.Combine(root, "output"));
 
-        return new ExampleContext(root, services, SampleDocuments.CreateAll(input));
+        // The document the content-reading example reads lives outside the merge folder, so that the
+        // inspection example keeps describing exactly the six samples it documents.
+        var richContent = ContentSampleDocument.Write(Path.Combine(root, "content"));
+
+        return new ExampleContext(root, services, SampleDocuments.CreateAll(input), richContent);
     }
 
     /// <summary>Returns the path of a file in the output folder, creating the folder when needed.</summary>

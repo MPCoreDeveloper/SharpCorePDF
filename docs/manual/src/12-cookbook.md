@@ -385,3 +385,41 @@ Notice that `PdfSourceFormatException` is caught even though inspection is suppo
 throw. It still throws when the bytes are not a PDF at all or the limits are exceeded — those are not
 "encrypted but closed" conditions that a `PdfDocumentInfo` can describe.
 
+## Extract the text a document carries, and keep its coordinates
+
+A search needs the words; a highlight needs where they are. One read returns both:
+
+```csharp
+var reader = provider.GetRequiredService<IPdfContentReader>();
+var source = PdfFileSource.From("report.pdf");
+
+var text = await reader.ReadTextAsync(
+    source,
+    PageRange.FromTo(1, 20),
+    cancellationToken: cancellationToken);
+
+foreach (var block in text.Items)
+{
+    hits.AddRange(
+        block.Words
+            .Where(word => word.Text.Contains(term, StringComparison.OrdinalIgnoreCase))
+            .Select(word => (block.PageNumber, word.Text, word.BoundingBox)));
+}
+
+foreach (var warning in text.Warnings)
+{
+    logger.LogWarning("{Kind}: {Message}", warning.Kind, warning.Message);
+}
+```
+
+Blocks come in reading order — down the page, then along the line — so `block.Text` is a paragraph a
+search index or a translation call can take as it is, while `block.Words` carries the rectangle of every
+word for a viewer that has to draw a highlight. A `PdfWarningKind.TextUnreadable` warning is the one to
+expect on a scan, or on a font this library cannot decode: the words that could be read are still
+returned, and the warning names the font that was in the way. Text drawn inside a form is included,
+because the read follows the form's matrix and the resources it inherits (Chapter 8).
+
+This is reading, not conversion: nothing is reflowed, and a two-column page comes back as blocks that
+alternate between the columns. When a caller knows the layout, `BoundingBox.Left` is enough to sort the
+blocks again before merging them.
+

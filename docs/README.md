@@ -6,7 +6,7 @@ long-form reference for the 1.0.0 API.
 
 ## The manual
 
-- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.0.0.pdf)** — 52 pages, A4, with a
+- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.0.0.pdf)** — 56 pages, A4, with a
   linked contents page and PDF bookmarks.
 - **Read the chapters as Markdown** in [`manual/src`](manual/src). Each file is one chapter, and the
   file-name order is the chapter order.
@@ -21,7 +21,7 @@ long-form reference for the 1.0.0 API.
 | [5. Page Selection](manual/src/05-page-selection.md) | The one-based selection notation, building selections in code, and preflighting a range. |
 | [6. Output Options](manual/src/06-output-options.md) | Target version, primary source, metadata policies and overrides, outlines, page labels and reproducible output. |
 | [7. Encryption and Permissions](manual/src/07-encryption-permissions.md) | Algorithms, passwords, permission bits, encrypted sources, and what encryption does to reproducibility. |
-| [8. Inspection](manual/src/08-inspection.md) | The document model, what inspection reports, encrypted and damaged documents, and preflight. |
+| [8. Inspection](manual/src/08-inspection.md) | The document model, what inspection reports, the content reader (images, text, annotations, form, bookmarks, attachments, XMP and the inline budget), encrypted and damaged documents, and preflight. |
 | [9. Errors, Exceptions and Warnings](manual/src/09-error-handling.md) | The exception family, what throws when, writing files safely, and warnings versus errors. |
 | [10. Dependency Injection](manual/src/10-dependency-injection.md) | `AddSharpCorePDF`, engine options, configuration binding, logging and testing with the container. |
 | [11. Architecture](manual/src/11-architecture.md) | The layers, the life of a merge, immutability, the memory model, extension points and concurrency. |
@@ -54,7 +54,7 @@ page, running footer and bookmarks stay in step.
 
 | Document | What it records |
 | --- | --- |
-| [`measurements.md`](measurements.md) | The recorded cost of a merge — allocations, wall time, throughput, retained heap and output bytes — and the performance and memory budgets they are read against. |
+| [`measurements.md`](measurements.md) | The recorded cost of a merge and of a content read — allocations, wall time, throughput, retained heap and output bytes — and the performance and memory budgets they are read against. |
 | [`release-checklist.md`](release-checklist.md) | The gates a version has to clear before it reaches nuget.org: version, packages, tests, coverage, changelog, symbols and the dry run. |
 | [`foundation-readiness.md`](foundation-readiness.md) | Every .NET Foundation eligibility criterion mapped to a repository artifact, with the remaining gaps named. |
 | [`foundation-application.md`](foundation-application.md) | The eight conditions that decide when the Foundation application is filed, and the answers it will contain. |

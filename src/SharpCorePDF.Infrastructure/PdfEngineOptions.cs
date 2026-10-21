@@ -43,6 +43,26 @@ public sealed record PdfEngineOptions
     /// </summary>
     public bool WriteBinaryMarker { get; init; } = true;
 
+    /// <summary>
+    /// Gets the largest image, mask or embedded file payload a read model carries inline. A payload
+    /// above this budget is left out of the record — <c>Data</c> is <see langword="null"/> — and the
+    /// caller fetches it with the copy route instead, so enumerating a document full of large images or
+    /// attachments does not grow the working set with the total size of what it found.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The default of 256 KiB covers the material a caller usually wants inline — icons, logos, small
+    /// attachments — while a scan or a video stays out of the report. <c>0</c> means metadata only:
+    /// every entry is described, nothing is carried, and the copy route is the only way to bytes.
+    /// </para>
+    /// <para>
+    /// The budget never raises a warning when it bites, because nothing failed: <c>Data</c> being
+    /// <see langword="null"/> while <c>IsBuffered</c> is <see langword="false"/> and
+    /// <c>ByteLength</c> is truthful is the contract, not a defect.
+    /// </para>
+    /// </remarks>
+    public int MaxInlineContentBytes { get; init; } = 256 * 1024;
+
     /// <summary>Validates these options.</summary>
     /// <returns>Every problem found, or an empty list when the options are usable.</returns>
     public IReadOnlyList<string> Validate()
@@ -62,6 +82,11 @@ public sealed record PdfEngineOptions
         if (MaxPagesPerSource < 1)
         {
             errors.Add($"MaxPagesPerSource must be at least 1, but is {MaxPagesPerSource}.");
+        }
+
+        if (MaxInlineContentBytes < 0)
+        {
+            errors.Add($"MaxInlineContentBytes must be at least 0, but is {MaxInlineContentBytes}.");
         }
 
         return errors;

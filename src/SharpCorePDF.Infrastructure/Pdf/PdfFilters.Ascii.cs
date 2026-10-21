@@ -5,7 +5,10 @@ namespace SharpCorePDF.Infrastructure.Pdf;
 /// </summary>
 internal static partial class PdfFilters
 {
-    private static byte[] DecodeAsciiHex(ReadOnlyMemory<byte> data)
+    /// <summary>Decodes an ASCII hexadecimal stream.</summary>
+    /// <param name="data">The encoded bytes.</param>
+    /// <returns>The decoded bytes.</returns>
+    public static byte[] DecodeAsciiHex(ReadOnlyMemory<byte> data)
     {
         // Two hex digits make one byte, so the input is a tight upper bound for the output and the
         // buffer is the right size the first time.
@@ -50,7 +53,10 @@ internal static partial class PdfFilters
         return result.ToExactArray();
     }
 
-    private static byte[] DecodeAscii85(ReadOnlyMemory<byte> data)
+    /// <summary>Decodes an ASCII base-85 stream.</summary>
+    /// <param name="data">The encoded bytes.</param>
+    /// <returns>The decoded bytes.</returns>
+    public static byte[] DecodeAscii85(ReadOnlyMemory<byte> data)
     {
         // Every five input characters make four bytes or fewer, so the input length is an upper bound.
         using var result = new PooledByteBuffer(data.Length);

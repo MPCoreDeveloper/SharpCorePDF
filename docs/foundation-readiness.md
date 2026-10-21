@@ -75,7 +75,7 @@ is also the reason an application now would be judged on intent rather than on e
 | Grants more rights to contributors who add value | **Met on paper** — the ladder is published (contributor → triage → reviewer → committer, with the evidence each step needs) | `CONTRIBUTING.md`. Nobody has climbed it yet; the ladder is what the criterion asks for, and no outside contribution has arrived to test it |
 | Public communication channel | **No** — Discussions is **disabled**, no chat, no mailing list | enable GitHub Discussions, or name the Discord server. One settings toggle |
 | Adheres to and enforces the Foundation Code of Conduct | **Met** — Contributor Covenant 2.1, and an enforcement section with two private channels and a stated response time | `CODE_OF_CONDUCT.md`. The enforcement paragraph is the part that counts, and it names GitHub's abuse reporting for a report *about* the maintainer |
-| Public documentation location | **Met** | README, `examples/README.md`, `docs/`. Note that `_bmad-output/` is gitignored, so the planning chain is *not* part of the public documentation and cannot be cited as one |
+| Public documentation location | **Met** | README, `examples/README.md`, `docs/`. Note that the planning notes are gitignored, so the planning chain is *not* part of the public documentation and cannot be cited as one |
 
 ## The technical checklist in the application form
 
@@ -184,8 +184,8 @@ needs whether or not an application is ever filed:
 
 - **Do not file the application to manufacture legitimacy.** Activity is measured, and a package with
   no downloads does not become a community because an issue was opened.
-- **Do not cite the planning chain.** `_bmad-output/` is gitignored, so the PRD, the epics and the
-  architecture spine are not public documentation; a reviewer who follows the links finds nothing.
+- **Do not cite the planning chain.** The local planning notes are gitignored, so the PRD, the epics and
+  the architecture spine are not public documentation; a reviewer who follows the links finds nothing.
 - **Do not claim a differentiator without its caveat** — the README and `docs/measurements.md` already
   state what is measured and what is not, and that habit is itself one of the criteria ("open and
   honest about the quality of its code").

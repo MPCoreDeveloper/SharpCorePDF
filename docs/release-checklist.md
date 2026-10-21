@@ -243,7 +243,7 @@ One service holds a number about this repository, and that number is a red-run g
 | --- | --- | --- | --- |
 | SonarCloud | the project's quality gate on new code — the coverage floor this repository wants there is 90%, above Sonar's 80% default — plus the Sonar way profile over `src/` and `tests/` | the quality gate on sonarcloud.io; the exclusions in `sonar.exclusions` in `ci.yml`; local silences in `src/.editorconfig` | `dotnet-sonarscanner begin` before the build, `end` after the tests, reading `artifacts/coverage/net11.0.xml` |
 
-The 90% is deliberately *not* the whole tree. The scan excludes the BMad bundle, `docs/`, `tools/`,
+The 90% is deliberately *not* the whole tree. The scan excludes the Spec Kit tooling, `docs/`, `tools/`,
 `examples/`, `bin/`, `obj/` and `artifacts/`, and test code contributes no lines to a coverage metric, so
 the number describes the four assemblies the packages ship plus the entry point. At the time of writing
 that is 92% (`SharpCorePDF.Infrastructure` 91%, `SharpCorePDF.Domain` 96%,

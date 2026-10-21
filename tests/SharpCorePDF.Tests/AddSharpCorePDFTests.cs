@@ -24,10 +24,13 @@ public sealed class AddSharpCorePDFTests
 
         Assert.NotNull(provider.GetRequiredService<IPdfMerger>());
         Assert.NotNull(provider.GetRequiredService<IPdfInspector>());
+        Assert.NotNull(provider.GetRequiredService<IPdfContentReader>());
         Assert.NotNull(provider.GetRequiredService<IPdfDocumentReader>());
+        Assert.NotNull(provider.GetRequiredService<IPdfPageContentReader>());
         Assert.NotNull(provider.GetRequiredService<IPdfMergeEngine>());
 
         Assert.Same(provider.GetRequiredService<IPdfMerger>(), provider.GetRequiredService<IPdfMerger>());
+        Assert.Same(provider.GetRequiredService<IPdfContentReader>(), provider.GetRequiredService<IPdfContentReader>());
         Assert.Same(PdfEngineOptions.Default, provider.GetRequiredService<PdfEngineOptions>());
     }
 
