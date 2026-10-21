@@ -42,9 +42,10 @@
 
 # SharpCorePDF
 
-A dependency-injection first, domain-driven PDF library for .NET 10 and .NET 11, built around one
-capability done properly: **merging PDF documents** — whole documents, selected pages, in any order —
-plus the bounded authoring a merge often needs: a cover page written from nothing.
+A dependency-injection first, domain-driven PDF library for .NET 10 and .NET 11, built around
+document assembly done properly: **merge, inspect and edit existing PDF files** — select, reorder,
+rotate, duplicate and delete pages, and override document information — plus the bounded authoring a
+merge often needs: a cover page written from nothing.
 
 Every PDF byte is read and written by this library. There is no dependency on a third-party PDF
 engine, no native binary and no licence to accept: the reader, the writer and the merge engine are
@@ -134,6 +135,34 @@ await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
 
   It is authoring for fixed-position content, not a layout engine: no word wrap, tables, vector
   drawing or JPEG images. Chapter 12 of the manual states the boundary.
+* **An existing document can be edited into a new one.** `IPdfDocumentEditor` applies an immutable
+  `PdfEditPlan` to a source: rotate a page, delete it, move it, duplicate it, and override document
+  information. Page numbers are one-based and refer to the document state produced by the preceding
+  operations, so a plan reads from top to bottom. The pages that survive are copied verbatim into a
+  fresh document; the source is never modified and no temporary file is created beside it.
+
+  ```csharp
+  using SharpCorePDF.Domain.Aggregates;
+  using SharpCorePDF.Domain.ValueObjects;
+  using SharpCorePDF.Infrastructure.Sources;
+
+  var edit = PdfEditPlan.Create()
+      .RotatePage(1, PageRotation.Clockwise90)   // add a quarter turn
+      .DeletePage(4)
+      .MovePage(3, 1)
+      .DuplicatePage(2, 4)                        // append the copy
+      .SetMetadata(new PdfMetadata { Title = "Revised statement" });
+
+  await using var output = File.Create(@"C:\reports\statement-edited.pdf");
+  var result = await editor.ApplyAsync(
+      new PdfFileSource(@"C:\reports\statement.pdf"), edit, output);
+  ```
+
+  Bookmarks and named destinations are redirected to the first surviving page they named, or to the
+  first page of the result when the named page was removed; page labels are dropped when the page order
+  changes, and XMP is dropped when the information dictionary is overridden. Both decisions are reported
+  in `PdfEditResult.Warnings`. Chapter 14 of the manual covers the operations, the ordering rules and the
+  boundary of the feature.
 
 ## Getting it into a project
 
@@ -246,10 +275,11 @@ walks through each one.
 ## Documentation
 
 The [manual](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md) is the long-form
-guide to the 1.0.0 API: fourteen chapters, from the first merge to encryption, inspection, dependency
-injection, the architecture, authoring a page and a cookbook of complete recipes. Read it as
+guide to the API: fourteen chapters, from the first merge to encryption, inspection, dependency
+injection, the architecture, authoring a page, a cookbook of complete recipes and editing an existing
+document. Read it as
 [a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.0.0.pdf)
-or chapter by chapter as Markdown, starting with
+(the 1.0.0 edition) or chapter by chapter as Markdown, starting with
 [Installation and First Merge](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/manual/src/03-installation.md).
 The [documentation index](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md)
 links every chapter and the supporting measurement, release and governance documents.

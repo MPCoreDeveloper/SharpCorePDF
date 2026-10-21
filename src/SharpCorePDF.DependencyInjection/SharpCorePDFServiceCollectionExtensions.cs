@@ -11,7 +11,7 @@ namespace SharpCorePDF.DependencyInjection;
 
 /// <summary>
 /// Registration of SharpCorePDF in a dependency injection container: one <c>AddSharpCorePDF()</c> call
-/// wires the merger, the inspector and the PDF engine behind their ports.
+/// wires the merger, the editor, the inspector and the PDF engines behind their ports.
 /// </summary>
 /// <remarks>
 /// Every service is stateless, so all of them are registered as singletons; a merge executes on its
@@ -71,19 +71,22 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
         return services.AddSharpCorePDFCore();
     }
 
-    /// <summary>Registers the reader, the engine, the merger and the inspector.</summary>
+    /// <summary>Registers the reader, the engines, the merger, the editor and the inspector.</summary>
     /// <param name="services">The service collection to add to.</param>
     /// <returns>The same collection, so calls can be chained.</returns>
     private static IServiceCollection AddSharpCorePDFCore(this IServiceCollection services)
     {
         services.TryAddSingleton(sp => new PdfDocumentReader(sp.GetRequiredService<PdfEngineOptions>()));
         services.TryAddSingleton(sp => new PdfMergeEngine(sp.GetRequiredService<PdfEngineOptions>()));
+        services.TryAddSingleton(sp => new PdfEditEngine(sp.GetRequiredService<PdfEngineOptions>()));
         services.TryAddSingleton(sp => new PdfPageContentReader(sp.GetRequiredService<PdfEngineOptions>()));
 
         services.TryAddSingleton<IPdfDocumentReader>(sp => sp.GetRequiredService<PdfDocumentReader>());
         services.TryAddSingleton<IPdfMergeEngine>(sp => sp.GetRequiredService<PdfMergeEngine>());
+        services.TryAddSingleton<IPdfEditEngine>(sp => sp.GetRequiredService<PdfEditEngine>());
         services.TryAddSingleton<IPdfPageContentReader>(sp => sp.GetRequiredService<PdfPageContentReader>());
         services.TryAddSingleton<IPdfMerger, PdfMergerService>();
+        services.TryAddSingleton<IPdfDocumentEditor, PdfDocumentEditorService>();
         services.TryAddSingleton<IPdfInspector, PdfInspectorService>();
         services.TryAddSingleton<IPdfContentReader, PdfContentReaderService>();
 

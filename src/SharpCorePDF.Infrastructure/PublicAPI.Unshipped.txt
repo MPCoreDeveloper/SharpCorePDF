@@ -23,6 +23,10 @@ SharpCorePDF.Infrastructure.PdfDocumentBuilder.PageCount.get -> int
 SharpCorePDF.Infrastructure.PdfDocumentBuilder.SaveAsync(System.IO.Stream! destination, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 SharpCorePDF.Infrastructure.PdfDocumentBuilder.ToArray() -> byte[]!
 SharpCorePDF.Infrastructure.PdfDocumentBuilder.WithMetadata(SharpCorePDF.Domain.ValueObjects.PdfMetadata! metadata) -> SharpCorePDF.Infrastructure.PdfDocumentBuilder!
+SharpCorePDF.Infrastructure.PdfEditEngine
+SharpCorePDF.Infrastructure.PdfEditEngine.ApplyAsync(string! sourceName, System.IO.Stream! content, SharpCorePDF.Domain.Aggregates.PdfEditPlan! plan, string? password, System.IO.Stream! destination, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfEditResult!>!
+SharpCorePDF.Infrastructure.PdfEditEngine.Options.get -> SharpCorePDF.Infrastructure.PdfEngineOptions!
+SharpCorePDF.Infrastructure.PdfEditEngine.PdfEditEngine(SharpCorePDF.Infrastructure.PdfEngineOptions? options = null) -> void
 SharpCorePDF.Infrastructure.PdfEngineOptions.MaxInlineContentBytes.get -> int
 SharpCorePDF.Infrastructure.PdfEngineOptions.MaxInlineContentBytes.init -> void
 SharpCorePDF.Infrastructure.PdfPageCanvas

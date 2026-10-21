@@ -1,11 +1,24 @@
 #nullable enable
 ~override SharpCorePDF.Domain.ValueObjects.PdfColor.Equals(object obj) -> bool
+abstract SharpCorePDF.Domain.ValueObjects.PdfEditOperation.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfEditOperation!
+abstract SharpCorePDF.Domain.ValueObjects.PdfEditOperation.Kind.get -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+override sealed SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfEditOperation? other) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfEditOperation? other) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfEditOperation? other) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfEditOperation? other) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfEditOperation? other) -> bool
+override SharpCorePDF.Domain.Aggregates.PdfEditPlan.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.Aggregates.PdfEditPlan.GetHashCode() -> int
+override SharpCorePDF.Domain.Aggregates.PdfEditPlan.ToString() -> string!
 override SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Equals(object? obj) -> bool
 override SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.GetHashCode() -> int
 override SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.ToString() -> string!
 override SharpCorePDF.Domain.ReadModels.PdfDestination.Equals(object? obj) -> bool
 override SharpCorePDF.Domain.ReadModels.PdfDestination.GetHashCode() -> int
 override SharpCorePDF.Domain.ReadModels.PdfDestination.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfEditResult.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfEditResult.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfEditResult.ToString() -> string!
 override SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Equals(object? obj) -> bool
 override SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.GetHashCode() -> int
 override SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.ToString() -> string!
@@ -47,12 +60,63 @@ override SharpCorePDF.Domain.ReadModels.PdfXmpResult.GetHashCode() -> int
 override SharpCorePDF.Domain.ReadModels.PdfXmpResult.ToString() -> string!
 override SharpCorePDF.Domain.ValueObjects.PdfColor.GetHashCode() -> int
 override SharpCorePDF.Domain.ValueObjects.PdfColor.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation!
+override SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.Kind.get -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+override SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation!
+override SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.Kind.get -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+override SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfEditOperation.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfEditOperation.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfEditOperation.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation!
+override SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.Kind.get -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+override SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.ToString() -> string!
 override SharpCorePDF.Domain.ValueObjects.PdfRectangle.Equals(object? obj) -> bool
 override SharpCorePDF.Domain.ValueObjects.PdfRectangle.GetHashCode() -> int
 override SharpCorePDF.Domain.ValueObjects.PdfRectangle.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation!
+override SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.Kind.get -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+override SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation!
+override SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.Kind.get -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+override SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.ToString() -> string!
 override SharpCorePDF.Domain.ValueObjects.PdfWarning.Equals(object? obj) -> bool
 override SharpCorePDF.Domain.ValueObjects.PdfWarning.GetHashCode() -> int
 override SharpCorePDF.Domain.ValueObjects.PdfWarning.ToString() -> string!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.<Clone>$() -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.DeletePage(int pageNumber) -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.DuplicatePage(int pageNumber, int insertAt) -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.EnsureValid() -> void
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.Equals(SharpCorePDF.Domain.Aggregates.PdfEditPlan? other) -> bool
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.IsEmpty.get -> bool
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.MovePage(int from, int to) -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.OperationCount.get -> int
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.Operations.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfEditOperation!>!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.Output.get -> SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.RotatePage(int pageNumber, SharpCorePDF.Domain.ValueObjects.PageRotation rotation) -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.SetMetadata(SharpCorePDF.Domain.ValueObjects.PdfMetadata! metadata) -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.Validate() -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.WithOutput(SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions! output) -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.WithOutput(System.Func<SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions!, SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions!>! mutate) -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+SharpCorePDF.Domain.Exceptions.PdfEditPlanValidationException
+SharpCorePDF.Domain.Exceptions.PdfEditPlanValidationException.Errors.get -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Domain.Exceptions.PdfEditPlanValidationException.PdfEditPlanValidationException(string! error) -> void
+SharpCorePDF.Domain.Exceptions.PdfEditPlanValidationException.PdfEditPlanValidationException(System.Collections.Generic.IEnumerable<string!>! errors) -> void
 SharpCorePDF.Domain.Ports.IPdfContentReader
 SharpCorePDF.Domain.Ports.IPdfContentReader.CopyEmbeddedFileDataAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo! file, System.IO.Stream! destination, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 SharpCorePDF.Domain.Ports.IPdfContentReader.CopyImageDataAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ReadModels.PdfImageInfo! image, System.IO.Stream! destination, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
@@ -65,6 +129,9 @@ SharpCorePDF.Domain.Ports.IPdfContentReader.ReadMetadataAsync(SharpCorePDF.Domai
 SharpCorePDF.Domain.Ports.IPdfContentReader.ReadOutlineAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfOutlineItem!>!>!
 SharpCorePDF.Domain.Ports.IPdfContentReader.ReadPageDetailsAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ValueObjects.PageRange range, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<SharpCorePDF.Domain.ReadModels.PdfPageDetail!>!
 SharpCorePDF.Domain.Ports.IPdfContentReader.ReadTextAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ValueObjects.PageRange range, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfTextBlock!>!>!
+SharpCorePDF.Domain.Ports.IPdfDocumentEditor
+SharpCorePDF.Domain.Ports.IPdfDocumentEditor.ApplyAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.Aggregates.PdfEditPlan! plan, System.IO.Stream! destination, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfEditResult!>!
+SharpCorePDF.Domain.Ports.IPdfDocumentEditor.ApplyToArrayAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.Aggregates.PdfEditPlan! plan, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<byte[]!>!
 SharpCorePDF.Domain.ReadModels.MergeResult.Warnings.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfWarning!>!
 SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo
 SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo!
@@ -111,6 +178,22 @@ SharpCorePDF.Domain.ReadModels.PdfDestination.Uri.init -> void
 SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.SecurityHandlerRevision.get -> int?
 SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.SecurityHandlerRevision.init -> void
 SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.Warnings.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfWarning!>!
+SharpCorePDF.Domain.ReadModels.PdfEditResult
+SharpCorePDF.Domain.ReadModels.PdfEditResult.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfEditResult!
+SharpCorePDF.Domain.ReadModels.PdfEditResult.BytesWritten.get -> long
+SharpCorePDF.Domain.ReadModels.PdfEditResult.BytesWritten.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEditResult.Elapsed.get -> System.TimeSpan
+SharpCorePDF.Domain.ReadModels.PdfEditResult.Elapsed.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEditResult.Equals(SharpCorePDF.Domain.ReadModels.PdfEditResult? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfEditResult.Operations.get -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Domain.ReadModels.PdfEditResult.Operations.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEditResult.OutputVersion.get -> SharpCorePDF.Domain.ValueObjects.PdfVersion
+SharpCorePDF.Domain.ReadModels.PdfEditResult.OutputVersion.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEditResult.PageCount.get -> int
+SharpCorePDF.Domain.ReadModels.PdfEditResult.PageCount.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEditResult.PdfEditResult() -> void
+SharpCorePDF.Domain.ReadModels.PdfEditResult.Warnings.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfWarning!>!
+SharpCorePDF.Domain.ReadModels.PdfEditResult.Warnings.init -> void
 SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo
 SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo!
 SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.ByteLength.get -> long
@@ -354,6 +437,52 @@ SharpCorePDF.Domain.ValueObjects.PdfColor.Green.get -> byte
 SharpCorePDF.Domain.ValueObjects.PdfColor.PdfColor() -> void
 SharpCorePDF.Domain.ValueObjects.PdfColor.PdfColor(byte red, byte green, byte blue) -> void
 SharpCorePDF.Domain.ValueObjects.PdfColor.Red.get -> byte
+SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation
+SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.Deconstruct(out int PageNumber) -> void
+SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.PageNumber.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.PageNumber.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.PdfDeletePageOperation(int PageNumber) -> void
+SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation
+SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.Deconstruct(out int PageNumber, out int InsertAt) -> void
+SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.InsertAt.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.InsertAt.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.PageNumber.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.PageNumber.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.PdfDuplicatePageOperation(int PageNumber, int InsertAt) -> void
+SharpCorePDF.Domain.ValueObjects.PdfEditOperation
+SharpCorePDF.Domain.ValueObjects.PdfEditOperation.PdfEditOperation() -> void
+SharpCorePDF.Domain.ValueObjects.PdfEditOperation.PdfEditOperation(SharpCorePDF.Domain.ValueObjects.PdfEditOperation! original) -> void
+SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind.DeletePage = 1 -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind.DuplicatePage = 3 -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind.MovePage = 2 -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind.RotatePage = 0 -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind.SetMetadata = 4 -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions!
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.DocumentId.get -> string?
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.DocumentId.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.Equals(SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.Metadata.get -> SharpCorePDF.Domain.ValueObjects.PdfMetadata?
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.Metadata.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.ModificationDate.get -> System.DateTimeOffset?
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.ModificationDate.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.PdfEditOutputOptions() -> void
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.Producer.get -> string!
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.Producer.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.TargetVersion.get -> SharpCorePDF.Domain.ValueObjects.PdfVersion
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.TargetVersion.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.Validate() -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation
+SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.Deconstruct(out int From, out int To) -> void
+SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.From.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.From.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.PdfMovePageOperation(int From, int To) -> void
+SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.To.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.To.init -> void
 SharpCorePDF.Domain.ValueObjects.PdfRectangle
 SharpCorePDF.Domain.ValueObjects.PdfRectangle.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfRectangle!
 SharpCorePDF.Domain.ValueObjects.PdfRectangle.Bottom.get -> double
@@ -365,6 +494,20 @@ SharpCorePDF.Domain.ValueObjects.PdfRectangle.PdfRectangle(double left, double b
 SharpCorePDF.Domain.ValueObjects.PdfRectangle.Right.get -> double
 SharpCorePDF.Domain.ValueObjects.PdfRectangle.Top.get -> double
 SharpCorePDF.Domain.ValueObjects.PdfRectangle.Width.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation
+SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.Deconstruct(out int PageNumber, out SharpCorePDF.Domain.ValueObjects.PageRotation Rotation) -> void
+SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.PageNumber.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.PageNumber.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.PdfRotatePageOperation(int PageNumber, SharpCorePDF.Domain.ValueObjects.PageRotation Rotation) -> void
+SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.Rotation.get -> SharpCorePDF.Domain.ValueObjects.PageRotation
+SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.Rotation.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation
+SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.Deconstruct(out SharpCorePDF.Domain.ValueObjects.PdfMetadata! Metadata) -> void
+SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.Metadata.get -> SharpCorePDF.Domain.ValueObjects.PdfMetadata!
+SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.Metadata.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.PdfSetMetadataOperation(SharpCorePDF.Domain.ValueObjects.PdfMetadata! Metadata) -> void
 SharpCorePDF.Domain.ValueObjects.PdfWarning
 SharpCorePDF.Domain.ValueObjects.PdfWarning.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfWarning!
 SharpCorePDF.Domain.ValueObjects.PdfWarning.Equals(SharpCorePDF.Domain.ValueObjects.PdfWarning? other) -> bool
@@ -400,6 +543,7 @@ SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ObjectStreamTruncated = 3 -> Sha
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ObjectStreamUnreadable = 2 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.OutlinesDroppedByPolicy = 21 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.OutputVerified = 25 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageLabelsDropped = 37 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageSizeAssumed = 10 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeBranchUnreadable = 7 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeChildNotANode = 8 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
@@ -407,6 +551,7 @@ SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeCycle = 6 -> SharpCorePD
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeMissing = 4 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeTooDeep = 5 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.TextUnreadable = 36 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.XmpPacketDropped = 38 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.XmpPacketMalformed = 33 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.XObjectResourceMissing = 29 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.StandardFont
@@ -422,10 +567,16 @@ SharpCorePDF.Domain.ValueObjects.StandardFont.TimesBold = 5 -> SharpCorePDF.Doma
 SharpCorePDF.Domain.ValueObjects.StandardFont.TimesBoldItalic = 7 -> SharpCorePDF.Domain.ValueObjects.StandardFont
 SharpCorePDF.Domain.ValueObjects.StandardFont.TimesItalic = 6 -> SharpCorePDF.Domain.ValueObjects.StandardFont
 SharpCorePDF.Domain.ValueObjects.StandardFont.TimesRoman = 4 -> SharpCorePDF.Domain.ValueObjects.StandardFont
+static SharpCorePDF.Domain.Aggregates.PdfEditPlan.Create(SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions? output = null) -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+static SharpCorePDF.Domain.Aggregates.PdfEditPlan.For(SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions! output) -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+static SharpCorePDF.Domain.Aggregates.PdfEditPlan.operator !=(SharpCorePDF.Domain.Aggregates.PdfEditPlan? left, SharpCorePDF.Domain.Aggregates.PdfEditPlan? right) -> bool
+static SharpCorePDF.Domain.Aggregates.PdfEditPlan.operator ==(SharpCorePDF.Domain.Aggregates.PdfEditPlan? left, SharpCorePDF.Domain.Aggregates.PdfEditPlan? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.operator !=(SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? left, SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.operator ==(SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? left, SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfDestination.operator !=(SharpCorePDF.Domain.ReadModels.PdfDestination? left, SharpCorePDF.Domain.ReadModels.PdfDestination? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfDestination.operator ==(SharpCorePDF.Domain.ReadModels.PdfDestination? left, SharpCorePDF.Domain.ReadModels.PdfDestination? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfEditResult.operator !=(SharpCorePDF.Domain.ReadModels.PdfEditResult? left, SharpCorePDF.Domain.ReadModels.PdfEditResult? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfEditResult.operator ==(SharpCorePDF.Domain.ReadModels.PdfEditResult? left, SharpCorePDF.Domain.ReadModels.PdfEditResult? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.operator !=(SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo? left, SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.operator ==(SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo? left, SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.operator !=(SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo? left, SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo? right) -> bool
@@ -458,8 +609,26 @@ static SharpCorePDF.Domain.ValueObjects.PdfColor.FromRgb(byte red, byte green, b
 static SharpCorePDF.Domain.ValueObjects.PdfColor.operator !=(SharpCorePDF.Domain.ValueObjects.PdfColor left, SharpCorePDF.Domain.ValueObjects.PdfColor right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfColor.operator ==(SharpCorePDF.Domain.ValueObjects.PdfColor left, SharpCorePDF.Domain.ValueObjects.PdfColor right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfColor.White.get -> SharpCorePDF.Domain.ValueObjects.PdfColor
+static SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.operator !=(SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation.operator ==(SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfDeletePageOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.operator !=(SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation.operator ==(SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfDuplicatePageOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfEditOperation.operator !=(SharpCorePDF.Domain.ValueObjects.PdfEditOperation? left, SharpCorePDF.Domain.ValueObjects.PdfEditOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfEditOperation.operator ==(SharpCorePDF.Domain.ValueObjects.PdfEditOperation? left, SharpCorePDF.Domain.ValueObjects.PdfEditOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.Default.get -> SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions!
+static SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.operator !=(SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions? left, SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.operator ==(SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions? left, SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.operator !=(SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation.operator ==(SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfMovePageOperation? right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfRectangle.FromCorners(double x1, double y1, double x2, double y2) -> SharpCorePDF.Domain.ValueObjects.PdfRectangle!
 static SharpCorePDF.Domain.ValueObjects.PdfRectangle.operator !=(SharpCorePDF.Domain.ValueObjects.PdfRectangle? left, SharpCorePDF.Domain.ValueObjects.PdfRectangle? right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfRectangle.operator ==(SharpCorePDF.Domain.ValueObjects.PdfRectangle? left, SharpCorePDF.Domain.ValueObjects.PdfRectangle? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.operator !=(SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation.operator ==(SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfRotatePageOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.operator !=(SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation? left, SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation.operator ==(SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation? left, SharpCorePDF.Domain.ValueObjects.PdfSetMetadataOperation? right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfWarning.operator !=(SharpCorePDF.Domain.ValueObjects.PdfWarning? left, SharpCorePDF.Domain.ValueObjects.PdfWarning? right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfWarning.operator ==(SharpCorePDF.Domain.ValueObjects.PdfWarning? left, SharpCorePDF.Domain.ValueObjects.PdfWarning? right) -> bool
+virtual SharpCorePDF.Domain.ValueObjects.PdfEditOperation.EqualityContract.get -> System.Type!
+virtual SharpCorePDF.Domain.ValueObjects.PdfEditOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfEditOperation? other) -> bool
+virtual SharpCorePDF.Domain.ValueObjects.PdfEditOperation.PrintMembers(System.Text.StringBuilder! builder) -> bool

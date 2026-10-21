@@ -221,4 +221,17 @@ public enum PdfWarningKind
     /// this warning, not as silence.
     /// </summary>
     TextUnreadable,
+
+    /// <summary>
+    /// The page labels of the source were dropped because an edit changed the order or the number of
+    /// pages, and a label range that was written for the old order would name the wrong pages.
+    /// </summary>
+    PageLabelsDropped,
+
+    /// <summary>
+    /// The XMP packet of the source was dropped because the edit replaced document information, and
+    /// the packet would otherwise keep describing the old values. The information dictionary is
+    /// written with the values the caller supplied.
+    /// </summary>
+    XmpPacketDropped,
 }

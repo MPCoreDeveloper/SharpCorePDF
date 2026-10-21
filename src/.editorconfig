@@ -27,6 +27,11 @@ dotnet_diagnostic.CA1720.severity = none
 # CA1720: Single is the natural name for "exactly one page", matching Enumerable.Single.
 dotnet_diagnostic.CA1720.severity = none
 
+[**/ValueObjects/PdfEditOperation.cs]
+# S1694: an edit operation is a closed hierarchy of values that the engine switches over; an
+# interface would let any type claim to be an operation the engine cannot execute.
+dotnet_diagnostic.S1694.severity = none
+
 # The three SonarCloud rules this repository answers with a decision rather than a change. Each silence is
 # scoped to the file that carries the decision and each line carries // NOSONAR as well, so the server side
 # of the gate reaches the same conclusion as a local build. Anything else the analyzer reports is a finding

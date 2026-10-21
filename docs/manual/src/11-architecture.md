@@ -7,8 +7,8 @@ the reasons behind it, so that you can judge where a change belongs and what a f
 
 | Project | Contains | Depends on |
 | --- | --- | --- |
-| `SharpCorePDF.Domain` | `MergePlan`, `PdfSource`, value objects, policies, read models, warnings, exceptions, `IPdfContentSource` | Nothing but the BCL |
-| `SharpCorePDF.Application` | `PdfMergerService`, `PdfInspectorService`, `IPdfDocumentReader`, `IPdfMergeEngine`, extension methods | Domain |
+| `SharpCorePDF.Domain` | `MergePlan`, `PdfEditPlan`, `PdfSource`, value objects, policies, read models, warnings, exceptions, `IPdfContentSource`, `IPdfDocumentEditor` | Nothing but the BCL |
+| `SharpCorePDF.Application` | `PdfMergerService`, `PdfDocumentEditorService`, `PdfInspectorService`, `IPdfDocumentReader`, `IPdfMergeEngine`, `IPdfEditEngine`, extension methods | Domain |
 | `SharpCorePDF.Infrastructure` | The PDF reader, writer, object model, filters, copier, engine, content sources, and the authoring builder with its font and PNG writers | Domain, Application |
 | `SharpCorePDF.DependencyInjection` | `AddSharpCorePDF()` and the service registrations | Domain, Application, Infrastructure |
 | `SharpCorePDF` (meta-package) | No assembly; depends on the four above | — |
@@ -30,12 +30,15 @@ display name. That is why a plan can be built, validated and tested without touc
 
 The application layer orchestrates but does not parse PDF syntax. It validates a plan, opens each
 source, asks `IPdfDocumentReader` what is inside, resolves the page selections against the real page
-counts, and hands a `MergeEngineRequest` to `IPdfMergeEngine`. It also owns the lifetime of every stream
-it opens, so a failure in the middle does not leak a handle.
+counts, and hands a `MergeEngineRequest` to `IPdfMergeEngine`. The edit service follows the same shape
+with one source: it validates the `PdfEditPlan` and hands it to `IPdfEditEngine`. The application layer
+also owns the lifetime of every stream it opens, so a failure in the middle does not leak a handle.
 
 The infrastructure layer is the PDF engine. It reads bytes, parses objects, decrypts, walks page trees,
 copies object graphs, writes a cross-reference table and encrypts the result. It has no opinion about
-where a document came from or which pages the caller wanted; the request states both.
+where a document came from or which pages the caller wanted; the request states both. The edit engine
+reuses that reader, copier and writer, flattening the page tree and applying the edit operations before
+the document is written.
 
 Authoring lives in this layer too, as a pure factory rather than a port: `PdfDocumentBuilder` holds the
 pages and writes them with the same `PdfWriter` a merge uses, then returns the bytes as a
@@ -127,7 +130,9 @@ The ports are the seams:
 | `IPdfContentSource` | `PdfFileSource`, byte and stream sources | Documents come from a database, blob store or network |
 | `IPdfDocumentReader` | `PdfDocumentReader` | You need a different inspection strategy in tests |
 | `IPdfMergeEngine` | `PdfMergeEngine` | You want to stub the writer while testing orchestration |
+| `IPdfEditEngine` | `PdfEditEngine` | You want to test the editor without PDF work |
 | `IPdfMerger` | `PdfMergerService` | You want to test a caller without any PDF work |
+| `IPdfDocumentEditor` | `PdfDocumentEditorService` | Same, for editing |
 | `IPdfInspector` | `PdfInspectorService` | Same, for inspection |
 
 A content source is small enough to write for any backing store. Each call must return an independent,

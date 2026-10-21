@@ -1,7 +1,7 @@
 # 1. What SharpCorePDF Is
 
-SharpCorePDF is a PDF **merging**, **inspection** and **authoring** library for .NET. It answers three
-questions:
+SharpCorePDF is a PDF **merging**, **inspection**, **authoring** and **editing** library for .NET. It
+answers four questions:
 
 1. *What is in this document?* — page count, page sizes, rotation, metadata, outlines, annotations,
    form fields, embedded files, encryption and the warnings the reader had to record.
@@ -9,19 +9,23 @@ questions:
    under the output policies I choose.
 3. *How do I write the one page that does not exist yet?* — a cover with a logo and text, fixed in
    place, written in memory and merged in front of the rest (Chapter 12).
+4. *How do I change an existing document without editing its content?* — rotate, delete, move or
+   duplicate pages and override document information, written to a new file (Chapter 14).
 
 Everything else in the API exists to make those operations predictable: an immutable plan, value
 objects for the inputs, read models for the outputs, typed exceptions for the failures, and warnings
 for the decisions that are not failures.
 
-## Three use cases, one engine
+## Four use cases, one engine
 
-Merging, inspection and authoring share the same reader and writer. A merge inspects every source
-anyway — it has to know the page count before it can resolve `"2-5"` — so inspection is not a separate
-code path with its own interpretation of a damaged file. If `InspectAsync` reports four pages, the
-merge that follows sees the same four pages and the same warnings. An authored page is written with
-the merge engine's writer and returned as a `PdfByteArraySource`, so it enters the merge through the
-same `IPdfContentSource` port as a file or an upload.
+Merging, inspection, authoring and editing share the same reader and writer. A merge inspects every
+source anyway — it has to know the page count before it can resolve `"2-5"` — so inspection is not a
+separate code path with its own interpretation of a damaged file. If `InspectAsync` reports four
+pages, the merge that follows sees the same four pages and the same warnings. An authored page is
+written with the merge engine's writer and returned as a `PdfByteArraySource`, so it enters the merge
+through the same `IPdfContentSource` port as a file or an upload. An edit reads the source, applies
+its operations to the page tree and writes a complete new document, with the same copier the merge
+uses for every object a surviving page needs.
 
 ```csharp
 using SharpCorePDF.Application.Extensions;
@@ -62,8 +66,8 @@ A merge is not a concatenation of files. The engine:
   encryption and the PDF version written in the header;
 - writes a complete file with a cross-reference table and a trailer.
 
-The source files are only ever read. The merge does not modify them, does not need write access to
-them, and does not leave temporary files beside them.
+The source files are only ever read. A merge or an edit does not modify them, does not need write
+access to them, and does not leave temporary files beside them.
 
 ## The guarantees you can build on
 
