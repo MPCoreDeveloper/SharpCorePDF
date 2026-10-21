@@ -181,7 +181,7 @@ those.
 > **Cancellation leaves a partial destination.** A cancelled `MergeToFileAsync` throws
 > `OperationCanceledException`, and the file it was writing may be incomplete. If the destination must
 > never be observed half-written, merge to a temporary file in the same directory and move it into
-> place after the call succeeds. Chapter 12 shows the pattern.
+> place after the call succeeds. Chapter 13 shows the pattern.
 
 ## Reuse and thread safety
 

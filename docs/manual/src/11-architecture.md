@@ -9,7 +9,7 @@ the reasons behind it, so that you can judge where a change belongs and what a f
 | --- | --- | --- |
 | `SharpCorePDF.Domain` | `MergePlan`, `PdfSource`, value objects, policies, read models, warnings, exceptions, `IPdfContentSource` | Nothing but the BCL |
 | `SharpCorePDF.Application` | `PdfMergerService`, `PdfInspectorService`, `IPdfDocumentReader`, `IPdfMergeEngine`, extension methods | Domain |
-| `SharpCorePDF.Infrastructure` | The PDF reader, writer, object model, filters, copier, engine and content sources | Domain, Application |
+| `SharpCorePDF.Infrastructure` | The PDF reader, writer, object model, filters, copier, engine, content sources, and the authoring builder with its font and PNG writers | Domain, Application |
 | `SharpCorePDF.DependencyInjection` | `AddSharpCorePDF()` and the service registrations | Domain, Application, Infrastructure |
 | `SharpCorePDF` (meta-package) | No assembly; depends on the four above | — |
 
@@ -36,6 +36,13 @@ it opens, so a failure in the middle does not leak a handle.
 The infrastructure layer is the PDF engine. It reads bytes, parses objects, decrypts, walks page trees,
 copies object graphs, writes a cross-reference table and encrypts the result. It has no opinion about
 where a document came from or which pages the caller wanted; the request states both.
+
+Authoring lives in this layer too, as a pure factory rather than a port: `PdfDocumentBuilder` holds the
+pages and writes them with the same `PdfWriter` a merge uses, then returns the bytes as a
+`PdfByteArraySource`. No service registration is involved, and the domain gains only two value objects —
+`PdfColor` and `StandardFont` — because a colour and a standard face are facts about a document, not
+about the engine. The font parser, the subset writer and the PNG reader are internal to the
+infrastructure assembly, the same way the object parser and the filters are.
 
 The dependency injection project is the composition root. It knows the concrete classes, and nothing
 else does.

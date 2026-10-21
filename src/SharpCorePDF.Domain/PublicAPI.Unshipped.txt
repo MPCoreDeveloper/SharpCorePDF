@@ -1,4 +1,5 @@
 #nullable enable
+~override SharpCorePDF.Domain.ValueObjects.PdfColor.Equals(object obj) -> bool
 override SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Equals(object? obj) -> bool
 override SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.GetHashCode() -> int
 override SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.ToString() -> string!
@@ -44,6 +45,8 @@ override SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.ToString() -> string!
 override SharpCorePDF.Domain.ReadModels.PdfXmpResult.Equals(object? obj) -> bool
 override SharpCorePDF.Domain.ReadModels.PdfXmpResult.GetHashCode() -> int
 override SharpCorePDF.Domain.ReadModels.PdfXmpResult.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfColor.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfColor.ToString() -> string!
 override SharpCorePDF.Domain.ValueObjects.PdfRectangle.Equals(object? obj) -> bool
 override SharpCorePDF.Domain.ValueObjects.PdfRectangle.GetHashCode() -> int
 override SharpCorePDF.Domain.ValueObjects.PdfRectangle.ToString() -> string!
@@ -344,6 +347,13 @@ SharpCorePDF.Domain.ReadModels.PdfXmpResult.Metadata.init -> void
 SharpCorePDF.Domain.ReadModels.PdfXmpResult.PdfXmpResult() -> void
 SharpCorePDF.Domain.ReadModels.PdfXmpResult.Warnings.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfWarning!>!
 SharpCorePDF.Domain.ReadModels.PdfXmpResult.Warnings.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfColor
+SharpCorePDF.Domain.ValueObjects.PdfColor.Blue.get -> byte
+SharpCorePDF.Domain.ValueObjects.PdfColor.Equals(SharpCorePDF.Domain.ValueObjects.PdfColor other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfColor.Green.get -> byte
+SharpCorePDF.Domain.ValueObjects.PdfColor.PdfColor() -> void
+SharpCorePDF.Domain.ValueObjects.PdfColor.PdfColor(byte red, byte green, byte blue) -> void
+SharpCorePDF.Domain.ValueObjects.PdfColor.Red.get -> byte
 SharpCorePDF.Domain.ValueObjects.PdfRectangle
 SharpCorePDF.Domain.ValueObjects.PdfRectangle.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfRectangle!
 SharpCorePDF.Domain.ValueObjects.PdfRectangle.Bottom.get -> double
@@ -399,6 +409,19 @@ SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeTooDeep = 5 -> SharpCore
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.TextUnreadable = 36 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.XmpPacketMalformed = 33 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.XObjectResourceMissing = 29 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.StandardFont
+SharpCorePDF.Domain.ValueObjects.StandardFont.Courier = 8 -> SharpCorePDF.Domain.ValueObjects.StandardFont
+SharpCorePDF.Domain.ValueObjects.StandardFont.CourierBold = 9 -> SharpCorePDF.Domain.ValueObjects.StandardFont
+SharpCorePDF.Domain.ValueObjects.StandardFont.CourierBoldOblique = 11 -> SharpCorePDF.Domain.ValueObjects.StandardFont
+SharpCorePDF.Domain.ValueObjects.StandardFont.CourierOblique = 10 -> SharpCorePDF.Domain.ValueObjects.StandardFont
+SharpCorePDF.Domain.ValueObjects.StandardFont.Helvetica = 0 -> SharpCorePDF.Domain.ValueObjects.StandardFont
+SharpCorePDF.Domain.ValueObjects.StandardFont.HelveticaBold = 1 -> SharpCorePDF.Domain.ValueObjects.StandardFont
+SharpCorePDF.Domain.ValueObjects.StandardFont.HelveticaBoldOblique = 3 -> SharpCorePDF.Domain.ValueObjects.StandardFont
+SharpCorePDF.Domain.ValueObjects.StandardFont.HelveticaOblique = 2 -> SharpCorePDF.Domain.ValueObjects.StandardFont
+SharpCorePDF.Domain.ValueObjects.StandardFont.TimesBold = 5 -> SharpCorePDF.Domain.ValueObjects.StandardFont
+SharpCorePDF.Domain.ValueObjects.StandardFont.TimesBoldItalic = 7 -> SharpCorePDF.Domain.ValueObjects.StandardFont
+SharpCorePDF.Domain.ValueObjects.StandardFont.TimesItalic = 6 -> SharpCorePDF.Domain.ValueObjects.StandardFont
+SharpCorePDF.Domain.ValueObjects.StandardFont.TimesRoman = 4 -> SharpCorePDF.Domain.ValueObjects.StandardFont
 static SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.operator !=(SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? left, SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.operator ==(SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? left, SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfDestination.operator !=(SharpCorePDF.Domain.ReadModels.PdfDestination? left, SharpCorePDF.Domain.ReadModels.PdfDestination? right) -> bool
@@ -429,6 +452,12 @@ static SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.operator !=(SharpCorePDF.Do
 static SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.operator ==(SharpCorePDF.Domain.ReadModels.PdfXmpMetadata? left, SharpCorePDF.Domain.ReadModels.PdfXmpMetadata? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfXmpResult.operator !=(SharpCorePDF.Domain.ReadModels.PdfXmpResult? left, SharpCorePDF.Domain.ReadModels.PdfXmpResult? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfXmpResult.operator ==(SharpCorePDF.Domain.ReadModels.PdfXmpResult? left, SharpCorePDF.Domain.ReadModels.PdfXmpResult? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfColor.Black.get -> SharpCorePDF.Domain.ValueObjects.PdfColor
+static SharpCorePDF.Domain.ValueObjects.PdfColor.FromHex(string! hexadecimal) -> SharpCorePDF.Domain.ValueObjects.PdfColor
+static SharpCorePDF.Domain.ValueObjects.PdfColor.FromRgb(byte red, byte green, byte blue) -> SharpCorePDF.Domain.ValueObjects.PdfColor
+static SharpCorePDF.Domain.ValueObjects.PdfColor.operator !=(SharpCorePDF.Domain.ValueObjects.PdfColor left, SharpCorePDF.Domain.ValueObjects.PdfColor right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfColor.operator ==(SharpCorePDF.Domain.ValueObjects.PdfColor left, SharpCorePDF.Domain.ValueObjects.PdfColor right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfColor.White.get -> SharpCorePDF.Domain.ValueObjects.PdfColor
 static SharpCorePDF.Domain.ValueObjects.PdfRectangle.FromCorners(double x1, double y1, double x2, double y2) -> SharpCorePDF.Domain.ValueObjects.PdfRectangle!
 static SharpCorePDF.Domain.ValueObjects.PdfRectangle.operator !=(SharpCorePDF.Domain.ValueObjects.PdfRectangle? left, SharpCorePDF.Domain.ValueObjects.PdfRectangle? right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfRectangle.operator ==(SharpCorePDF.Domain.ValueObjects.PdfRectangle? left, SharpCorePDF.Domain.ValueObjects.PdfRectangle? right) -> bool

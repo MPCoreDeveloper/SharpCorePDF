@@ -15,6 +15,12 @@ internal static class TestAssets
     /// <summary>Gets a real-world 6 page document written by "Microsoft: Print To PDF".</summary>
     public static string SafeWebCore => Path.Combine(Folder, "SafeWebCore.pdf");
 
+    /// <summary>
+    /// Gets a subsetted DejaVu Sans font, the face the authoring tests embed. It is redistributed under
+    /// the Bitstream Vera licence, which the <c>DejaVu-LICENSE.txt</c> file beside it states.
+    /// </summary>
+    public static string EmbeddedFont => Path.Combine(Folder, "DejaVuSans-subset.ttf");
+
     /// <summary>Gets a 2 page document that uses object streams and a cross-reference stream.</summary>
     public static string Modern => Path.Combine(Folder, "Modern.pdf");
 

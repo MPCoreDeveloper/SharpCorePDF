@@ -20,7 +20,7 @@ symbols story" — so the gate reads without it, and nothing here depends on a d
 | Tags | `v1.0.0-preview.1` (2026-10-15) and `v1.0.0` (2026-10-17), the source of the five `1.0.0` packages |
 | Packages `dotnet pack` would produce | five at `1.0.0`: `SharpCorePDF` (the entry point, no assemblies) plus `SharpCorePDF.Domain`, `.Application`, `.Infrastructure`, `.DependencyInjection` |
 | Build | `dotnet build SharpCorePDF.slnx -t:Rebuild` → 0 warnings, 0 errors, `net10.0` and `net11.0` |
-| Tests | 447 pass on each leg |
+| Tests | 549 pass on each leg |
 | Coverage | 92% of the shipped assemblies, imported into SonarCloud by the scan; the 90% floor is a condition on the quality gate, where the suite's own 99% is not counted |
 | External prerequisites | the trusted publishing policy, whose subject list must hold a line for the bare `SharpCorePDF` as well as the `SharpCorePDF.*` glob — the glob alone refuses the entry point with 403 — and the `NUGET_USERNAME` secret. Both were confirmed the hard way on the first `1.0.0` attempt; neither is visible from this repository. **Automatic Analysis being off** on sonarcloud.io belongs in this row for the same reason: no file here sets it, and both workflows stop while it is on |
 

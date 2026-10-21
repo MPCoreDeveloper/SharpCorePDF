@@ -44,6 +44,7 @@
 
   <ItemGroup>
     <None Include="Assets\**\*.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Assets\**\*.ttf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

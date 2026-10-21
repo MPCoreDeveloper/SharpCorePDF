@@ -29,10 +29,22 @@ context, so concurrent requests can use the same `IPdfMerger` instance without c
 | `IPdfMergeEngine` | Singleton | Resolves to the same `PdfMergeEngine` |
 | `IPdfMerger` | Singleton | `PdfMergerService`, the use case to depend on |
 | `IPdfInspector` | Singleton | `PdfInspectorService` |
+| `PdfPageContentReader` | Singleton | Concrete content reader |
+| `IPdfPageContentReader` | Singleton | Resolves to the same `PdfPageContentReader` |
+| `IPdfContentReader` | Singleton | `PdfContentReaderService` |
 
 Application code should depend on `IPdfMerger` and `IPdfInspector`, not on the concrete services. The
 concrete registrations exist so a test can replace one layer without replacing the whole stack, and so
 the engine can be exercised directly.
+
+Authoring is not registered because it is not a service: `PdfDocumentBuilder` is an ordinary class with
+a static factory, and `Build()` returns an `IPdfContentSource` the merger already understands. A
+typeface is immutable, so a typeface read at start-up can be registered as a singleton and shared by
+every builder:
+
+```csharp
+builder.Services.AddSingleton(PdfTypeface.FromTrueType(File.ReadAllBytes("fonts/DejaVuSans.ttf")));
+```
 
 ```csharp
 app.MapPost("/merge", async (IPdfMerger merger, IFormFileCollection files) =>

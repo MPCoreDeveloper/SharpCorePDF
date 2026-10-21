@@ -45,6 +45,8 @@
   <ItemGroup>
     <!-- The engine options of the examples are read from this file, next to the app. -->
     <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The font the authoring example embeds, so the example runs without a system font. -->
+    <None Include="Assets\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

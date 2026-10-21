@@ -43,7 +43,8 @@
 # SharpCorePDF
 
 A dependency-injection first, domain-driven PDF library for .NET 10 and .NET 11, built around one
-capability done properly: **merging PDF documents** — whole documents, selected pages, in any order.
+capability done properly: **merging PDF documents** — whole documents, selected pages, in any order —
+plus the bounded authoring a merge often needs: a cover page written from nothing.
 
 Every PDF byte is read and written by this library. There is no dependency on a third-party PDF
 engine, no native binary and no licence to accept: the reader, the writer and the merge engine are
@@ -112,6 +113,27 @@ await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
   file, unselected pages that something still points at are folded onto a page that exists, and
   anything the merge had to change is reported in `MergeResult.Warnings` as a `PdfWarning` whose
   `Kind` names the condition — the part a caller may match on, while its message is only text.
+* **A cover page can be written from nothing and merged in front.** `PdfDocumentBuilder` adds pages of
+  a chosen size, draws lines of text with one of the twelve standard fonts or a TrueType program you
+  supply, and places PNG images at fixed positions — a top-left origin, `y` downwards, and the text
+  at a baseline. An embedded font is subsetted, carries a `ToUnicode` map and needs no system font; an
+  RGBA PNG gets a soft mask. The result is a `PdfByteArraySource`, so it merges without a temp file:
+
+  ```csharp
+  var cover = PdfDocumentBuilder.Create()
+      .AddPage(PdfPageSize.A4, page => page
+          .DrawImage(logoPng, x: 40, y: 30, width: 152, height: 87)
+          .DrawText("Veuillez trouver ci-joint le décompte", 150, 400,
+              PdfTypeface.Standard(StandardFont.Helvetica), 12))
+      .Build("cover.pdf");
+
+  var plan = MergePlan.Create()
+      .AddSource(PdfSource.Create(cover))
+      .AddFile(@"C:\reports\statement.pdf");
+  ```
+
+  It is authoring for fixed-position content, not a layout engine: no word wrap, tables, vector
+  drawing or JPEG images. Chapter 12 of the manual states the boundary.
 
 ## Getting it into a project
 
@@ -193,7 +215,7 @@ cannot resolve relative paths, which is why the logo and the links in this file 
 ## Examples
 
 [`examples/SharpCorePDF.Examples`](https://github.com/MPCoreDeveloper/SharpCorePDF/tree/main/examples/SharpCorePDF.Examples)
-is a console app with nine runnable examples. Every snippet on this page is code that compiles and
+is a console app with eleven runnable examples. Every snippet on this page is code that compiles and
 executes there:
 
 ```powershell
@@ -207,8 +229,10 @@ dotnet run --project .\examples\SharpCorePDF.Examples -- errors options  # sever
 | `merge-files` | Three documents from disk into one file, and what each source contributed. |
 | `select-pages` | `3,1`, `2-`, `-2` and `2,2,1`: a selection is an order rather than a set, and it can be built in code too. |
 | `merge-streams` | A source that is an upload stream, and one that is already a `byte[]`. |
+| `author-page` | A cover page written from nothing — logo, standard font, embedded font and accents — merged in front of a document and read back. |
 | `no-container` | The same merge without a container, and the proof that both routes write the same bytes. |
 | `inspect-first` | Describing a folder of documents before merging: a file that is unusable, or encrypted and waiting for its password, is reported, not thrown. |
+| `read-content` | Every image, text block, annotation, form field, bookmark, attachment and metadata packet a document carries. |
 | `options` | Metadata policy and override, outline and page-label policy, the target version, reproducible output. |
 | `protect-result` | A result that needs a password: AES-256, a user and an owner password, the permission bits, and a merge of an encrypted source into a document sealed again under new passwords. |
 | `warnings` | What inspection reports about a document, versus what a merge reports about its own work. |
@@ -222,8 +246,8 @@ walks through each one.
 ## Documentation
 
 The [manual](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md) is the long-form
-guide to the 1.0.0 API: thirteen chapters, from the first merge to encryption, inspection, dependency
-injection, the architecture and a cookbook of complete recipes. Read it as
+guide to the 1.0.0 API: fourteen chapters, from the first merge to encryption, inspection, dependency
+injection, the architecture, authoring a page and a cookbook of complete recipes. Read it as
 [a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.0.0.pdf)
 or chapter by chapter as Markdown, starting with
 [Installation and First Merge](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/manual/src/03-installation.md).
@@ -242,9 +266,9 @@ nuget.org.
 | Package | Contents |
 | --- | --- |
 | [`SharpCorePDF`](https://www.nuget.org/packages/SharpCorePDF) | The one to install. Carries no assembly of its own: its only content is a dependency on the four below, so `dotnet add package SharpCorePDF` is the whole install. |
-| [`SharpCorePDF.Domain`](https://www.nuget.org/packages/SharpCorePDF.Domain) | The `MergePlan` aggregate, the `PdfSource` entity, value objects (`PageSelection`, `PageRange`, `PdfMetadata`, `PdfVersion`, `PdfPageSize`, `PageRotation`, the policies), the read models (document and page info, `PdfReadResult<T>`, image, mask, annotation, destination, form field, widget, bookmark, embedded file, text block, word, glyph, page detail and XMP) and the ports (`IPdfMerger`, `IPdfInspector`, `IPdfContentReader`, `IPdfContentSource`). No I/O, no third-party code. |
+| [`SharpCorePDF.Domain`](https://www.nuget.org/packages/SharpCorePDF.Domain) | The `MergePlan` aggregate, the `PdfSource` entity, value objects (`PageSelection`, `PageRange`, `PdfMetadata`, `PdfVersion`, `PdfPageSize`, `PageRotation`, `PdfColor`, `StandardFont`, the policies), the read models (document and page info, `PdfReadResult<T>`, image, mask, annotation, destination, form field, widget, bookmark, embedded file, text block, word, glyph, page detail and XMP) and the ports (`IPdfMerger`, `IPdfInspector`, `IPdfContentReader`, `IPdfContentSource`). No I/O, no third-party code. |
 | [`SharpCorePDF.Application`](https://www.nuget.org/packages/SharpCorePDF.Application) | The use cases: `PdfMergerService` (validate, open, inspect, resolve selections, hand over to the engine, release every stream), `PdfInspectorService` and `PdfContentReaderService` (resolve the source, open it once, call the engine's page-content port), plus the extension methods callers use (`PdfMergerExtensions`, `PdfContentReaderExtensions`). |
-| [`SharpCorePDF.Infrastructure`](https://www.nuget.org/packages/SharpCorePDF.Infrastructure) | The engine: the object model, the lexer, the object parser, the filter decoders, cross-reference tables, cross-reference streams, object streams, the page tree walk, the object copier, `PdfMergeEngine`, `PdfDocumentReader`, `PdfPageContentReader` (one partial file per capability, with `PdfTextCollector` for the glyphs), the content scanner, the writer and the content sources. |
+| [`SharpCorePDF.Infrastructure`](https://www.nuget.org/packages/SharpCorePDF.Infrastructure) | The engine: the object model, the lexer, the object parser, the filter decoders, cross-reference tables, cross-reference streams, object streams, the page tree walk, the object copier, `PdfMergeEngine`, `PdfDocumentReader`, `PdfPageContentReader` (one partial file per capability, with `PdfTextCollector` for the glyphs), the content scanner, the writer, the content sources, and the authoring path (`PdfDocumentBuilder`, `PdfPageCanvas`, `PdfTypeface`, with the TrueType subset writer and the PNG reader). |
 | [`SharpCorePDF.DependencyInjection`](https://www.nuget.org/packages/SharpCorePDF.DependencyInjection) | `AddSharpCorePDF()` registration. |
 
 The domain and the application layer know nothing about PDF syntax; the engine implements their ports.

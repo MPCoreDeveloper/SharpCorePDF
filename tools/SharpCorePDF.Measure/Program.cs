@@ -39,6 +39,15 @@ if (args.Contains("--content"))
     return;
 }
 
+// The authoring rows answer a third question — what it costs to write a page — and need no corpus:
+//
+//   dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --author
+if (args.Contains("--author"))
+{
+    Authoring();
+    return;
+}
+
 var assets = Path.Combine(RepositoryRoot(), "tests", "SharpCorePDF.Tests", "Assets");
 var scratch = Path.Combine(Path.GetTempPath(), "scpdf-assets");
 Directory.CreateDirectory(scratch);
@@ -521,4 +530,96 @@ static string Pad(string source, string destination, int size)
     File.WriteAllBytes(destination, Encoding.Latin1.GetBytes(text));
 
     return destination;
+}
+
+/// <summary>Measures what writing a page costs: one cover and a 200 page document.</summary>
+static void Authoring()
+{
+    const string RgbaLogo =
+        "iVBORw0KGgoAAAANSUhEUgAAAJgAAABXCAYAAAD4fIxAAAAA6klEQVR42u3awQkAIAwEwevEPmwm/VehLzsQDDgH20CYZ5LLG7OWdApgAkyAASbABJgAA0yACTABBpgAE2ACDDABJsAcVYAJMAEGmAATYAIMMAEmwAQYYAJMgEmACTABBpgAE2ACDDABJsAEGGACTIC16vUAAwwwwAADDDDAAAMMMMAAAwwwwAADDDDAAAMMMMAAAwwwwAADDDDAAAPMP5gAE2CACTABJsAAE2ACTIABJsAEmAADTIAJMAkwASbAABNgAkyAASbABJgAA0yACTABBpgAE2CACTABJsAAE2ACTIABJsAEmP5sA9V2M2TFwZ3JAAAAAElFTkSuQmCC";
+
+    var root = RepositoryRoot();
+    var rgbLogo = File.ReadAllBytes(Path.Combine(root, "Logo-256.png"));
+    var rgbaLogo = Convert.FromBase64String(RgbaLogo);
+    var body = PdfTypeface.FromTrueType(
+        File.ReadAllBytes(Path.Combine(root, "examples", "SharpCorePDF.Examples", "Assets", "DejaVuSans-subset.ttf")));
+    var heading = PdfTypeface.Standard(StandardFont.Helvetica);
+
+    var options = PdfAuthoringOptions.Default with
+    {
+        CreationDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+        DocumentId = "00112233445566778899AABBCCDDEEFF",
+    };
+
+    Console.WriteLine(
+        $"environment: {RuntimeInformation.FrameworkDescription}, {RuntimeInformation.OSArchitecture}, "
+        + $"{Environment.ProcessorCount} logical cores, server GC {GCSettings.IsServerGC}");
+    Console.WriteLine("authoring: a cover with a logo and six lines; the typeface is parsed outside the measured window");
+    Console.WriteLine();
+
+    byte[] Cover(byte[] logo) => PdfDocumentBuilder.Create(options)
+        .AddPage(PdfPageSize.A4, page => page
+            .DrawImage(logo, x: 40, y: 30, width: 152, height: 87)
+            .DrawText("Décomptes SPRL", 330, 180, heading, 12)
+            .DrawText("Rue de l'Église 1", 330, 194, heading, 12)
+            .DrawText("1000 Bruxelles", 330, 208, heading, 12)
+            .DrawText("Veuillez trouver ci-joint le décompte pour l'immeuble 12345", 150, 400, body, 12)
+            .DrawText("pour la période du 01/01/2025 au 31/12/2025.", 150, 414, body, 12)
+            .DrawText("Sending 1/3", 150, 550, body, 12))
+        .ToArray();
+
+    byte[] Pages(int count)
+    {
+        var builder = PdfDocumentBuilder.Create(options);
+
+        for (var index = 0; index < count; index++)
+        {
+            var number = index + 1;
+            builder.AddPage(PdfPageSize.A4, page => page
+                .DrawText($"Sending {number}/{count}", 150, 550, body, 12)
+                .DrawText("Veuillez trouver ci-joint le décompte pour l'immeuble 12345", 150, 400, body, 12));
+        }
+
+        return builder.ToArray();
+    }
+
+    AuthoringRow("1 page, RGB logo, 6 text lines", () => Cover(rgbLogo));
+    AuthoringRow("1 page, RGBA logo, 6 text lines", () => Cover(rgbaLogo));
+    AuthoringRow("200 pages, 2 text lines each", () => Pages(200));
+}
+
+/// <summary>Measures one authoring shape and prints its median allocations, time and size.</summary>
+/// <param name="label">The row label.</param>
+/// <param name="build">The document under measurement.</param>
+static void AuthoringRow(string label, Func<byte[]> build)
+{
+    const int Rounds = 5;
+
+    var allocated = new List<long>(Rounds);
+    var elapsed = new List<double>(Rounds);
+    var size = 0;
+
+    // One warm-up, so JIT compilation is not part of the first measured build.
+    _ = build();
+
+    for (var round = 0; round < Rounds; round++)
+    {
+        CollectForMeasurement();
+
+        var before = GC.GetTotalAllocatedBytes(precise: true);
+        var watch = Stopwatch.StartNew();
+        var document = build();
+
+        watch.Stop();
+        allocated.Add(GC.GetTotalAllocatedBytes(precise: true) - before);
+        elapsed.Add(watch.Elapsed.TotalMilliseconds);
+        size = document.Length;
+    }
+
+    allocated.Sort();
+    elapsed.Sort();
+
+    Console.WriteLine(
+        $"{label,-46} : {allocated[Rounds / 2] / 1024.0,9:N0} KB  {elapsed[Rounds / 2],8:N2} ms  "
+        + $"{size,9:N0} B output  live after GC {ManagedHeapBytes() / 1024.0 / 1024.0,5:N2} MB");
 }

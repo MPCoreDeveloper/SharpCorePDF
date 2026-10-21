@@ -1,4 +1,4 @@
-# 12. Cookbook
+# 13. Cookbook
 
 Short, complete recipes for the shapes that come up most often. Each one assumes `IPdfMerger` and
 `IPdfInspector` are available, as described in Chapter 10, and that the destination path is not one of
@@ -423,3 +423,54 @@ This is reading, not conversion: nothing is reflowed, and a two-column page come
 alternate between the columns. When a caller knows the layout, `BoundingBox.Left` is enough to sort the
 blocks again before merging them.
 
+## Write a cover page and put it in front of a document
+
+A batch of statements needs one cover per document: a logo, the addressee and two lines of text. The
+cover is authored in memory and merged as the first source, so no temporary file exists at any point.
+
+```csharp
+public async Task<string> AddCoverAsync(
+    string statementPath,
+    string logoPath,
+    string fontPath,
+    CancellationToken cancellationToken)
+{
+    // Both are read once per process in a service; a typeface is immutable and can be shared.
+    var logo = await File.ReadAllBytesAsync(logoPath, cancellationToken);
+    var body = PdfTypeface.FromTrueType(await File.ReadAllBytesAsync(fontPath, cancellationToken));
+
+    var cover = PdfDocumentBuilder.Create(PdfAuthoringOptions.Default with
+    {
+        CreationDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+    })
+        .WithMetadata(new PdfMetadata { Title = "Décompte 12345", Creator = "Billing" })
+        .AddPage(PdfPageSize.A4, page => page
+            .DrawImage(logo, x: 40, y: 30, width: 152, height: 87)
+            .DrawText("Décomptes SPRL", 330, 180, PdfTypeface.Standard(StandardFont.Helvetica), 12)
+            .DrawText("Rue de l'Église 1", 330, 194, PdfTypeface.Standard(StandardFont.Helvetica), 12)
+            .DrawText("1000 Bruxelles", 330, 208, PdfTypeface.Standard(StandardFont.Helvetica), 12)
+            .DrawText("Veuillez trouver ci-joint le décompte pour l'immeuble 12345", 150, 400, body, 12)
+            .DrawText("pour la période du 01/01/2025 au 31/12/2025.", 150, 414, body, 12)
+            .DrawText("Sending 1/3", 150, 550, body, 12))
+        .Build("cover.pdf");
+
+    var destination = Path.ChangeExtension(statementPath, ".with-cover.pdf");
+
+    var plan = MergePlan.Create()
+        .AddSource(PdfSource.Create(cover))
+        .AddFile(statementPath);
+
+    await merger.MergeToFileAsync(plan, destination, cancellationToken);
+    return destination;
+}
+```
+
+The coordinates are points from the top-left corner, and the `y` of `DrawText` is the baseline. The
+`PdfTypeface.Standard` calls create the same typeface every time, which is cheap but needless: hoist one
+instance next to the embedded face in a service. Keep the creation date fixed if the cover is compared
+between runs, and leave it out when the real creation moment matters (Chapter 12).
+
+The text round-trips: `ReadTextAsync` gives back `Veuillez trouver ci-joint le décompte…` with its
+accents, because the embedded font carries a `ToUnicode` map. The standard font covers the address block
+because it is Windows-1252 text; a character outside that encoding would have been refused when the cover
+was written, and an embedded face is the answer for anything else.
