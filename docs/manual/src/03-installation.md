@@ -203,3 +203,4 @@ the base type of every library failure, rather than `Exception`; an `OperationCa
 - To set metadata, version, bookmarks or encryption, read Chapters 6 and 7.
 - To decide what to do when a source is damaged or password-protected, read Chapters 8 and 9.
 - To wire the library into an existing application, read Chapter 10.
+- To write a cover page from nothing and merge it in front, read Chapter 12.

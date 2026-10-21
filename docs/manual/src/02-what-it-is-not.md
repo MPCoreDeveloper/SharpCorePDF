@@ -4,15 +4,18 @@ A precise boundary is part of the API. This chapter states what the library does
 to use instead. If one of these lines is a requirement, SharpCorePDF is the wrong tool and no amount of
 configuration will change that.
 
-## It is not a PDF creation library
+## It is not a page layout or reporting library
 
-There is no API that starts from a blank page and draws text, images or vector graphics. Sources are
-PDF documents that already exist, supplied as a file, a byte array, a stream or a custom
-`IPdfContentSource`. The library can copy a page, select pages and combine documents; it cannot author
-content.
+SharpCorePDF can start a document from a blank page: `PdfDocumentBuilder` adds pages of a chosen size,
+draws lines of text in a standard or an embedded TrueType font, and places PNG images at fixed positions
+(Chapter 12). That is enough for a cover page, an address block or a fixed marker, and it is where
+authorship stops. There is no word wrap, paragraph flow, table, list or vector drawing; text is not
+shaped beyond what the font program itself does; JPEG and other image formats are not embedded; and no
+font is ever read from the machine the code runs on. The merge side still receives documents as a file,
+a byte array, a stream or a custom `IPdfContentSource`, copies the pages you select and combines them.
 
-**Use instead:** a reporting or layout library that produces PDF, or a PDF toolkit with a content
-builder. SharpCorePDF can merge the reports afterwards.
+**Use instead:** a reporting or layout library that produces PDF when a page has to flow, wrap or lay
+out a table. SharpCorePDF can merge those reports afterwards and can add its own fixed-position cover.
 
 ## It is not a PDF editor
 
@@ -104,7 +107,8 @@ cookbook shows one.
 | Encrypt the merged result | Yes |
 | Learn page counts, sizes, outline size or encryption state before merging | Yes |
 | Read the images, text, comments, form fields and bookmarks a document carries | Yes |
-| Create a PDF from scratch | No |
+| Create a fixed-position page from scratch: text, PNG images, standard or embedded fonts | Yes |
+| Lay out a report: flow, wrapping, tables, vector graphics, JPEG images | No |
 | Edit text, images or page geometry | No |
 | Render, convert, OCR or reflow text | No |
 | Fill forms, sign or redact | No |

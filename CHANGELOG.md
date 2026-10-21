@@ -22,6 +22,25 @@ against an empty feed.
 
 ### Added
 
+- **A page written from nothing.** `PdfDocumentBuilder` creates an in-memory document — one or more
+  pages of any `PdfPageSize` — whose pages are drawn through `PdfPageCanvas`: `DrawText` sets a line in a
+  standard or an embedded font at a baseline, in a top-left coordinate system with `y` downwards, and
+  `DrawImage` places a PNG at an explicit size or at the size its `pHYs` chunk states. `Build()` returns
+  a `PdfByteArraySource`, so the page can lead a `MergePlan` without a temporary file; `ToArray()` and
+  `SaveAsync(Stream)` are the other two routes. `WithMetadata` writes the document information and
+  `PdfAuthoringOptions` fixes the creation date and document identifier, which makes repeated builds
+  byte-identical.
+- **Two levels of font, neither of them a system font.** `PdfTypeface.Standard` selects one of the twelve
+  standard PDF faces with `WinAnsiEncoding` and no font file; `PdfTypeface.FromTrueType` embeds a TrueType
+  program the caller supplies, subsetted to the glyphs the pages draw, with a `/ToUnicode` map so the text
+  — `é`, `è`, `à`, `ç`, `ô`, `ï` included — extracts again. Glyph numbers are preserved, unused outlines
+  are left out, and the program is never looked up in the machine's font folder. A character the face
+  cannot encode is refused with the character and code point in the message, rather than replaced.
+- **PNG images without an imaging dependency.** Eight bit, non-interlaced PNGs of colour types 0, 2, 3,
+  4 and 6 are embedded: an alpha channel becomes an `/SMask`, a palette with `tRNS` is expanded to RGB and
+  a soft mask, a colour key becomes `/Mask`, and an opaque image keeps its original `IDAT` bytes with a
+  PNG predictor instead of being recompressed. Interlaced and sixteen bit images are refused with an
+  explanation; JPEG and other formats are out of scope. One image drawn on several pages is one object.
 - **Reading what a document already contains.** `IPdfContentReader`, resolved by `AddSharpCorePDF()` and
   constructible by hand, answers the questions a caller asks before drawing anything: `ReadImagesAsync`
   returns every image a page range paints — one entry per object, carrying every page that draws it, with

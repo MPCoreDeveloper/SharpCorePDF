@@ -8,7 +8,7 @@
 
 # SharpCorePDF examples
 
-Ten runnable examples that show how the library is used, and the console app that runs them. Everything
+Eleven runnable examples that show how the library is used, and the console app that runs them. Everything
 here is code that compiles and executes against the package, so nothing in the documentation is a
 snippet that was never run.
 
@@ -35,6 +35,7 @@ when every example ran, `1` when one failed, and `2` when a name on the command 
 | `merge-files` | Three documents from disk into one file, and what the merge result says about each source. |
 | `select-pages` | The page selection notation (`3,1`, `2-`, `-2`, `2,2,1`), that it is an order and not a set, and how to build a selection in code. |
 | `merge-streams` | A source that is an upload stream and a source that is already a `byte[]`, with the merged document handed back as bytes. |
+| `author-page` | A cover page written from nothing — a PNG logo with transparency, a standard font for the address and an embedded TrueType subset for accented text — merged in front of a document and read back through the inspector and the text reader. |
 | `no-container` | The same merge without a dependency injection container, and the proof that the result is the same. |
 | `inspect-first` | Describing a folder of documents before merging, which is how a file that is unusable, or encrypted and waiting for its password, is found without an exception. |
 | `read-content` | Reading what a document already contains: the image a page paints, the text both pages draw as blocks of words, the comment and the link with its resolved target, the form field, the bookmark, the attachment extracted to disk, and the XMP packet with the values parsed beside it, then the same pages one at a time. |
@@ -139,6 +140,8 @@ services.AddSharpCorePDF(config);    // or from the "SharpCorePDF" configuration
 | `ContentSampleDocument.cs` | The one sample with an image, text on both pages, a comment, a link, a form field, a bookmark, an attachment and an XMP packet, which is what `read-content` reads. |
 | `MergeExamples.cs` | `merge-files`, `select-pages`. |
 | `SourceExamples.cs` | `merge-streams`, `no-container`. |
+| `AuthoringExamples.cs` | `author-page`. |
+| `Assets/DejaVuSans-subset.ttf` | The embedded font of `author-page`, with its licence beside it, so the example runs without a system font. |
 | `InspectionExamples.cs` | `inspect-first`. |
 | `ContentInspectionExamples.cs` | `read-content`. |
 | `OptionExamples.cs` | `options`, `protect-result`, `warnings`. |

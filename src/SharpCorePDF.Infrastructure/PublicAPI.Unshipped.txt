@@ -1,6 +1,37 @@
 #nullable enable
+override SharpCorePDF.Infrastructure.PdfAuthoringOptions.Equals(object? obj) -> bool
+override SharpCorePDF.Infrastructure.PdfAuthoringOptions.GetHashCode() -> int
+override SharpCorePDF.Infrastructure.PdfAuthoringOptions.ToString() -> string!
+override SharpCorePDF.Infrastructure.PdfTypeface.ToString() -> string!
+SharpCorePDF.Infrastructure.PdfAuthoringOptions
+SharpCorePDF.Infrastructure.PdfAuthoringOptions.<Clone>$() -> SharpCorePDF.Infrastructure.PdfAuthoringOptions!
+SharpCorePDF.Infrastructure.PdfAuthoringOptions.CreationDate.get -> System.DateTimeOffset?
+SharpCorePDF.Infrastructure.PdfAuthoringOptions.CreationDate.init -> void
+SharpCorePDF.Infrastructure.PdfAuthoringOptions.DocumentId.get -> string?
+SharpCorePDF.Infrastructure.PdfAuthoringOptions.DocumentId.init -> void
+SharpCorePDF.Infrastructure.PdfAuthoringOptions.Equals(SharpCorePDF.Infrastructure.PdfAuthoringOptions? other) -> bool
+SharpCorePDF.Infrastructure.PdfAuthoringOptions.PdfAuthoringOptions() -> void
+SharpCorePDF.Infrastructure.PdfAuthoringOptions.Producer.get -> string!
+SharpCorePDF.Infrastructure.PdfAuthoringOptions.Producer.init -> void
+SharpCorePDF.Infrastructure.PdfAuthoringOptions.Validate() -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Infrastructure.PdfDocumentBuilder
+SharpCorePDF.Infrastructure.PdfDocumentBuilder.AddPage(SharpCorePDF.Domain.ValueObjects.PdfPageSize size, System.Action<SharpCorePDF.Infrastructure.PdfPageCanvas!>? draw = null) -> SharpCorePDF.Infrastructure.PdfDocumentBuilder!
+SharpCorePDF.Infrastructure.PdfDocumentBuilder.Build(string! displayName = "authored.pdf") -> SharpCorePDF.Infrastructure.Sources.PdfByteArraySource!
+SharpCorePDF.Infrastructure.PdfDocumentBuilder.Metadata.get -> SharpCorePDF.Domain.ValueObjects.PdfMetadata!
+SharpCorePDF.Infrastructure.PdfDocumentBuilder.Options.get -> SharpCorePDF.Infrastructure.PdfAuthoringOptions!
+SharpCorePDF.Infrastructure.PdfDocumentBuilder.PageCount.get -> int
+SharpCorePDF.Infrastructure.PdfDocumentBuilder.SaveAsync(System.IO.Stream! destination, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+SharpCorePDF.Infrastructure.PdfDocumentBuilder.ToArray() -> byte[]!
+SharpCorePDF.Infrastructure.PdfDocumentBuilder.WithMetadata(SharpCorePDF.Domain.ValueObjects.PdfMetadata! metadata) -> SharpCorePDF.Infrastructure.PdfDocumentBuilder!
 SharpCorePDF.Infrastructure.PdfEngineOptions.MaxInlineContentBytes.get -> int
 SharpCorePDF.Infrastructure.PdfEngineOptions.MaxInlineContentBytes.init -> void
+SharpCorePDF.Infrastructure.PdfPageCanvas
+SharpCorePDF.Infrastructure.PdfPageCanvas.DrawImage(System.ReadOnlyMemory<byte> png, double x, double y, double width, double height) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.DrawImage(System.ReadOnlyMemory<byte> png, double x, double y) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.DrawText(string! text, double x, double y, SharpCorePDF.Infrastructure.PdfTypeface! typeface, double fontSize, SharpCorePDF.Domain.ValueObjects.PdfColor? color = null) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.Height.get -> double
+SharpCorePDF.Infrastructure.PdfPageCanvas.Size.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+SharpCorePDF.Infrastructure.PdfPageCanvas.Width.get -> double
 SharpCorePDF.Infrastructure.PdfPageContentReader
 SharpCorePDF.Infrastructure.PdfPageContentReader.CopyEmbeddedFileDataAsync(string! sourceName, System.IO.Stream! content, SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo! file, System.IO.Stream! destination, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 SharpCorePDF.Infrastructure.PdfPageContentReader.CopyImageDataAsync(string! sourceName, System.IO.Stream! content, SharpCorePDF.Domain.ReadModels.PdfImageInfo! image, System.IO.Stream! destination, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
@@ -15,3 +46,14 @@ SharpCorePDF.Infrastructure.PdfPageContentReader.ReadMetadataAsync(string! sourc
 SharpCorePDF.Infrastructure.PdfPageContentReader.ReadOutlineAsync(string! sourceName, System.IO.Stream! content, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfOutlineItem!>!>!
 SharpCorePDF.Infrastructure.PdfPageContentReader.ReadPageDetailsAsync(string! sourceName, System.IO.Stream! content, SharpCorePDF.Domain.ValueObjects.PageRange range, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<SharpCorePDF.Domain.ReadModels.PdfPageDetail!>!
 SharpCorePDF.Infrastructure.PdfPageContentReader.ReadTextAsync(string! sourceName, System.IO.Stream! content, SharpCorePDF.Domain.ValueObjects.PageRange range, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfTextBlock!>!>!
+SharpCorePDF.Infrastructure.PdfTypeface
+SharpCorePDF.Infrastructure.PdfTypeface.Family.get -> SharpCorePDF.Domain.ValueObjects.StandardFont?
+SharpCorePDF.Infrastructure.PdfTypeface.FontProgram.get -> System.ReadOnlyMemory<byte>?
+SharpCorePDF.Infrastructure.PdfTypeface.IsEmbedded.get -> bool
+SharpCorePDF.Infrastructure.PdfTypeface.Name.get -> string!
+static SharpCorePDF.Infrastructure.PdfAuthoringOptions.Default.get -> SharpCorePDF.Infrastructure.PdfAuthoringOptions!
+static SharpCorePDF.Infrastructure.PdfAuthoringOptions.operator !=(SharpCorePDF.Infrastructure.PdfAuthoringOptions? left, SharpCorePDF.Infrastructure.PdfAuthoringOptions? right) -> bool
+static SharpCorePDF.Infrastructure.PdfAuthoringOptions.operator ==(SharpCorePDF.Infrastructure.PdfAuthoringOptions? left, SharpCorePDF.Infrastructure.PdfAuthoringOptions? right) -> bool
+static SharpCorePDF.Infrastructure.PdfDocumentBuilder.Create(SharpCorePDF.Infrastructure.PdfAuthoringOptions? options = null) -> SharpCorePDF.Infrastructure.PdfDocumentBuilder!
+static SharpCorePDF.Infrastructure.PdfTypeface.FromTrueType(System.ReadOnlyMemory<byte> fontProgram) -> SharpCorePDF.Infrastructure.PdfTypeface!
+static SharpCorePDF.Infrastructure.PdfTypeface.Standard(SharpCorePDF.Domain.ValueObjects.StandardFont family) -> SharpCorePDF.Infrastructure.PdfTypeface!

@@ -1,22 +1,27 @@
 # 1. What SharpCorePDF Is
 
-SharpCorePDF is a PDF **merging** and **inspection** library for .NET. It answers two questions:
+SharpCorePDF is a PDF **merging**, **inspection** and **authoring** library for .NET. It answers three
+questions:
 
 1. *What is in this document?* — page count, page sizes, rotation, metadata, outlines, annotations,
    form fields, embedded files, encryption and the warnings the reader had to record.
 2. *How do I produce one document from several?* — in the order I choose, with the pages I choose,
    under the output policies I choose.
+3. *How do I write the one page that does not exist yet?* — a cover with a logo and text, fixed in
+   place, written in memory and merged in front of the rest (Chapter 12).
 
-Everything else in the API exists to make those two operations predictable: an immutable plan, value
+Everything else in the API exists to make those operations predictable: an immutable plan, value
 objects for the inputs, read models for the outputs, typed exceptions for the failures, and warnings
 for the decisions that are not failures.
 
-## Two use cases, one engine
+## Three use cases, one engine
 
-Merging and inspection share the same reader. A merge inspects every source anyway — it has to know
-the page count before it can resolve `"2-5"` — so inspection is not a separate code path with its own
-interpretation of a damaged file. If `InspectAsync` reports four pages, the merge that follows sees the
-same four pages and the same warnings.
+Merging, inspection and authoring share the same reader and writer. A merge inspects every source
+anyway — it has to know the page count before it can resolve `"2-5"` — so inspection is not a separate
+code path with its own interpretation of a damaged file. If `InspectAsync` reports four pages, the
+merge that follows sees the same four pages and the same warnings. An authored page is written with
+the merge engine's writer and returned as a `PdfByteArraySource`, so it enters the merge through the
+same `IPdfContentSource` port as a file or an upload.
 
 ```csharp
 using SharpCorePDF.Application.Extensions;
@@ -95,7 +100,7 @@ own and depends on the four layers, so one `dotnet add package SharpCorePDF` is 
 | --- | --- | --- |
 | `SharpCorePDF.Domain` | Plan, sources, value objects, read models, ports, exceptions, warnings | You build plans in a domain project that must not depend on the engine |
 | `SharpCorePDF.Application` | Merge and inspection use cases, convenience extensions | You need the services without the concrete engine |
-| `SharpCorePDF.Infrastructure` | Reader, engine, file and memory sources, engine options | You construct the engine yourself instead of using DI |
+| `SharpCorePDF.Infrastructure` | Reader, engine, file and memory sources, engine options, the authoring builder | You construct the engine yourself instead of using DI |
 | `SharpCorePDF.DependencyInjection` | `AddSharpCorePDF()` and configuration binding | You register the library in a `IServiceCollection` |
 | `SharpCorePDF` | Dependencies on all four | You just want the library |
 

@@ -6,7 +6,8 @@ budgets) and NFR **§7.2** (memory and allocation discipline), measured by the h
 feeling, and so that a budget that does not hold is visible as a number rather than as an absence.
 
 Sections 1 to 6 record merges. Section 7 records the read side: what it costs to enumerate page details and
-to copy a payload through the copy route.
+to copy a payload through the copy route. Section 8 records the authoring side: what it costs to write a
+page from nothing.
 
 Recorded: 2026-10-15, .NET 11.0.0-rc.1.26425.128, x64, 12 logical cores, `Release`.
 **No earlier record exists** — this is the baseline, and the first measurement of the engine, so nothing
@@ -266,3 +267,42 @@ Not covered: a 200-page document whose pages paint many distinct images, a paylo
 decoder (`FlateDecode`), a text read of a composite font (`/ToUnicode` rather than glyph names), a document
 whose fonts cannot be decoded at all, cancellation latency, and the server-GC legs — the last is the same
 command under `DOTNET_gcServer=1`.
+
+## 8. What authoring a page costs
+
+Recorded: 2026-10-21, .NET 11.0.0-rc.2.26504.105, x64, 12 logical cores, workstation GC, `Release`:
+
+```powershell
+dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --author
+```
+
+Every row builds the whole document and keeps its bytes, after one warm-up; allocations are
+`GC.GetTotalAllocatedBytes(precise: true)` around the build alone, wall time is the median of five, and
+`live after GC` is read after a full collection. The typeface is parsed before the measured window: a
+`PdfTypeface` is meant to be created once and shared, so the parse is not part of writing a page. Both the
+creation date and the document identifier are fixed, so every row writes the same bytes each round.
+
+| Row | Allocated | Wall | Output | Live after GC |
+| --- | --- | --- | --- | --- |
+| 1 page, RGB logo, 6 text lines | 669 KB | 0.80 ms | 74,413 B | 0.42 MB |
+| 1 page, RGBA logo, 6 text lines | 416 KB | 1.56 ms | 7,679 B | 0.48 MB |
+| 200 pages, 2 text lines each | 1,827 KB | 7.17 ms | 135,207 B | 0.61 MB |
+
+What the rows say:
+
+* **An opaque PNG costs its own bytes and no decoding.** The RGB row embeds `Logo-256.png` (67,587 bytes)
+  as its `IDAT` stream with a PNG predictor, so the output carries the picture unchanged and the build
+  spends 669 KB to write it.
+* **An RGBA logo is decoded once and split.** The 152 × 87 image is inflated, unfiltered, split into RGB
+  and alpha, and compressed as two streams, which is the 1.56 ms of that row; the output is 7.7 KB
+  including the embedded subset.
+* **A page costs about 9 KB of allocation and 0.04 ms.** The 200-page row allocates 1,827 KB and takes
+  7.17 ms, so a page of two lines is about 9 KB and 0.036 ms once the one-off font subset is written. The
+  output is 676 bytes a page, because a content stream of two short lines is small and is not compressed.
+* **The whole document is in memory.** `ToArray` and `Build` return the bytes, so the peak is the document
+  plus the buffers of the writer. For a very large authored document, `SaveAsync(Stream)` writes to a
+  caller's stream, but the builder still holds its pages until it is released.
+
+Not covered: fonts with tens of thousands of glyphs, pages with hundreds of operations, a builder shared
+by concurrent callers (it is not thread safe), and a 1000-page document — the 200-page row is the shape,
+not a limit.
