@@ -62,7 +62,7 @@ internal static partial class PdfDocumentInspection
         };
     }
 
-    private static PdfMetadata ReadMetadata(PdfFileReader reader)
+    internal static PdfMetadata ReadMetadata(PdfFileReader reader)
     {
         if (reader.Information is not { } information)
         {

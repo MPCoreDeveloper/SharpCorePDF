@@ -17,15 +17,17 @@ a byte array, a stream or a custom `IPdfContentSource`, copies the pages you sel
 **Use instead:** a reporting or layout library that produces PDF when a page has to flow, wrap or lay
 out a table. SharpCorePDF can merge those reports afterwards and can add its own fixed-position cover.
 
-## It is not a PDF editor
+## It is not a content editor
 
-There is no API to rotate a page, delete an annotation, replace text, fill a form, add a digital
-signature, redact content or change a page's media box. Page rotation and page size are *preserved*
-from the source; they are not editable through the merge plan.
+SharpCorePDF can change the **assembly** of an existing document: rotate a page, delete it, move it,
+duplicate it, and override the document information (Chapter 14). What it cannot do is change what a
+page draws. There is no API to replace text or an image, remove an annotation, fill a form, add a
+digital signature, add a redaction, or change a page's media box, crop box or size. Page content and
+page geometry that survive an edit are copied verbatim.
 
-**Use instead:** a viewer/editor SDK for interactive editing, or a PDF library that exposes page
-content modification. If you need to *assemble* a new document from existing pages, that is exactly
-what a merge plan does.
+**Use instead:** a viewer/editor SDK for interactive editing, a form-filling library when field values
+have to change, and a redaction product when content has to be removed. If the change is which pages
+the document contains, in what order and with what rotation, that is what an edit plan does.
 
 ## It is not a renderer, converter or OCR engine
 
@@ -64,11 +66,12 @@ These are not missing features in the sense above; they are decisions about what
 can sensibly contain. The library makes them explicit, and where a decision loses information it
 records a warning.
 
-| Area | Behaviour in 1.0.0 |
+| Area | Behaviour |
 | --- | --- |
 | Document-level features | Metadata follows `MetadataPolicy` (the primary source by default); viewer preferences, page layout and mode, form fields, named destinations and embedded files come from the **primary source**, because they cannot sensibly exist twice in one document |
 | Page-level features | Content, resources, annotations, page size and rotation are merged from **every** source |
-| Outlines | Merged into one tree, top-level entries in source order; bookmarks whose destination cannot be resolved are skipped with a warning |
+| Editing | An edit plan rotates (additively), deletes, moves and duplicates pages, and overrides document information. Page content and geometry are copied, not changed. Page labels are dropped when the page order or count changes, and XMP is dropped when document information is overridden; both are reported as warnings |
+| Outlines | Merged into one tree, top-level entries in source order; bookmarks whose destination cannot be resolved are skipped with a warning. An edit redirects a destination to the first surviving page it named |
 | Page labels | Dropped by default, because labels are tied to absolute page indices and misalign when sources are reordered or partially selected |
 | AcroForm fields | The interactive form of the primary source is carried over; fields of other sources remain visible as page annotations but are not part of the merged form |
 | Embedded files | Carried over from the primary source only |
@@ -103,13 +106,15 @@ cookbook shows one.
 | --- | --- |
 | Combine existing PDFs, all pages or a selection | Yes |
 | Reorder or repeat pages from a source | Yes |
+| Rotate, delete, move or duplicate pages in an existing document | Yes |
+| Override the title, author or other document information | Yes |
 | Preserve bookmarks, annotations and metadata | Yes |
 | Encrypt the merged result | Yes |
 | Learn page counts, sizes, outline size or encryption state before merging | Yes |
 | Read the images, text, comments, form fields and bookmarks a document carries | Yes |
 | Create a fixed-position page from scratch: text, PNG images, standard or embedded fonts | Yes |
 | Lay out a report: flow, wrapping, tables, vector graphics, JPEG images | No |
-| Edit text, images or page geometry | No |
+| Change page size, crop box, text, images or annotations | No |
 | Render, convert, OCR or reflow text | No |
 | Fill forms, sign or redact | No |
 | Validate PDF/A or accessibility profiles | No |

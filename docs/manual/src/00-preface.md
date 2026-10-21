@@ -27,9 +27,9 @@ The first four chapters are the shortest path to a working merge:
 - **Chapter 4** explains the merge plan, the object at the centre of the API.
 
 Chapters 5 to 10 cover one part of the API each: page selection, output options, encryption,
-inspection, errors and warnings, and dependency injection. Chapters 11 to 13 are for readers who want
-to understand the design, write a page that did not exist, or need a recipe they can adapt: the
-architecture, authoring, then a cookbook.
+inspection, errors and warnings, and dependency injection. Chapters 11 to 14 are for readers who want
+to understand the design, write a page that did not exist, need a recipe they can adapt, or change the
+assembly of an existing document: the architecture, authoring, a cookbook, then editing.
 
 You do not have to read the chapters in order. Each one starts from a complete example and refers to
 earlier chapters only for background.

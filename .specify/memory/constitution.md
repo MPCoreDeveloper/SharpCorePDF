@@ -1,10 +1,11 @@
 <!--
 Sync Impact Report
 ==================
-Version change: template scaffold (unversioned) -> 1.0.0
-Modified principles: none. This is the first ratification; all seven principles are new.
-Added sections: Core Principles (I-VII); Architectural and Technical Constraints; Development
-  Workflow and Quality Gates; Governance.
+Version change: 1.0.0 -> 2.0.0
+Modified principles: VII (creation and editing removed from the excluded surface; the library may
+  author and edit PDFs. Rendering, conversion, OCR, conformance validation, service and CLI
+  exclusions remain).
+Added sections: none.
 Removed sections: none.
 Follow-up TODOs: none. Every placeholder was resolved from README.md, CONTRIBUTING.md,
   SECURITY.md, docs/release-checklist.md, docs/measurements.md, docs/manual/src/11-architecture.md,
@@ -118,9 +119,10 @@ whether to take seriously.
 
 What the library refuses to do is documented, and the documentation is governed like code.
 
-- SharpCorePDF is not a creation library, an editor, a renderer, a converter, an OCR engine, a
-  PDF/A or PDF/UA validator, a general-purpose PDF object-graph parser, a service or a CLI. Adding
-  one of those to the surface is a change of product, and it MUST NOT happen inside a fix.
+- SharpCorePDF is a PDF creation, editing and reading library. It is not a renderer, a converter,
+  an OCR engine, a PDF/A or PDF/UA validator, a general-purpose mutable PDF object-graph parser, a
+  service or a CLI. Adding one of those to the surface is a change of product, and it MUST NOT
+  happen inside a fix.
 - A change that makes a sentence in `README.md`, `docs/` or the manual false MUST update that
   sentence in the same pull request.
 - Published claims MUST stay tied to a measurement or to a test. A differentiator that
@@ -240,4 +242,7 @@ amendment rather than a habit.
 
 **Ratification.** Adopted 2026-10-20 as version 1.0.0, replacing the unmodified template scaffold.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-20 | **Last Amended**: 2026-10-20
+**Amendment 2.0.0 (2026-10-21).** Creation and editing are part of the product. Rendering,
+conversion, OCR, conformance validation, a service and a CLI remain outside it.
+
+**Version**: 2.0.0 | **Ratified**: 2026-10-20 | **Last Amended**: 2026-10-21

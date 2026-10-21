@@ -2,20 +2,21 @@
 
 This directory holds the SharpCorePDF manual, the measurement record and the project's release and
 governance documents. The [repository README](../README.md) is the short tour; the manual is the
-long-form reference for the 1.0.0 API.
+long-form reference for the API.
 
 ## The manual
 
 - **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.0.0.pdf)** — 62 pages, A4, with a
   linked contents page and PDF bookmarks.
 - **Read the chapters as Markdown** in [`manual/src`](manual/src). Each file is one chapter, and the
-  file-name order is the chapter order.
+  file-name order is the chapter order. Chapter 14 documents the editing slice that is currently
+  unreleased; it is not part of the 1.0.0 PDF yet.
 
 | Chapter | What it covers |
 | --- | --- |
 | [Preface](manual/src/00-preface.md) | Who the manual is for, how it is organised, and the conventions every chapter uses. |
-| [1. What SharpCorePDF Is](manual/src/01-what-it-is.md) | The two use cases, what a merge guarantees, and what "no third-party engine" means. |
-| [2. What SharpCorePDF Is Not](manual/src/02-what-it-is-not.md) | The deliberate boundary: no layout engine, editing, rendering, conversion, OCR or PDF/A validation. |
+| [1. What SharpCorePDF Is](manual/src/01-what-it-is.md) | The four use cases, what a merge guarantees, and what "no third-party engine" means. |
+| [2. What SharpCorePDF Is Not](manual/src/02-what-it-is-not.md) | The deliberate boundary: no layout engine, no page-content editing, rendering, conversion, OCR or PDF/A validation. |
 | [3. Installation and First Merge](manual/src/03-installation.md) | Install the package, register the services, merge two files, and read the result. |
 | [4. The Merge Plan](manual/src/04-mergeplan-basics.md) | How a plan is built, why source order is the merge order, and how validation and reuse work. |
 | [5. Page Selection](manual/src/05-page-selection.md) | The one-based selection notation, building selections in code, and preflighting a range. |
@@ -27,10 +28,11 @@ long-form reference for the 1.0.0 API.
 | [11. Architecture](manual/src/11-architecture.md) | The layers, the life of a merge, immutability, the memory model, extension points and concurrency. |
 | [12. Authoring a Page](manual/src/12-authoring.md) | Writing a page from nothing: coordinates, standard and embedded fonts, PNG images, determinism, and the boundary of the feature. |
 | [13. Cookbook](manual/src/13-cookbook.md) | Complete recipes for folder merges, password prompts, extraction, encryption, uploads, logging, batching, preflight gates and cover pages. |
+| [14. Editing an Existing Document](manual/src/14-editing.md) | Rotating, deleting, moving and duplicating pages, ordering rules, metadata overrides, warnings, reproducible output and what an edit cannot change. |
 
 The first four chapters are the shortest path to a working merge. Chapters 5 to 10 cover one part of the
-API each, and chapters 11 to 13 are for design context, authoring and ready-to-adapt recipes. `Chapter 3`
-is the place to start if you only want to see a document merged.
+API each, and chapters 11 to 14 are for design context, authoring, ready-to-adapt recipes and editing.
+`Chapter 3` is the place to start if you only want to see a document merged.
 
 ### Building the PDF
 

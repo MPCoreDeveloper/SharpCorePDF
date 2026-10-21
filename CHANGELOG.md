@@ -22,6 +22,30 @@ against an empty feed.
 
 ### Added
 
+- **An existing document can be edited into a new one.** `IPdfDocumentEditor`, resolved by
+  `AddSharpCorePDF()`, applies an immutable `PdfEditPlan` to one source: `RotatePage` adds a quarter
+  turn to a page, `DeletePage` removes it, `MovePage` changes its position, `DuplicatePage` copies it
+  to another position, and `SetMetadata` overrides document information. Page numbers are one-based
+  and are resolved against the state produced by the preceding operations, so a plan reads like a
+  sequence of edits. Each operation is a value; the plan is validated before the source is read, and
+  an operation that reaches past the last page fails with `PdfEditPlanValidationException` before any
+  output is written. `PdfEditResult` reports the page count, bytes written, output version, elapsed
+  time, the operations applied and the warnings the edit produced.
+- **Editing copies pages, it does not re-render them.** The engine writes a complete new document and
+  copies every surviving page's content streams, resources, fonts, images and annotations verbatim;
+  inherited `MediaBox`, `CropBox`, `Resources` and `Rotate` are materialised onto each page. Bookmarks,
+  named destinations and form widgets that name a source page are redirected to the first surviving
+  occurrence, or to the first page of the result when the named page did not survive. Page labels are
+  dropped when an operation changes the page order or count, and an
+  XMP packet is dropped when document information is overridden; both decisions are reported through
+  `PdfWarningKind.PageLabelsDropped` and `PdfWarningKind.XmpPacketDropped` rather than silently
+  producing a document whose metadata contradicts itself.
+- **An edit is reproducible when its inputs are fixed.** `PdfEditOutputOptions` chooses the output
+  version, metadata overrides, producer, modification date and document identifier. The file
+  identifier is derived from the version, date, page count, identifier and applied operations, so a
+  fixed `ModificationDate` and `DocumentId` make repeated edits of the same source byte-identical.
+  The editing release reads encrypted sources through the existing standard security handler and
+  writes the result in the clear; output encryption is not part of this slice.
 - **A page written from nothing.** `PdfDocumentBuilder` creates an in-memory document — one or more
   pages of any `PdfPageSize` — whose pages are drawn through `PdfPageCanvas`: `DrawText` sets a line in a
   standard or an embedded font at a baseline, in a top-left coordinate system with `y` downwards, and

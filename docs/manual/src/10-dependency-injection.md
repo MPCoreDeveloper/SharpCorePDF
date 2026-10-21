@@ -1,8 +1,8 @@
 # 10. Dependency Injection
 
-The `SharpCorePDF.DependencyInjection` package registers the merger, the inspector and the engine
-behind their ports. It is a thin layer: one call, no auto-discovery, no background services and no
-logging of its own. The `SharpCorePDF` meta-package already depends on it, so the types are available
+The `SharpCorePDF.DependencyInjection` package registers the merger, the editor, the inspector and the
+engines behind their ports. It is a thin layer: one call, no auto-discovery, no background services and
+no logging of its own. The `SharpCorePDF` meta-package already depends on it, so the types are available
 after the installation described in Chapter 3.
 
 ## One call
@@ -17,25 +17,29 @@ builder.Services.AddSharpCorePDF();
 var app = builder.Build();
 ```
 
-That registers the services listed below as singletons. They are stateless; a merge creates its own
-context, so concurrent requests can use the same `IPdfMerger` instance without coordination.
+That registers the services listed below as singletons. They are stateless; a merge or an edit creates
+its own context, so concurrent requests can use the same `IPdfMerger` or `IPdfDocumentEditor` instance
+without coordination.
 
 | Service | Lifetime | Notes |
 | --- | --- | --- |
 | `PdfEngineOptions` | Singleton | `PdfEngineOptions.Default` unless replaced |
 | `PdfDocumentReader` | Singleton | Concrete reader; registered for advanced use |
 | `IPdfDocumentReader` | Singleton | Resolves to the same `PdfDocumentReader` |
-| `PdfMergeEngine` | Singleton | Concrete engine |
+| `PdfMergeEngine` | Singleton | Concrete merge engine |
 | `IPdfMergeEngine` | Singleton | Resolves to the same `PdfMergeEngine` |
-| `IPdfMerger` | Singleton | `PdfMergerService`, the use case to depend on |
+| `PdfEditEngine` | Singleton | Concrete edit engine |
+| `IPdfEditEngine` | Singleton | Resolves to the same `PdfEditEngine` |
+| `IPdfMerger` | Singleton | `PdfMergerService`, the merge use case to depend on |
+| `IPdfDocumentEditor` | Singleton | `PdfDocumentEditorService`, the edit use case to depend on |
 | `IPdfInspector` | Singleton | `PdfInspectorService` |
 | `PdfPageContentReader` | Singleton | Concrete content reader |
 | `IPdfPageContentReader` | Singleton | Resolves to the same `PdfPageContentReader` |
 | `IPdfContentReader` | Singleton | `PdfContentReaderService` |
 
-Application code should depend on `IPdfMerger` and `IPdfInspector`, not on the concrete services. The
-concrete registrations exist so a test can replace one layer without replacing the whole stack, and so
-the engine can be exercised directly.
+Application code should depend on `IPdfMerger`, `IPdfDocumentEditor` and `IPdfInspector`, not on the
+concrete services. The concrete registrations exist so a test can replace one layer without replacing
+the whole stack, and so the engines can be exercised directly.
 
 Authoring is not registered because it is not a service: `PdfDocumentBuilder` is an ordinary class with
 a static factory, and `Build()` returns an `IPdfContentSource` the merger already understands. A
