@@ -322,7 +322,7 @@ engine be swapped in.
 # Everything at once, through the solution: the five packages, the tests,
 # the examples and the measurement harness.
 dotnet build .\SharpCorePDF.slnx -c Release
-dotnet test  .\SharpCorePDF.slnx                      # 447 tests on net10.0, 447 on net11.0
+dotnet test  .\SharpCorePDF.slnx                      # 549 tests on each of net10.0 and net11.0
 dotnet run --project .\examples\SharpCorePDF.Examples -c Release
 
 # Or one project at a time:
