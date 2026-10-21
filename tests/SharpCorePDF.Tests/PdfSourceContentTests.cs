@@ -51,7 +51,12 @@ public sealed class PdfSourceContentTests
     [Fact]
     public async Task Reports_a_file_that_is_not_there()
     {
-        var absent = new PdfFileSource(Path.Combine(Path.GetTempPath(), "SharpCorePDF.Tests", "absent.pdf"));
+        // On Unix, opening a path whose parent directory is absent reports DirectoryNotFoundException,
+        // while this test is about a missing file. Create the directory so both platforms report the
+        // file itself as missing.
+        var directory = Path.Combine(Path.GetTempPath(), "SharpCorePDF.Tests");
+        Directory.CreateDirectory(directory);
+        var absent = new PdfFileSource(Path.Combine(directory, "absent.pdf"));
 
         await Assert.ThrowsAsync<FileNotFoundException>(
             async () => await absent.OpenReadAsync(TestContext.Current.CancellationToken));

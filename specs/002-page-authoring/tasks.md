@@ -10,9 +10,13 @@ side, so a document that only looks right in its own bytes does not pass.
 
 **Status**: implemented. `[x]` means the task is present in the working tree and its evidence was
 reproduced: the Release build reports 0 warnings and 0 errors; the full suite reports 549 passed on
-`net10.0` and on `net11.0`; the example writes a cover that `pikepdf` checks with no problems, `pypdf`
-and PyMuPDF extract exactly, and PyMuPDF renders with the logo visible and its transparent margin
-blank. `[ ]` is outstanding.
+`net10.0` and on `net11.0`; the authoring tests also report 23/23 and the full suite 549/549 in a
+`mcr.microsoft.com/dotnet/sdk:10.0` Linux container with an empty font directory (0 font files), which
+closes the no-system-font acceptance scenario; the cover built there is byte-identical to the host cover;
+the example writes a cover that `pikepdf` and the real
+`qpdf --check` accept with no problems, `pypdf`, `pdftotext` and PyMuPDF extract the required characters,
+and PyMuPDF and `pdftoppm` render with the logo visible and its transparent margin blank. `[ ]` is
+outstanding.
 
 ## Phase 1: Setup
 
