@@ -1,11 +1,360 @@
 #nullable enable
+override SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfDestination.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfDestination.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfDestination.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfGlyph.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfGlyph.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfGlyph.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfImageInfo.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfImageInfo.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfImageInfo.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfImageMask.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfImageMask.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfImageMask.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfOutlineItem.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfOutlineItem.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfOutlineItem.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfPageDetail.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfPageDetail.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfPageDetail.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfTextBlock.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfTextBlock.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfTextBlock.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfWidgetInfo.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfWidgetInfo.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfWidgetInfo.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfWord.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfWord.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfWord.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfXmpResult.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfXmpResult.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfXmpResult.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfRectangle.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfRectangle.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfRectangle.ToString() -> string!
 override SharpCorePDF.Domain.ValueObjects.PdfWarning.Equals(object? obj) -> bool
 override SharpCorePDF.Domain.ValueObjects.PdfWarning.GetHashCode() -> int
 override SharpCorePDF.Domain.ValueObjects.PdfWarning.ToString() -> string!
+SharpCorePDF.Domain.Ports.IPdfContentReader
+SharpCorePDF.Domain.Ports.IPdfContentReader.CopyEmbeddedFileDataAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo! file, System.IO.Stream! destination, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+SharpCorePDF.Domain.Ports.IPdfContentReader.CopyImageDataAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ReadModels.PdfImageInfo! image, System.IO.Stream! destination, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+SharpCorePDF.Domain.Ports.IPdfContentReader.CopyImageMaskDataAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ReadModels.PdfImageMask! mask, System.IO.Stream! destination, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+SharpCorePDF.Domain.Ports.IPdfContentReader.ReadAnnotationsAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ValueObjects.PageRange range, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo!>!>!
+SharpCorePDF.Domain.Ports.IPdfContentReader.ReadEmbeddedFilesAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo!>!>!
+SharpCorePDF.Domain.Ports.IPdfContentReader.ReadFormFieldsAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo!>!>!
+SharpCorePDF.Domain.Ports.IPdfContentReader.ReadImagesAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ValueObjects.PageRange range, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfImageInfo!>!>!
+SharpCorePDF.Domain.Ports.IPdfContentReader.ReadMetadataAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfXmpResult!>!
+SharpCorePDF.Domain.Ports.IPdfContentReader.ReadOutlineAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfOutlineItem!>!>!
+SharpCorePDF.Domain.Ports.IPdfContentReader.ReadPageDetailsAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ValueObjects.PageRange range, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<SharpCorePDF.Domain.ReadModels.PdfPageDetail!>!
+SharpCorePDF.Domain.Ports.IPdfContentReader.ReadTextAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ValueObjects.PageRange range, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfTextBlock!>!>!
 SharpCorePDF.Domain.ReadModels.MergeResult.Warnings.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfWarning!>!
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo!
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Author.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Author.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Contents.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Contents.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Equals(SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Flags.get -> int
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Flags.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.HasAppearance.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.HasAppearance.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.IsLink.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.ModificationDate.get -> System.DateTimeOffset?
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.ModificationDate.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Name.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Name.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.PageNumber.get -> int
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.PageNumber.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.PdfAnnotationInfo() -> void
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Rectangle.get -> SharpCorePDF.Domain.ValueObjects.PdfRectangle?
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Rectangle.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Subtype.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Subtype.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Target.get -> SharpCorePDF.Domain.ReadModels.PdfDestination?
+SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.Target.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDestination
+SharpCorePDF.Domain.ReadModels.PdfDestination.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfDestination!
+SharpCorePDF.Domain.ReadModels.PdfDestination.Area.get -> SharpCorePDF.Domain.ValueObjects.PdfRectangle?
+SharpCorePDF.Domain.ReadModels.PdfDestination.Area.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDestination.Equals(SharpCorePDF.Domain.ReadModels.PdfDestination? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfDestination.FileName.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfDestination.FileName.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDestination.IsExternal.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfDestination.IsInternal.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfDestination.IsUnresolved.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfDestination.NamedDestination.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfDestination.NamedDestination.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDestination.PageNumber.get -> int?
+SharpCorePDF.Domain.ReadModels.PdfDestination.PageNumber.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDestination.PdfDestination() -> void
+SharpCorePDF.Domain.ReadModels.PdfDestination.Uri.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfDestination.Uri.init -> void
 SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.SecurityHandlerRevision.get -> int?
 SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.SecurityHandlerRevision.init -> void
 SharpCorePDF.Domain.ReadModels.PdfDocumentInfo.Warnings.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfWarning!>!
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo!
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.ByteLength.get -> long
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.ByteLength.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Data.get -> System.ReadOnlyMemory<byte>?
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Data.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Equals(SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Filter.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Filter.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Id.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Id.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.IsBuffered.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.IsBuffered.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.IsDecodable.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.IsDecodable.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.MimeType.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.MimeType.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.ModificationDate.get -> System.DateTimeOffset?
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.ModificationDate.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Name.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Name.init -> void
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.PdfEmbeddedFileInfo() -> void
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Relationship.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.Relationship.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo!
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.DefaultValue.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.DefaultValue.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.Equals(SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.FieldType.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.FieldType.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.Flags.get -> int
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.Flags.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.IsReadOnly.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.IsRequired.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.Name.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.Name.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.PdfFormFieldInfo() -> void
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.Value.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.Value.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.Widgets.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ReadModels.PdfWidgetInfo!>!
+SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.Widgets.init -> void
+SharpCorePDF.Domain.ReadModels.PdfGlyph
+SharpCorePDF.Domain.ReadModels.PdfGlyph.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfGlyph!
+SharpCorePDF.Domain.ReadModels.PdfGlyph.BaseFont.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfGlyph.BaseFont.init -> void
+SharpCorePDF.Domain.ReadModels.PdfGlyph.BoundingBox.get -> SharpCorePDF.Domain.ValueObjects.PdfRectangle!
+SharpCorePDF.Domain.ReadModels.PdfGlyph.Equals(SharpCorePDF.Domain.ReadModels.PdfGlyph? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfGlyph.FontName.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfGlyph.FontName.init -> void
+SharpCorePDF.Domain.ReadModels.PdfGlyph.FontSize.get -> double
+SharpCorePDF.Domain.ReadModels.PdfGlyph.FontSize.init -> void
+SharpCorePDF.Domain.ReadModels.PdfGlyph.Height.get -> double
+SharpCorePDF.Domain.ReadModels.PdfGlyph.IsWhitespace.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfGlyph.PageNumber.get -> int
+SharpCorePDF.Domain.ReadModels.PdfGlyph.PageNumber.init -> void
+SharpCorePDF.Domain.ReadModels.PdfGlyph.PdfGlyph() -> void
+SharpCorePDF.Domain.ReadModels.PdfGlyph.Text.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfGlyph.Text.init -> void
+SharpCorePDF.Domain.ReadModels.PdfGlyph.Width.get -> double
+SharpCorePDF.Domain.ReadModels.PdfGlyph.Width.init -> void
+SharpCorePDF.Domain.ReadModels.PdfGlyph.X.get -> double
+SharpCorePDF.Domain.ReadModels.PdfGlyph.X.init -> void
+SharpCorePDF.Domain.ReadModels.PdfGlyph.Y.get -> double
+SharpCorePDF.Domain.ReadModels.PdfGlyph.Y.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfImageInfo!
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.BitsPerComponent.get -> int?
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.BitsPerComponent.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.ByteLength.get -> long
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.ByteLength.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.ColorSpace.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.ColorSpace.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Data.get -> System.ReadOnlyMemory<byte>?
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Data.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Equals(SharpCorePDF.Domain.ReadModels.PdfImageInfo? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Filter.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Filter.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Generation.get -> int?
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Generation.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Height.get -> int?
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Height.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Id.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Id.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.IsBuffered.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.IsBuffered.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.IsDecodable.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.IsDecodable.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.IsInline.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Mask.get -> SharpCorePDF.Domain.ReadModels.PdfImageMask?
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Mask.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.ObjectNumber.get -> long?
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.ObjectNumber.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Pages.get -> System.Collections.Generic.IReadOnlyList<int>!
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Pages.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.PdfImageInfo() -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Position.get -> SharpCorePDF.Domain.ValueObjects.PdfRectangle?
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Position.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Width.get -> int?
+SharpCorePDF.Domain.ReadModels.PdfImageInfo.Width.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask
+SharpCorePDF.Domain.ReadModels.PdfImageMask.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfImageMask!
+SharpCorePDF.Domain.ReadModels.PdfImageMask.BitsPerComponent.get -> int?
+SharpCorePDF.Domain.ReadModels.PdfImageMask.BitsPerComponent.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.ByteLength.get -> long
+SharpCorePDF.Domain.ReadModels.PdfImageMask.ByteLength.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.ColorKey.get -> System.Collections.Generic.IReadOnlyList<double>!
+SharpCorePDF.Domain.ReadModels.PdfImageMask.ColorKey.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.ColorSpace.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfImageMask.ColorSpace.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Data.get -> System.ReadOnlyMemory<byte>?
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Data.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Equals(SharpCorePDF.Domain.ReadModels.PdfImageMask? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Filter.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Filter.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Generation.get -> int?
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Generation.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Height.get -> int?
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Height.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.ImageId.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfImageMask.ImageId.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.IsBuffered.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfImageMask.IsBuffered.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.IsDecodable.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfImageMask.IsDecodable.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Kind.get -> SharpCorePDF.Domain.ReadModels.PdfImageMaskKind
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Kind.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.ObjectNumber.get -> long?
+SharpCorePDF.Domain.ReadModels.PdfImageMask.ObjectNumber.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.PdfImageMask() -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Width.get -> int?
+SharpCorePDF.Domain.ReadModels.PdfImageMask.Width.init -> void
+SharpCorePDF.Domain.ReadModels.PdfImageMaskKind
+SharpCorePDF.Domain.ReadModels.PdfImageMaskKind.ColorKey = 2 -> SharpCorePDF.Domain.ReadModels.PdfImageMaskKind
+SharpCorePDF.Domain.ReadModels.PdfImageMaskKind.ExplicitMask = 1 -> SharpCorePDF.Domain.ReadModels.PdfImageMaskKind
+SharpCorePDF.Domain.ReadModels.PdfImageMaskKind.SoftMask = 0 -> SharpCorePDF.Domain.ReadModels.PdfImageMaskKind
+SharpCorePDF.Domain.ReadModels.PdfOutlineItem
+SharpCorePDF.Domain.ReadModels.PdfOutlineItem.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfOutlineItem!
+SharpCorePDF.Domain.ReadModels.PdfOutlineItem.Children.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ReadModels.PdfOutlineItem!>!
+SharpCorePDF.Domain.ReadModels.PdfOutlineItem.Children.init -> void
+SharpCorePDF.Domain.ReadModels.PdfOutlineItem.Destination.get -> SharpCorePDF.Domain.ReadModels.PdfDestination?
+SharpCorePDF.Domain.ReadModels.PdfOutlineItem.Destination.init -> void
+SharpCorePDF.Domain.ReadModels.PdfOutlineItem.Equals(SharpCorePDF.Domain.ReadModels.PdfOutlineItem? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfOutlineItem.IsOpen.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfOutlineItem.IsOpen.init -> void
+SharpCorePDF.Domain.ReadModels.PdfOutlineItem.PdfOutlineItem() -> void
+SharpCorePDF.Domain.ReadModels.PdfOutlineItem.Title.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfOutlineItem.Title.init -> void
+SharpCorePDF.Domain.ReadModels.PdfPageDetail
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfPageDetail!
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.Annotations.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo!>!
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.Annotations.init -> void
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.DisplaySize.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.Equals(SharpCorePDF.Domain.ReadModels.PdfPageDetail? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.FormFields.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo!>!
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.FormFields.init -> void
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.Images.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ReadModels.PdfImageInfo!>!
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.Images.init -> void
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.Links.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo!>!
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.PageNumber.get -> int
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.PageNumber.init -> void
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.PdfPageDetail() -> void
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.Rotation.get -> SharpCorePDF.Domain.ValueObjects.PageRotation
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.Rotation.init -> void
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.Size.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.Size.init -> void
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.Warnings.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfWarning!>!
+SharpCorePDF.Domain.ReadModels.PdfPageDetail.Warnings.init -> void
+SharpCorePDF.Domain.ReadModels.PdfReadResult<T>
+SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfReadResult<T>!
+SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.Count.get -> int
+SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.Equals(SharpCorePDF.Domain.ReadModels.PdfReadResult<T>? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.Items.get -> System.Collections.Generic.IReadOnlyList<T>!
+SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.Items.init -> void
+SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.PdfReadResult() -> void
+SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.Warnings.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfWarning!>!
+SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.Warnings.init -> void
+SharpCorePDF.Domain.ReadModels.PdfTextBlock
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfTextBlock!
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.BoundingBox.get -> SharpCorePDF.Domain.ValueObjects.PdfRectangle!
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.BoundingBox.init -> void
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.Equals(SharpCorePDF.Domain.ReadModels.PdfTextBlock? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.LineCount.get -> int
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.PageNumber.get -> int
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.PageNumber.init -> void
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.PdfTextBlock() -> void
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.ReadingOrder.get -> int
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.ReadingOrder.init -> void
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.Text.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.Text.init -> void
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.Words.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ReadModels.PdfWord!>!
+SharpCorePDF.Domain.ReadModels.PdfTextBlock.Words.init -> void
+SharpCorePDF.Domain.ReadModels.PdfWidgetInfo
+SharpCorePDF.Domain.ReadModels.PdfWidgetInfo.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfWidgetInfo!
+SharpCorePDF.Domain.ReadModels.PdfWidgetInfo.Equals(SharpCorePDF.Domain.ReadModels.PdfWidgetInfo? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfWidgetInfo.PageNumber.get -> int?
+SharpCorePDF.Domain.ReadModels.PdfWidgetInfo.PageNumber.init -> void
+SharpCorePDF.Domain.ReadModels.PdfWidgetInfo.PdfWidgetInfo() -> void
+SharpCorePDF.Domain.ReadModels.PdfWidgetInfo.Rectangle.get -> SharpCorePDF.Domain.ValueObjects.PdfRectangle?
+SharpCorePDF.Domain.ReadModels.PdfWidgetInfo.Rectangle.init -> void
+SharpCorePDF.Domain.ReadModels.PdfWord
+SharpCorePDF.Domain.ReadModels.PdfWord.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfWord!
+SharpCorePDF.Domain.ReadModels.PdfWord.BaselineY.get -> double
+SharpCorePDF.Domain.ReadModels.PdfWord.BoundingBox.get -> SharpCorePDF.Domain.ValueObjects.PdfRectangle!
+SharpCorePDF.Domain.ReadModels.PdfWord.BoundingBox.init -> void
+SharpCorePDF.Domain.ReadModels.PdfWord.Equals(SharpCorePDF.Domain.ReadModels.PdfWord? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfWord.FontName.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfWord.FontSize.get -> double
+SharpCorePDF.Domain.ReadModels.PdfWord.Glyphs.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ReadModels.PdfGlyph!>!
+SharpCorePDF.Domain.ReadModels.PdfWord.Glyphs.init -> void
+SharpCorePDF.Domain.ReadModels.PdfWord.PageNumber.get -> int
+SharpCorePDF.Domain.ReadModels.PdfWord.PageNumber.init -> void
+SharpCorePDF.Domain.ReadModels.PdfWord.PdfWord() -> void
+SharpCorePDF.Domain.ReadModels.PdfWord.Text.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfWord.Text.init -> void
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfXmpMetadata!
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.CreatorTool.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.Equals(SharpCorePDF.Domain.ReadModels.PdfXmpMetadata? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.PdfXmpMetadata() -> void
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.Producer.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.Properties.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.Properties.init -> void
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.RawPacket.get -> System.ReadOnlyMemory<byte>
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.RawPacket.init -> void
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.Text.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.Text.init -> void
+SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.Title.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfXmpResult
+SharpCorePDF.Domain.ReadModels.PdfXmpResult.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfXmpResult!
+SharpCorePDF.Domain.ReadModels.PdfXmpResult.Equals(SharpCorePDF.Domain.ReadModels.PdfXmpResult? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfXmpResult.Metadata.get -> SharpCorePDF.Domain.ReadModels.PdfXmpMetadata?
+SharpCorePDF.Domain.ReadModels.PdfXmpResult.Metadata.init -> void
+SharpCorePDF.Domain.ReadModels.PdfXmpResult.PdfXmpResult() -> void
+SharpCorePDF.Domain.ReadModels.PdfXmpResult.Warnings.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfWarning!>!
+SharpCorePDF.Domain.ReadModels.PdfXmpResult.Warnings.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfRectangle
+SharpCorePDF.Domain.ValueObjects.PdfRectangle.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfRectangle!
+SharpCorePDF.Domain.ValueObjects.PdfRectangle.Bottom.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfRectangle.Equals(SharpCorePDF.Domain.ValueObjects.PdfRectangle? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfRectangle.Height.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfRectangle.IsEmpty.get -> bool
+SharpCorePDF.Domain.ValueObjects.PdfRectangle.Left.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfRectangle.PdfRectangle(double left, double bottom, double right, double top) -> void
+SharpCorePDF.Domain.ValueObjects.PdfRectangle.Right.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfRectangle.Top.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfRectangle.Width.get -> double
 SharpCorePDF.Domain.ValueObjects.PdfWarning
 SharpCorePDF.Domain.ValueObjects.PdfWarning.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfWarning!
 SharpCorePDF.Domain.ValueObjects.PdfWarning.Equals(SharpCorePDF.Domain.ValueObjects.PdfWarning? other) -> bool
@@ -13,13 +362,17 @@ SharpCorePDF.Domain.ValueObjects.PdfWarning.Kind.get -> SharpCorePDF.Domain.Valu
 SharpCorePDF.Domain.ValueObjects.PdfWarning.Message.get -> string!
 SharpCorePDF.Domain.ValueObjects.PdfWarning.PdfWarning(SharpCorePDF.Domain.ValueObjects.PdfWarningKind kind, string! message) -> void
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.AnnotationUnreadable = 35 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.BookmarkDestinationDropped = 24 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.BookmarkSkipped = 22 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.BookmarksTruncated = 23 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ContentStreamUnreadable = 26 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.CrossReferenceEntryMismatch = 1 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.CrossReferenceRebuilt = 0 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.CryptFilterMethodUnsupported = 18 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.CryptFilterUndefined = 17 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EmbeddedFileNameCollision = 32 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EmbeddedFileUnreadable = 31 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionCombinationUnsupported = 15 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionDictionaryIncomplete = 16 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionDictionaryUnreadable = 11 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
@@ -27,8 +380,12 @@ SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionHandlerUnsupported = 1
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionNotOpened = 12 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionOpened = 19 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionRevisionUnsupported = 14 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.FormFieldUnreadable = 34 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ImageDataUnreadable = 28 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ImageFilterUnsupported = 27 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.InlinePageSkipped = 9 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.NamedDestinationsDropped = 20 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.NamedDestinationUnresolved = 30 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ObjectStreamTruncated = 3 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ObjectStreamUnreadable = 2 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.OutlinesDroppedByPolicy = 21 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
@@ -39,5 +396,41 @@ SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeChildNotANode = 8 -> Sha
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeCycle = 6 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeMissing = 4 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageTreeTooDeep = 5 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.TextUnreadable = 36 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.XmpPacketMalformed = 33 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.XObjectResourceMissing = 29 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+static SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.operator !=(SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? left, SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo.operator ==(SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? left, SharpCorePDF.Domain.ReadModels.PdfAnnotationInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfDestination.operator !=(SharpCorePDF.Domain.ReadModels.PdfDestination? left, SharpCorePDF.Domain.ReadModels.PdfDestination? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfDestination.operator ==(SharpCorePDF.Domain.ReadModels.PdfDestination? left, SharpCorePDF.Domain.ReadModels.PdfDestination? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.operator !=(SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo? left, SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo.operator ==(SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo? left, SharpCorePDF.Domain.ReadModels.PdfEmbeddedFileInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.operator !=(SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo? left, SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo.operator ==(SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo? left, SharpCorePDF.Domain.ReadModels.PdfFormFieldInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfGlyph.operator !=(SharpCorePDF.Domain.ReadModels.PdfGlyph? left, SharpCorePDF.Domain.ReadModels.PdfGlyph? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfGlyph.operator ==(SharpCorePDF.Domain.ReadModels.PdfGlyph? left, SharpCorePDF.Domain.ReadModels.PdfGlyph? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfImageInfo.operator !=(SharpCorePDF.Domain.ReadModels.PdfImageInfo? left, SharpCorePDF.Domain.ReadModels.PdfImageInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfImageInfo.operator ==(SharpCorePDF.Domain.ReadModels.PdfImageInfo? left, SharpCorePDF.Domain.ReadModels.PdfImageInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfImageMask.operator !=(SharpCorePDF.Domain.ReadModels.PdfImageMask? left, SharpCorePDF.Domain.ReadModels.PdfImageMask? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfImageMask.operator ==(SharpCorePDF.Domain.ReadModels.PdfImageMask? left, SharpCorePDF.Domain.ReadModels.PdfImageMask? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfOutlineItem.operator !=(SharpCorePDF.Domain.ReadModels.PdfOutlineItem? left, SharpCorePDF.Domain.ReadModels.PdfOutlineItem? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfOutlineItem.operator ==(SharpCorePDF.Domain.ReadModels.PdfOutlineItem? left, SharpCorePDF.Domain.ReadModels.PdfOutlineItem? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfPageDetail.operator !=(SharpCorePDF.Domain.ReadModels.PdfPageDetail? left, SharpCorePDF.Domain.ReadModels.PdfPageDetail? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfPageDetail.operator ==(SharpCorePDF.Domain.ReadModels.PdfPageDetail? left, SharpCorePDF.Domain.ReadModels.PdfPageDetail? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.operator !=(SharpCorePDF.Domain.ReadModels.PdfReadResult<T>? left, SharpCorePDF.Domain.ReadModels.PdfReadResult<T>? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfReadResult<T>.operator ==(SharpCorePDF.Domain.ReadModels.PdfReadResult<T>? left, SharpCorePDF.Domain.ReadModels.PdfReadResult<T>? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfTextBlock.operator !=(SharpCorePDF.Domain.ReadModels.PdfTextBlock? left, SharpCorePDF.Domain.ReadModels.PdfTextBlock? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfTextBlock.operator ==(SharpCorePDF.Domain.ReadModels.PdfTextBlock? left, SharpCorePDF.Domain.ReadModels.PdfTextBlock? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfWidgetInfo.operator !=(SharpCorePDF.Domain.ReadModels.PdfWidgetInfo? left, SharpCorePDF.Domain.ReadModels.PdfWidgetInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfWidgetInfo.operator ==(SharpCorePDF.Domain.ReadModels.PdfWidgetInfo? left, SharpCorePDF.Domain.ReadModels.PdfWidgetInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfWord.operator !=(SharpCorePDF.Domain.ReadModels.PdfWord? left, SharpCorePDF.Domain.ReadModels.PdfWord? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfWord.operator ==(SharpCorePDF.Domain.ReadModels.PdfWord? left, SharpCorePDF.Domain.ReadModels.PdfWord? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.operator !=(SharpCorePDF.Domain.ReadModels.PdfXmpMetadata? left, SharpCorePDF.Domain.ReadModels.PdfXmpMetadata? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfXmpMetadata.operator ==(SharpCorePDF.Domain.ReadModels.PdfXmpMetadata? left, SharpCorePDF.Domain.ReadModels.PdfXmpMetadata? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfXmpResult.operator !=(SharpCorePDF.Domain.ReadModels.PdfXmpResult? left, SharpCorePDF.Domain.ReadModels.PdfXmpResult? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfXmpResult.operator ==(SharpCorePDF.Domain.ReadModels.PdfXmpResult? left, SharpCorePDF.Domain.ReadModels.PdfXmpResult? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfRectangle.FromCorners(double x1, double y1, double x2, double y2) -> SharpCorePDF.Domain.ValueObjects.PdfRectangle!
+static SharpCorePDF.Domain.ValueObjects.PdfRectangle.operator !=(SharpCorePDF.Domain.ValueObjects.PdfRectangle? left, SharpCorePDF.Domain.ValueObjects.PdfRectangle? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfRectangle.operator ==(SharpCorePDF.Domain.ValueObjects.PdfRectangle? left, SharpCorePDF.Domain.ValueObjects.PdfRectangle? right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfWarning.operator !=(SharpCorePDF.Domain.ValueObjects.PdfWarning? left, SharpCorePDF.Domain.ValueObjects.PdfWarning? right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfWarning.operator ==(SharpCorePDF.Domain.ValueObjects.PdfWarning? left, SharpCorePDF.Domain.ValueObjects.PdfWarning? right) -> bool

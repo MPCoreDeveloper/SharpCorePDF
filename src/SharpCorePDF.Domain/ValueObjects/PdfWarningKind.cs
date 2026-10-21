@@ -150,4 +150,75 @@ public enum PdfWarningKind
     /// only when <c>PdfEngineOptions.VerifyOutput</c> is enabled.
     /// </summary>
     OutputVerified,
+
+    /// <summary>
+    /// A content stream could not be decoded, so the page it belongs to reports no images from it. The
+    /// stream is named in the message; the rest of the page and the rest of the document are readable.
+    /// </summary>
+    ContentStreamUnreadable,
+
+    /// <summary>
+    /// An image declares a filter this library does not decode, such as <c>JPXDecode</c> or
+    /// <c>CCITTFaxDecode</c>. The image is still returned with its raw bytes and its filter named, and
+    /// <c>IsDecodable</c> is cleared.
+    /// </summary>
+    ImageFilterUnsupported,
+
+    /// <summary>
+    /// An image's geometry or payload could not be read — a missing <c>/Width</c>, a truncated stream,
+    /// a colour space that cannot be described. The image is still returned with what is known.
+    /// </summary>
+    ImageDataUnreadable,
+
+    /// <summary>
+    /// A content stream paints a named XObject that the page's resources do not define, so the object
+    /// it names could not be read.
+    /// </summary>
+    XObjectResourceMissing,
+
+    /// <summary>
+    /// A link or a bookmark names a destination that does not resolve in this document. The entry is
+    /// returned with the name that failed and no page, and the call does not throw.
+    /// </summary>
+    NamedDestinationUnresolved,
+
+    /// <summary>
+    /// An embedded file's payload could not be read, or the file specification that names it could not
+    /// be resolved. The entry is returned with what is known.
+    /// </summary>
+    EmbeddedFileUnreadable,
+
+    /// <summary>
+    /// Two entries of the filename tree share a name. Both are returned with distinct identifiers and
+    /// the collision is reported, so neither is silently dropped.
+    /// </summary>
+    EmbeddedFileNameCollision,
+
+    /// <summary>
+    /// A document carries an XMP packet that is not well-formed XML. The raw packet is still returned
+    /// byte-exact and the parsed values are empty.
+    /// </summary>
+    XmpPacketMalformed,
+
+    /// <summary>
+    /// A form field could not be read — a field dictionary that does not resolve, or a name that
+    /// cannot be built. The field is skipped and the rest of the form is still returned.
+    /// </summary>
+    FormFieldUnreadable,
+
+    /// <summary>
+    /// An annotation could not be read — its dictionary does not resolve, so its subtype and
+    /// rectangle are unknown. The annotation is skipped and the rest of the page is still returned.
+    /// </summary>
+    AnnotationUnreadable,
+
+    /// <summary>
+    /// A glyph of a page could not be turned into text: the font resource the content stream selects
+    /// is missing, the font states no encoding this library understands, or a composite font carries no
+    /// <c>/ToUnicode</c> map. The glyph is skipped and a character is never guessed, so the block that
+    /// loses it still carries the text around it and the warning says which font was in the way. A
+    /// document whose text uses an encoding this library cannot map therefore reads as no text plus
+    /// this warning, not as silence.
+    /// </summary>
+    TextUnreadable,
 }

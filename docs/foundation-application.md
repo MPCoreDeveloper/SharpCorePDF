@@ -44,7 +44,7 @@ the two where "we know, here is why we are early" is a legitimate sentence rathe
    then the CLA through DocuSign, then the onboarding checklist.
 4. Keep the issue updated rather than opening a second one. It is the record of the application.
 
-What must not go into it: a link to `_bmad-output/` (gitignored — the reviewer would find nothing), a claim
+What must not go into it: a link to a gitignored planning document (the reviewer would find nothing), a claim
 about a differentiator that `docs/measurements.md` does not back, or an issue count inflated by filing
 against yourself.
 
@@ -152,8 +152,8 @@ Draft, for the owner to edit rather than to paste blind:
       its own.
 - [ ] The test count in the README is still the count `dotnet test` reports — a reviewer who checks one
       number and finds it wrong reads the rest differently.
-- [ ] No link in the issue points at `_bmad-output/` or at anything else that is not in the public
-      repository.
+- [ ] No link in the issue points at a gitignored planning document or at anything else that is not in the
+      public repository.
 - [ ] The five owner decisions are answered in `docs/foundation-readiness.md`, with a date — two are
       (package id, account shape); three are not.
 

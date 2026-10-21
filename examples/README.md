@@ -8,7 +8,7 @@
 
 # SharpCorePDF examples
 
-Nine runnable examples that show how the library is used, and the console app that runs them. Everything
+Ten runnable examples that show how the library is used, and the console app that runs them. Everything
 here is code that compiles and executes against the package, so nothing in the documentation is a
 snippet that was never run.
 
@@ -37,6 +37,7 @@ when every example ran, `1` when one failed, and `2` when a name on the command 
 | `merge-streams` | A source that is an upload stream and a source that is already a `byte[]`, with the merged document handed back as bytes. |
 | `no-container` | The same merge without a dependency injection container, and the proof that the result is the same. |
 | `inspect-first` | Describing a folder of documents before merging, which is how a file that is unusable, or encrypted and waiting for its password, is found without an exception. |
+| `read-content` | Reading what a document already contains: the image a page paints, the text both pages draw as blocks of words, the comment and the link with its resolved target, the form field, the bookmark, the attachment extracted to disk, and the XMP packet with the values parsed beside it, then the same pages one at a time. |
 | `options` | Metadata policy and override, outline and page-label policy, the target version, and a reproducible result (byte for byte). |
 | `protect-result` | A result written with AES-256, a user and an owner password and a permission set: what a reader is asked for, what it is allowed to do, and how an encrypted source is merged into a document that is sealed again under new passwords. |
 | `warnings` | The two channels: what inspection reports about a document, and what the merge reports about its own work. |
@@ -56,6 +57,11 @@ They are not part of the library; they exist so that running the examples has so
 | `Broken.pdf` | A text file that someone renamed to `.pdf`. |
 | `Encrypted.pdf` | One page, encrypted with the standard security handler (AES-128, revision 4) and the user password `user-password`. |
 | `NamedDests.pdf` | A first page with no declared page size, and named destinations in its catalog. |
+
+One more sample, `RichContent.pdf`, is written to `%TEMP%\SharpCorePDF.Examples\content` rather than to the
+merge folder, so that `inspect-first` keeps describing exactly the six files above. It is the document
+`read-content` reads: two pages, an image and a line of text on the first, a two-line block of text on the
+second, a comment, a link, a form field, a bookmark, an attachment and an XMP packet.
 
 `Encrypted.pdf` is the one sample that is not generated: writing it would mean implementing a security
 handler inside an example, and what the example has to show is that the library opens a document somebody
@@ -128,11 +134,13 @@ services.AddSharpCorePDF(config);    // or from the "SharpCorePDF" configuration
 | --- | --- |
 | `Program.cs` | The runner: argument handling, Ctrl+C cancellation, and the exit code. |
 | `Scenarios.cs` | The example registry and the command line handling. |
-| `ExampleContext.cs` | The sample documents, the container (`AddSharpCorePDF` from `appsettings.json`), the two ports, and the report helper. |
+| `ExampleContext.cs` | The sample documents, the container (`AddSharpCorePDF` from `appsettings.json`), the three ports, and the report helper. |
 | `SampleDocuments.cs` | The fixture generator described above. |
+| `ContentSampleDocument.cs` | The one sample with an image, text on both pages, a comment, a link, a form field, a bookmark, an attachment and an XMP packet, which is what `read-content` reads. |
 | `MergeExamples.cs` | `merge-files`, `select-pages`. |
 | `SourceExamples.cs` | `merge-streams`, `no-container`. |
 | `InspectionExamples.cs` | `inspect-first`. |
+| `ContentInspectionExamples.cs` | `read-content`. |
 | `OptionExamples.cs` | `options`, `protect-result`, `warnings`. |
 | `ErrorHandlingExamples.cs` | `errors`. |
 | `appsettings.json` | The engine options the container binds, including `VerifyOutput`, so every example also proves its output can be read back. |

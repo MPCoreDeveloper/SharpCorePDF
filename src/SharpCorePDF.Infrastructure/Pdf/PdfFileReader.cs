@@ -172,6 +172,11 @@ internal sealed partial class PdfFileReader
     /// <returns>The object, or <see langword="null"/>.</returns>
     public PdfObject? Resolve(PdfReference? reference) => reference is null ? null : Resolve(reference.ObjectNumber);
 
+    /// <summary>Resolves a value that may be a reference, leaving anything else as it is.</summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The object the value refers to, or the value itself when it is not a reference.</returns>
+    public PdfObject? Resolve(PdfObject? value) => value is PdfReference reference ? Resolve(reference) : value;
+
     /// <summary>Resolves a value that may be a dictionary or a reference to one.</summary>
     /// <param name="value">The value.</param>
     /// <returns>The dictionary, or <see langword="null"/>.</returns>

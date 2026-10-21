@@ -13,7 +13,7 @@
 <!--
   The defect or the gap, in terms of behaviour rather than of the code you touched. If it is a defect,
   say what it produced and what it should have produced. An issue number is welcome; a link to a
-  gitignored planning document is not — nobody reviewing this can open `_bmad-output/`.
+  gitignored planning document is not — nobody reviewing this can open it.
 -->
 
 ## The test that fails without this change
@@ -30,7 +30,7 @@
 - [ ] `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt` updated in the same commit — or the surface is unchanged
 - [ ] `CHANGELOG.md` has an entry under `[Unreleased]`, or the change is not user-visible
 - [ ] Documentation that made a claim this change alters (README, `examples/`, `docs/measurements.md`) is updated in this pull request
-- [ ] Nothing from `_bmad-output/`, and no internal story, epic or requirement identifier, appears in a comment, a commit message or this description
+- [ ] Nothing from a gitignored planning document, and no internal story, epic or requirement identifier, appears in a comment, a commit message or this description
 - [ ] The change is not drive-by: no reordering, renaming or reformatting outside what the change needs
 
 ## Anything else a reviewer should know

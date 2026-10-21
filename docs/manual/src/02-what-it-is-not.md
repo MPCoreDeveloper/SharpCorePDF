@@ -26,11 +26,15 @@ what a merge plan does.
 
 ## It is not a renderer, converter or OCR engine
 
-The library does not rasterise pages, does not render them to an image, does not extract text, does
-not convert PDF to Word/HTML/text and does not recognise scanned characters.
+The library does not rasterise pages, does not render them to an image, does not convert PDF to Word,
+HTML or a reflowed document, and does not recognise scanned characters. It does read the text a document
+draws (Chapter 8): the glyphs, the words they make and the blocks those words make, each with its
+coordinates — what the file already says, not what a picture of it might say. That is enough for search
+over a born-digital document and not enough for a scan.
 
-**Use instead:** a rendering engine for thumbnails and previews, a text extraction library for
-search, and an OCR product for scans.
+**Use instead:** a rendering engine for thumbnails and previews, an OCR product for scans, and a
+layout-aware conversion product when the output has to be a reflowed document rather than text with
+coordinates.
 
 ## It is not a PDF/A or PDF/UA validator
 
@@ -99,8 +103,9 @@ cookbook shows one.
 | Preserve bookmarks, annotations and metadata | Yes |
 | Encrypt the merged result | Yes |
 | Learn page counts, sizes, outline size or encryption state before merging | Yes |
+| Read the images, text, comments, form fields and bookmarks a document carries | Yes |
 | Create a PDF from scratch | No |
 | Edit text, images or page geometry | No |
-| Render, convert, OCR or extract text | No |
+| Render, convert, OCR or reflow text | No |
 | Fill forms, sign or redact | No |
 | Validate PDF/A or accessibility profiles | No |

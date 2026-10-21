@@ -33,11 +33,6 @@ msbuild.log
 # Measurement scratch (BenchmarkDotNet, if it is ever added alongside tools/SharpCorePDF.Measure)
 BenchmarkDotNet.Artifacts/
 
-# Agent and workflow tooling -- not part of the library and not part of its record
-.cline/
-_bmad/
-_bmad-output/
-
 # OS noise
 .DS_Store
 Thumbs.db

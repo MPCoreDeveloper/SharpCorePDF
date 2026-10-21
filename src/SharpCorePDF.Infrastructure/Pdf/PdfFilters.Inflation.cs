@@ -118,4 +118,21 @@ internal static partial class PdfFilters
             (int)(parameters.GetInteger("Columns") ?? 1),
             sourceName);
     }
+
+    /// <summary>
+    /// Decompresses Flate data and undoes the predictor the filter declares, if any.
+    /// </summary>
+    /// <param name="data">The compressed bytes.</param>
+    /// <param name="parameters">The decode parameters of the filter, or <see langword="null"/>.</param>
+    /// <param name="sourceName">The name of the source, used in diagnostics.</param>
+    /// <returns>The decoded bytes.</returns>
+    /// <remarks>
+    /// Exposed to the rest of the engine so image and attachment decoding share one implementation of
+    /// both the inflation and the predictors, rather than growing a second copy that can drift.
+    /// </remarks>
+    /// <exception cref="PdfSourceFormatException">The data could not be decompressed.</exception>
+    public static byte[] InflateAndUnpredict(
+        ReadOnlyMemory<byte> data,
+        PdfDictionary? parameters,
+        string sourceName) => ApplyFlate(data, parameters, sourceName);
 }

@@ -204,11 +204,10 @@ jobs:
           PR_BRANCH: ${{ github.head_ref }}
           PR_BASE: ${{ github.base_ref }}
         run: |
-          # Excluded: build and test output; the BMad Method bundle (_bmad, _bmad-output, .cline), which is
-          # somebody else's Python and JavaScript rather than this repository's code; the scanner's own
-          # working directory; and docs/, tools/ and examples/, because the gate is about what the packages
-          # ship. src/ is analysed as source and tests/ as test code, since the test project sets
-          # IsTestProject.
+          # Excluded: build and test output; the Spec Kit tooling (.specify, .clinerules), which is
+          # scaffolding rather than this repository's code; the scanner's own working directory; and
+          # docs/, tools/ and examples/, because the gate is about what the packages ship. src/ is
+          # analysed as source and tests/ as test code, since the test project sets IsTestProject.
           args=(
             "/k:MPCoreDeveloper_SharpCorePDF"
             "/o:mpcoredeveloper"
@@ -216,7 +215,7 @@ jobs:
             "/d:sonar.token=$SONAR_TOKEN"
             "/d:sonar.sourceEncoding=UTF-8"
             "/d:sonar.scm.provider=git"
-            "/d:sonar.exclusions=**/bin/**,**/obj/**,**/artifacts/**,**/TestResults/**,**/.sonarqube/**,**/_bmad/**,**/_bmad-output/**,**/.cline/**,**/docs/**,**/tools/**,**/examples/**"
+            "/d:sonar.exclusions=**/bin/**,**/obj/**,**/artifacts/**,**/TestResults/**,**/.sonarqube/**,**/.specify/**,**/.clinerules/**,**/docs/**,**/tools/**,**/examples/**"
             # Exactly one file: this is the only coverage report the run produces.
             "/d:sonar.cs.vscoveragexml.reportsPaths=artifacts/coverage/net11.0.xml"
             # Asked for here rather than on `end`: the post-processing phase accepts no property but the

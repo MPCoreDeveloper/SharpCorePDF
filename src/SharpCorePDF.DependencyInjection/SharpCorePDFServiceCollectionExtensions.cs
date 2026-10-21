@@ -78,11 +78,14 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
     {
         services.TryAddSingleton(sp => new PdfDocumentReader(sp.GetRequiredService<PdfEngineOptions>()));
         services.TryAddSingleton(sp => new PdfMergeEngine(sp.GetRequiredService<PdfEngineOptions>()));
+        services.TryAddSingleton(sp => new PdfPageContentReader(sp.GetRequiredService<PdfEngineOptions>()));
 
         services.TryAddSingleton<IPdfDocumentReader>(sp => sp.GetRequiredService<PdfDocumentReader>());
         services.TryAddSingleton<IPdfMergeEngine>(sp => sp.GetRequiredService<PdfMergeEngine>());
+        services.TryAddSingleton<IPdfPageContentReader>(sp => sp.GetRequiredService<PdfPageContentReader>());
         services.TryAddSingleton<IPdfMerger, PdfMergerService>();
         services.TryAddSingleton<IPdfInspector, PdfInspectorService>();
+        services.TryAddSingleton<IPdfContentReader, PdfContentReaderService>();
 
         return services;
     }
