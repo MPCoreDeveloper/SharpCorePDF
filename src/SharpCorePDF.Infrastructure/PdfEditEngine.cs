@@ -84,7 +84,8 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
                 "the document has no page tree, so it cannot be edited.");
         }
 
-        var layout = BuildLayout(reader, plan, out var layoutChanged);
+        var warnings = new List<PdfWarning>(reader.Warnings);
+        var layout = BuildLayout(reader, plan, warnings, out var layoutChanged);
 
         if (layout.Count == 0)
         {
@@ -94,7 +95,6 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
 
         var modificationDate = plan.Output.ModificationDate ?? DateTimeOffset.UtcNow;
         var identifier = BuildFileIdentifier(plan, layout.Count, modificationDate);
-        var warnings = new List<PdfWarning>(reader.Warnings);
 
         // The capture is disposed with the edit: it owns a pooled buffer, and the destination it
         // forwards to belongs to the caller and is left open.
@@ -107,7 +107,7 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
         RedirectPageTree(reader, copier, pagesNodeNumber);
         AllocatePageTargets(writer, layout);
         RedirectSourcePages(reader, layout, copier);
-        WritePages(copier, writer, pagesNodeNumber, layout);
+        WritePages(reader, copier, writer, pagesNodeNumber, layout);
 
         var catalog = BuildCatalog(reader, copier, pagesNodeNumber, plan, layoutChanged, warnings);
         writer.WriteObject(catalogNumber, catalog);

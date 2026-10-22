@@ -311,4 +311,10 @@ public enum PdfWarningKind
     /// A PDF/A output intent could not be copied from the source and a different intent was used.
     /// </summary>
     OutputIntentSubstituted,
+
+    /// <summary>
+    /// A crop box was inverted or reached outside the media box, so it was normalised to the part
+    /// that lies inside the page. The page is written with the normalised box.
+    /// </summary>
+    PageGeometryNormalized,
 }

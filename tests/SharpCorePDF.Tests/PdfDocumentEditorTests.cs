@@ -19,7 +19,7 @@ namespace SharpCorePDF.Tests;
 /// assertions then go through the public read side — the inspector and the content reader — so a
 /// document that only looks right in the bytes it was built from does not pass.
 /// </remarks>
-public sealed class PdfDocumentEditorTests
+public sealed partial class PdfDocumentEditorTests
 {
     private static readonly PdfEngineOptions Options = PdfEngineOptions.Default with { VerifyOutput = true };
     private static readonly PdfDocumentEditorService Editor = new(new PdfDocumentReader(Options), new PdfEditEngine(Options));

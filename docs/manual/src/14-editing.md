@@ -58,12 +58,15 @@ between requests and applied concurrently without a lock.
 | `DeletePage(pageNumber)` | Removes one page. An edit that would leave the document with no page is refused. |
 | `MovePage(from, to)` | Moves a page so that it ends up at position `to` in the state that exists before the move. |
 | `DuplicatePage(pageNumber, insertAt)` | Copies a page and inserts the copy before `insertAt`. `insertAt` may be one past the current count, which appends. Both copies draw the same objects; the page entries are distinct. |
+| `CropPage(pageNumber, cropBox)` | Sets the visible area of a page inside its media box. A box that reaches outside the media box is clamped to the part that overlaps it and reported as `PdfWarningKind.PageGeometryNormalized`; a box with no overlap is refused. |
+| `ResizePage(pageNumber, size, mode)` | Changes the page size and makes the content follow it. `PdfPageResizeMode.Scale` scales the content to the new size; `PdfPageResizeMode.Preserve` keeps it at its original size and centres it. The original content streams are wrapped, not rewritten. |
 | `SetMetadata(metadata)` | Merges document information into the source values. Fields left `null` keep their source value; fields set are replaced. Several metadata operations merge in plan order. |
 
 The operation objects are public values (`PdfRotatePageOperation`, `PdfDeletePageOperation`,
-`PdfMovePageOperation`, `PdfDuplicatePageOperation`, `PdfSetMetadataOperation`), but the methods on
-`PdfEditPlan` are the intended construction route: they check the invariant that can be checked
-without a document, and they keep the plan immutable.
+`PdfMovePageOperation`, `PdfDuplicatePageOperation`, `PdfCropPageOperation`,
+`PdfResizePageOperation`, `PdfSetMetadataOperation`), but the methods on `PdfEditPlan` are the
+intended construction route: they check the invariant that can be checked without a document, and
+they keep the plan immutable.
 
 ## Output options
 
@@ -123,8 +126,9 @@ duplicate does not produce a second target for the same reference.
 ## Validation and failure
 
 A plan checks what it can without opening a document: page numbers must be positive, a rotation must
-be a quarter turn, and the output options must name a supported version and non-empty strings where a
-value is set. `Validate()` returns every problem; `EnsureValid()` throws a single
+be a quarter turn, a crop box must enclose an area, a resize mode must be `Scale` or `Preserve`, and
+the output options must name a supported version and non-empty strings where a value is set.
+`Validate()` returns every problem; `EnsureValid()` throws a single
 `PdfEditPlanValidationException` that lists them.
 
 The rest is checked when the source has been read, because only then is its page count known. A page
@@ -138,9 +142,10 @@ raises `PdfEncryptionException`. Both are described in Chapter 9.
 
 ## What an edit cannot change
 
-An edit copies pages; it does not modify them. There is no operation that replaces text or an image,
-removes or edits an annotation, fills a form field, changes a `MediaBox` or `CropBox`, redacts
-content, signs the result or adds a digital signature. The source can be encrypted and is opened with
+An edit copies pages; it does not re-render them. There is no operation that replaces text or an
+image, removes or edits an annotation, fills a form field, redacts content, signs the result or adds
+a digital signature. `CropPage` and `ResizePage` change the geometry a viewer uses, but they do not
+change the bytes of the content streams they show. The source can be encrypted and is opened with
 the `password` argument of `ApplyAsync`; the result is written in the clear, because output encryption
 is not part of this editing release.
 
