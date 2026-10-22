@@ -31,6 +31,13 @@ against an empty feed.
   an operation that reaches past the last page fails with `PdfEditPlanValidationException` before any
   output is written. `PdfEditResult` reports the page count, bytes written, output version, elapsed
   time, the operations applied and the warnings the edit produced.
+- **Pages can be cropped and resized without re-rendering their content.** `CropPage` sets an
+  explicit `/CropBox` inside the media box: a box that reaches outside it is clamped and reported as
+  `PdfWarningKind.PageGeometryNormalized`, and a box with no overlap is refused before any output is
+  written. `ResizePage` changes `/MediaBox` and wraps the untouched original content streams in a
+  graphics state (`q`, a `cm` transform, then `Q`), so `PdfPageResizeMode.Scale` scales the content
+  to the new size and `PdfPageResizeMode.Preserve` keeps it at its original size and centres it. A
+  crop box set before a resize is carried through the same transform.
 - **Editing copies pages, it does not re-render them.** The engine writes a complete new document and
   copies every surviving page's content streams, resources, fonts, images and annotations verbatim;
   inherited `MediaBox`, `CropBox`, `Resources` and `Rotate` are materialised onto each page. Bookmarks,

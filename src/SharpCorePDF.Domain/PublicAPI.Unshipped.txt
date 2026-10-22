@@ -975,3 +975,45 @@ static SharpCorePDF.Domain.ValueObjects.PdfPngImage.operator ==(SharpCorePDF.Dom
 virtual SharpCorePDF.Domain.ValueObjects.PdfImageSource.EqualityContract.get -> System.Type!
 virtual SharpCorePDF.Domain.ValueObjects.PdfImageSource.Equals(SharpCorePDF.Domain.ValueObjects.PdfImageSource? other) -> bool
 virtual SharpCorePDF.Domain.ValueObjects.PdfImageSource.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfEditOperation? other) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfEditOperation? other) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation!
+override SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.Kind.get -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+override SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation!
+override SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.Kind.get -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+override SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.ToString() -> string!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.CropPage(int pageNumber, SharpCorePDF.Domain.ValueObjects.PdfRectangle! cropBox) -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.ResizePage(int pageNumber, SharpCorePDF.Domain.ValueObjects.PdfPageSize size, SharpCorePDF.Domain.ValueObjects.PdfPageResizeMode mode = SharpCorePDF.Domain.ValueObjects.PdfPageResizeMode.Scale) -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation
+SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.CropBox.get -> SharpCorePDF.Domain.ValueObjects.PdfRectangle!
+SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.CropBox.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.Deconstruct(out int PageNumber, out SharpCorePDF.Domain.ValueObjects.PdfRectangle! CropBox) -> void
+SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.PageNumber.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.PageNumber.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.PdfCropPageOperation(int PageNumber, SharpCorePDF.Domain.ValueObjects.PdfRectangle! CropBox) -> void
+SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind.CropPage = 5 -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind.ResizePage = 6 -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+SharpCorePDF.Domain.ValueObjects.PdfPageResizeMode
+SharpCorePDF.Domain.ValueObjects.PdfPageResizeMode.Preserve = 1 -> SharpCorePDF.Domain.ValueObjects.PdfPageResizeMode
+SharpCorePDF.Domain.ValueObjects.PdfPageResizeMode.Scale = 0 -> SharpCorePDF.Domain.ValueObjects.PdfPageResizeMode
+SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation
+SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.Deconstruct(out int PageNumber, out SharpCorePDF.Domain.ValueObjects.PdfPageSize Size, out SharpCorePDF.Domain.ValueObjects.PdfPageResizeMode Mode) -> void
+SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.Mode.get -> SharpCorePDF.Domain.ValueObjects.PdfPageResizeMode
+SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.Mode.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.PageNumber.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.PageNumber.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.PdfResizePageOperation(int PageNumber, SharpCorePDF.Domain.ValueObjects.PdfPageSize Size, SharpCorePDF.Domain.ValueObjects.PdfPageResizeMode Mode) -> void
+SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.Size.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
+SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.Size.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageGeometryNormalized = 53 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+static SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.operator !=(SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.operator ==(SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.operator !=(SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.operator ==(SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation? right) -> bool

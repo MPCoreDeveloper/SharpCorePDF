@@ -17,6 +17,12 @@ public enum PdfEditOperationKind
 
     /// <summary>The document information is changed.</summary>
     SetMetadata,
+
+    /// <summary>The visible area of a page is narrowed.</summary>
+    CropPage,
+
+    /// <summary>The page size is changed and the content follows it.</summary>
+    ResizePage,
 }
 
 /// <summary>
@@ -82,6 +88,38 @@ public sealed record PdfDuplicatePageOperation(int PageNumber, int InsertAt) : P
     /// <summary>Formats the operation for diagnostics.</summary>
     /// <returns>The formatted operation.</returns>
     public override string ToString() => $"duplicate page {PageNumber} at position {InsertAt}";
+}
+
+/// <summary>Sets the visible area of one page.</summary>
+/// <param name="PageNumber">The one-based page number.</param>
+/// <param name="CropBox">The requested crop box, in page space.</param>
+public sealed record PdfCropPageOperation(int PageNumber, PdfRectangle CropBox) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.CropPage;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The formatted operation.</returns>
+    public override string ToString() =>
+        $"crop page {PageNumber} to [{CropBox.Left:0.##} {CropBox.Bottom:0.##} {CropBox.Right:0.##} {CropBox.Top:0.##}]";
+}
+
+/// <summary>Changes the page size of one page and makes the content follow it.</summary>
+/// <param name="PageNumber">The one-based page number.</param>
+/// <param name="Size">The new page size.</param>
+/// <param name="Mode">How the content follows the new size.</param>
+public sealed record PdfResizePageOperation(
+    int PageNumber,
+    PdfPageSize Size,
+    PdfPageResizeMode Mode) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.ResizePage;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The formatted operation.</returns>
+    public override string ToString() =>
+        $"resize page {PageNumber} to {Size} using {Mode}";
 }
 
 /// <summary>Overrides part or all of the document information.</summary>

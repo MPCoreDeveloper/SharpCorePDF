@@ -82,6 +82,39 @@ public sealed record PdfEditPlan
         return Add(new PdfRotatePageOperation(pageNumber, rotation));
     }
 
+    /// <summary>Sets the visible area of one page.</summary>
+    /// <param name="pageNumber">The one-based page number.</param>
+    /// <param name="cropBox">The crop box in page space; it is clamped to the media box when the plan is applied.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="cropBox"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan CropPage(int pageNumber, PdfRectangle cropBox)
+    {
+        ArgumentNullException.ThrowIfNull(cropBox);
+        return Add(new PdfCropPageOperation(pageNumber, cropBox));
+    }
+
+    /// <summary>Changes the page size of one page and makes the content follow it.</summary>
+    /// <param name="pageNumber">The one-based page number.</param>
+    /// <param name="size">The new page size.</param>
+    /// <param name="mode">How the content follows the new size; defaults to <see cref="PdfPageResizeMode.Scale"/>.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="mode"/> is not a defined resize mode.</exception>
+    public PdfEditPlan ResizePage(
+        int pageNumber,
+        PdfPageSize size,
+        PdfPageResizeMode mode = PdfPageResizeMode.Scale)
+    {
+        if (!Enum.IsDefined(mode))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(mode),
+                mode,
+                "A page resize mode must be Scale or Preserve.");
+        }
+
+        return Add(new PdfResizePageOperation(pageNumber, size, mode));
+    }
+
     /// <summary>Removes one page.</summary>
     /// <param name="pageNumber">The one-based page number.</param>
     /// <returns>The new plan.</returns>
@@ -218,6 +251,36 @@ public sealed record PdfEditPlan
                 if (duplicate.InsertAt < 1)
                 {
                     yield return $"operation {index}: insert position {duplicate.InsertAt} is not one-based.";
+                }
+
+                break;
+
+            case PdfCropPageOperation crop:
+                if (crop.PageNumber < 1)
+                {
+                    yield return $"operation {index}: page number {crop.PageNumber} is not one-based.";
+                }
+
+                if (crop.CropBox is null)
+                {
+                    yield return $"operation {index}: the crop box is null.";
+                }
+                else if (crop.CropBox.IsEmpty)
+                {
+                    yield return $"operation {index}: the crop box encloses no area.";
+                }
+
+                break;
+
+            case PdfResizePageOperation resize:
+                if (resize.PageNumber < 1)
+                {
+                    yield return $"operation {index}: page number {resize.PageNumber} is not one-based.";
+                }
+
+                if (!Enum.IsDefined(resize.Mode))
+                {
+                    yield return $"operation {index}: resize mode '{(int)resize.Mode}' is not defined.";
                 }
 
                 break;
