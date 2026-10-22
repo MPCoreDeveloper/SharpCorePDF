@@ -234,4 +234,81 @@ public enum PdfWarningKind
     /// written with the values the caller supplied.
     /// </summary>
     XmpPacketDropped,
+
+    /// <summary>
+    /// An authored path extends beyond the page it is painted on. The path is written unchanged, so a
+    /// viewer may clip it at the page edge.
+    /// </summary>
+    PathOutsidePage,
+
+    /// <summary>
+    /// A line break was inserted while laying text out because a word did not fit and the layout
+    /// policy allowed a fallback break. The caller can see where the break was made.
+    /// </summary>
+    TextLineBreakFallback,
+
+    /// <summary>
+    /// Text that did not fit the layout's maximum width was clipped, as the caller requested with
+    /// <c>PdfTextOverflow.Clip</c>.
+    /// </summary>
+    TextOverflowClipped,
+
+    /// <summary>
+    /// A JPEG's EXIF orientation was applied to the pixels and the image was re-encoded, so the
+    /// original encoded bytes could not be embedded unchanged.
+    /// </summary>
+    ImageOrientationApplied,
+
+    /// <summary>
+    /// An image was resampled to a lower resolution before it was written.
+    /// </summary>
+    ImageDownsampled,
+
+    /// <summary>
+    /// An image's pixels were converted from one colour space to another before they were written.
+    /// </summary>
+    ImageColorConverted,
+
+    /// <summary>
+    /// A GIF carries more than one frame; the first frame was written and the later frames were
+    /// ignored.
+    /// </summary>
+    GifAdditionalFramesIgnored,
+
+    /// <summary>
+    /// A page was removed and a destination in the document still pointed at it, so the destination
+    /// was removed with the page.
+    /// </summary>
+    RemovedPageHadDestination,
+
+    /// <summary>
+    /// An annotation's destination did not resolve, so the annotation was kept without a destination.
+    /// </summary>
+    AnnotationDestinationUnresolved,
+
+    /// <summary>
+    /// An annotation had no appearance and one was generated from its properties.
+    /// </summary>
+    AnnotationAppearanceRegenerated,
+
+    /// <summary>
+    /// A form field had no appearance and one was generated from its value and style.
+    /// </summary>
+    FormAppearanceGenerated,
+
+    /// <summary>
+    /// A signature was requested with a timestamp, but no timestamp authority was available, so the
+    /// signature was written without one.
+    /// </summary>
+    SignatureTimestampUnavailable,
+
+    /// <summary>
+    /// A signature's certificate chain could not be validated; the signature was still written.
+    /// </summary>
+    SignatureChainUntrusted,
+
+    /// <summary>
+    /// A PDF/A output intent could not be copied from the source and a different intent was used.
+    /// </summary>
+    OutputIntentSubstituted,
 }

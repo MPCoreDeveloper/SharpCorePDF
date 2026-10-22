@@ -61,3 +61,55 @@ static SharpCorePDF.Infrastructure.PdfAuthoringOptions.operator ==(SharpCorePDF.
 static SharpCorePDF.Infrastructure.PdfDocumentBuilder.Create(SharpCorePDF.Infrastructure.PdfAuthoringOptions? options = null) -> SharpCorePDF.Infrastructure.PdfDocumentBuilder!
 static SharpCorePDF.Infrastructure.PdfTypeface.FromTrueType(System.ReadOnlyMemory<byte> fontProgram) -> SharpCorePDF.Infrastructure.PdfTypeface!
 static SharpCorePDF.Infrastructure.PdfTypeface.Standard(SharpCorePDF.Domain.ValueObjects.StandardFont family) -> SharpCorePDF.Infrastructure.PdfTypeface!
+override SharpCorePDF.Infrastructure.Authoring.PdfTextLine.Equals(object? obj) -> bool
+override SharpCorePDF.Infrastructure.Authoring.PdfTextLine.GetHashCode() -> int
+override SharpCorePDF.Infrastructure.Authoring.PdfTextLine.ToString() -> string!
+override SharpCorePDF.Infrastructure.Authoring.PdfTextRun.Equals(object? obj) -> bool
+override SharpCorePDF.Infrastructure.Authoring.PdfTextRun.GetHashCode() -> int
+override SharpCorePDF.Infrastructure.Authoring.PdfTextRun.ToString() -> string!
+override SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.Equals(object? obj) -> bool
+override SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.GetHashCode() -> int
+override SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.ToString() -> string!
+SharpCorePDF.Infrastructure.Authoring.PdfTextLayout
+SharpCorePDF.Infrastructure.Authoring.PdfTextLayout.Baseline.get -> double
+SharpCorePDF.Infrastructure.Authoring.PdfTextLayout.Bounds.get -> SharpCorePDF.Domain.ValueObjects.PdfRectangle!
+SharpCorePDF.Infrastructure.Authoring.PdfTextLayout.LineCount.get -> int
+SharpCorePDF.Infrastructure.Authoring.PdfTextLayout.LineHeight.get -> double
+SharpCorePDF.Infrastructure.Authoring.PdfTextLayout.Lines.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Infrastructure.Authoring.PdfTextLine!>!
+SharpCorePDF.Infrastructure.Authoring.PdfTextLayout.PdfTextLayout(SharpCorePDF.Infrastructure.Authoring.PdfTextStyle! style, System.Collections.Generic.IEnumerable<SharpCorePDF.Infrastructure.Authoring.PdfTextLine!>! lines, SharpCorePDF.Domain.ValueObjects.PdfRectangle! bounds, double lineHeight) -> void
+SharpCorePDF.Infrastructure.Authoring.PdfTextLayout.Style.get -> SharpCorePDF.Infrastructure.Authoring.PdfTextStyle!
+SharpCorePDF.Infrastructure.Authoring.PdfTextLine
+SharpCorePDF.Infrastructure.Authoring.PdfTextLine.<Clone>$() -> SharpCorePDF.Infrastructure.Authoring.PdfTextLine!
+SharpCorePDF.Infrastructure.Authoring.PdfTextLine.Baseline.get -> double
+SharpCorePDF.Infrastructure.Authoring.PdfTextLine.Equals(SharpCorePDF.Infrastructure.Authoring.PdfTextLine? other) -> bool
+SharpCorePDF.Infrastructure.Authoring.PdfTextLine.PdfTextLine(string! text, SharpCorePDF.Domain.ValueObjects.PdfPoint start, double width, double baseline, System.Collections.Generic.IEnumerable<SharpCorePDF.Infrastructure.Authoring.PdfTextRun!>? runs = null) -> void
+SharpCorePDF.Infrastructure.Authoring.PdfTextLine.Runs.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Infrastructure.Authoring.PdfTextRun!>!
+SharpCorePDF.Infrastructure.Authoring.PdfTextLine.Start.get -> SharpCorePDF.Domain.ValueObjects.PdfPoint
+SharpCorePDF.Infrastructure.Authoring.PdfTextLine.Text.get -> string!
+SharpCorePDF.Infrastructure.Authoring.PdfTextLine.Width.get -> double
+SharpCorePDF.Infrastructure.Authoring.PdfTextRun
+SharpCorePDF.Infrastructure.Authoring.PdfTextRun.<Clone>$() -> SharpCorePDF.Infrastructure.Authoring.PdfTextRun!
+SharpCorePDF.Infrastructure.Authoring.PdfTextRun.Deconstruct(out string! Text, out SharpCorePDF.Domain.ValueObjects.PdfPoint Start, out double Width) -> void
+SharpCorePDF.Infrastructure.Authoring.PdfTextRun.Equals(SharpCorePDF.Infrastructure.Authoring.PdfTextRun? other) -> bool
+SharpCorePDF.Infrastructure.Authoring.PdfTextRun.PdfTextRun(string! Text, SharpCorePDF.Domain.ValueObjects.PdfPoint Start, double Width) -> void
+SharpCorePDF.Infrastructure.Authoring.PdfTextRun.Start.get -> SharpCorePDF.Domain.ValueObjects.PdfPoint
+SharpCorePDF.Infrastructure.Authoring.PdfTextRun.Text.get -> string!
+SharpCorePDF.Infrastructure.Authoring.PdfTextRun.Width.get -> double
+SharpCorePDF.Infrastructure.Authoring.PdfTextStyle
+SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.<Clone>$() -> SharpCorePDF.Infrastructure.Authoring.PdfTextStyle!
+SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.CharacterSpacing.get -> double
+SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.Color.get -> SharpCorePDF.Domain.ValueObjects.PdfColor
+SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.Equals(SharpCorePDF.Infrastructure.Authoring.PdfTextStyle? other) -> bool
+SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.FontSize.get -> double
+SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.HorizontalScale.get -> double
+SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.Leading.get -> double
+SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.PdfTextStyle(SharpCorePDF.Infrastructure.PdfTypeface! typeface, double fontSize, SharpCorePDF.Domain.ValueObjects.PdfColor? color = null, double leading = 0, double characterSpacing = 0, double wordSpacing = 0, double horizontalScale = 100, double rise = 0) -> void
+SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.Rise.get -> double
+SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.Typeface.get -> SharpCorePDF.Infrastructure.PdfTypeface!
+SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.WordSpacing.get -> double
+static SharpCorePDF.Infrastructure.Authoring.PdfTextLine.operator !=(SharpCorePDF.Infrastructure.Authoring.PdfTextLine? left, SharpCorePDF.Infrastructure.Authoring.PdfTextLine? right) -> bool
+static SharpCorePDF.Infrastructure.Authoring.PdfTextLine.operator ==(SharpCorePDF.Infrastructure.Authoring.PdfTextLine? left, SharpCorePDF.Infrastructure.Authoring.PdfTextLine? right) -> bool
+static SharpCorePDF.Infrastructure.Authoring.PdfTextRun.operator !=(SharpCorePDF.Infrastructure.Authoring.PdfTextRun? left, SharpCorePDF.Infrastructure.Authoring.PdfTextRun? right) -> bool
+static SharpCorePDF.Infrastructure.Authoring.PdfTextRun.operator ==(SharpCorePDF.Infrastructure.Authoring.PdfTextRun? left, SharpCorePDF.Infrastructure.Authoring.PdfTextRun? right) -> bool
+static SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.operator !=(SharpCorePDF.Infrastructure.Authoring.PdfTextStyle? left, SharpCorePDF.Infrastructure.Authoring.PdfTextStyle? right) -> bool
+static SharpCorePDF.Infrastructure.Authoring.PdfTextStyle.operator ==(SharpCorePDF.Infrastructure.Authoring.PdfTextStyle? left, SharpCorePDF.Infrastructure.Authoring.PdfTextStyle? right) -> bool

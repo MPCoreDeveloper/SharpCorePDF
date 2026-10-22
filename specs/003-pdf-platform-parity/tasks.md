@@ -47,14 +47,14 @@ reproducible corpus before implementation starts.
 
 **Purpose**: Values, diagnostics and one content writer shared by authoring and editing.
 
-- [ ] T014 [P] Add `PdfPoint`, `PdfMatrix`, `PdfPath` and `PdfPathSegment` in `src/SharpCorePDF.Domain/ValueObjects/`.
-- [ ] T015 [P] Add `PdfPaint`, `PdfStroke`, `PdfGraphicsState`, `PdfLineCap`, `PdfLineJoin`, `PdfFillRule` and `PdfBlendMode` in `src/SharpCorePDF.Domain/ValueObjects/`.
-- [ ] T016 [P] Add `PdfImageSource`, `PdfImageColorSpace` and the image option values in `src/SharpCorePDF.Domain/ValueObjects/`.
-- [ ] T017 [P] Add `PdfTextStyle`, `PdfTextMetrics`, `PdfTextLayoutOptions`, `PdfTextLayout`, `PdfTextLine` and the alignment/overflow/direction enums in `src/SharpCorePDF.Domain/ValueObjects/`.
-- [ ] T018 [P] Add the new `PdfWarningKind` members and `PdfUnsupportedFeatureException` cases required by the data model in `src/SharpCorePDF.Domain/`.
-- [ ] T019 Add `ContentStreamBuilder` and `PathWriter` in `src/SharpCorePDF.Infrastructure/Authoring/`, covering `m l c v y h re f S B W n q Q cm gs d J j M G g RG rg K k CS cs SC sc SCN scn ca CA`.
-- [ ] T020 Add `GraphicsState` and the resource registry in `src/SharpCorePDF.Infrastructure/Authoring/`, including balanced `q`/`Q`, clipping and `ExtGState` alpha/blend modes.
-- [ ] T021 [P] Add failing-first tests for geometry, path serialisation and balanced graphics state in `tests/SharpCorePDF.Tests/PdfContentStreamBuilderTests.cs`.
+- [x] T014 [P] Add `PdfPoint`, `PdfMatrix`, `PdfPath` and `PdfPathSegment` in `src/SharpCorePDF.Domain/ValueObjects/`.
+- [x] T015 [P] Add `PdfPaint`, `PdfStroke`, `PdfGraphicsState`, `PdfLineCap`, `PdfLineJoin`, `PdfFillRule` and `PdfBlendMode` in `src/SharpCorePDF.Domain/ValueObjects/`.
+- [x] T016 [P] Add `PdfImageSource`, `PdfImageColorSpace` and the image option values in `src/SharpCorePDF.Domain/ValueObjects/`.
+- [x] T017 [P] Add `PdfTextStyle`, `PdfTextMetrics`, `PdfTextLayoutOptions`, `PdfTextLayout`, `PdfTextLine` and the alignment/overflow/direction enums in `src/SharpCorePDF.Domain/ValueObjects/`.
+- [x] T018 [P] Add the new `PdfWarningKind` members and `PdfUnsupportedFeatureException` cases required by the data model in `src/SharpCorePDF.Domain/`.
+- [x] T019 Add `ContentStreamBuilder` and `PathWriter` in `src/SharpCorePDF.Infrastructure/Authoring/`, covering `m l c v y h re f S B W n q Q cm gs d J j M G g RG rg K k CS cs SC sc SCN scn ca CA`.
+- [x] T020 Add `GraphicsState` and the resource registry in `src/SharpCorePDF.Infrastructure/Authoring/`, including balanced `q`/`Q`, clipping and `ExtGState` alpha/blend modes.
+- [x] T021 [P] Add failing-first tests for geometry, path serialisation and balanced graphics state in `tests/SharpCorePDF.Tests/PdfContentStreamBuilderTests.cs`.
 
 **Checkpoint**: the writer can serialise a path without a page, and the 1.0 suite is unchanged.
 
