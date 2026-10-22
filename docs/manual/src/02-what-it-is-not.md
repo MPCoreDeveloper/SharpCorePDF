@@ -17,13 +17,18 @@ a byte array, a stream or a custom `IPdfContentSource`, copies the pages you sel
 **Use instead:** a reporting or layout library that produces PDF when a page has to flow, wrap or lay
 out a table. SharpCorePDF can merge those reports afterwards and can add its own fixed-position cover.
 
-## It is not a content editor
+## It does not rewrite page content yet
 
 SharpCorePDF can change the **assembly** of an existing document: rotate a page, delete it, move it,
-duplicate it, and override the document information (Chapter 14). What it cannot do is change what a
-page draws. There is no API to replace text or an image, remove an annotation, fill a form, add a
-digital signature, add a redaction, or change a page's media box, crop box or size. Page content and
-page geometry that survive an edit are copied verbatim.
+duplicate it, and override the document information (Chapter 14). What it cannot do *in this release*
+is change what a page draws. There is no API to replace text or an image, remove an annotation, fill a
+form, add a digital signature, add a redaction, or change a page's media box, crop box or size. Page
+content and page geometry that survive an edit are copied verbatim.
+
+The 1.1 parity plan extends editing to page content, annotations, forms and page geometry. None of
+that is implemented yet, and this chapter will be rewritten as each capability ships; until then the
+boundary above is the accurate one. The capabilities that stay outside the product at every release —
+rendering, conversion, OCR, conformance validation, services and CLIs — are the sections below.
 
 **Use instead:** a viewer/editor SDK for interactive editing, a form-filling library when field values
 have to change, and a redaction product when content has to be removed. If the change is which pages

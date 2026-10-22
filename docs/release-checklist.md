@@ -57,6 +57,38 @@ is the first time the entry-point id is claimed, and G0 is what decided it. It w
 | G8 | The published packages install and open a document | the feed page is not the product | **Yes, 2026-10-17** — `1.0.0` installed from nuget.org into an empty `net11.0` console app; `AddSharpCorePDF()`, a merge of two sources (3 pages, 1,976 bytes, PDF 1.7, 0 warnings) and an inspection of the output that reported it readable with outlines | G8 below |
 | G9 | The quality gate is green on the commit being released | a release is the one build nobody re-runs; the coverage and the analysis have to be true of the tree, not of a branch it came from | **Yes, enforced twice** — `ci.yml` fails on the gate, and `publish.yml` reads it again for the tagged commit before it packs anything; see G9 below | keep it green; tag the commit whose analysis is the newest on `main` |
 
+## The 1.1 boundary amendment (CA-001)
+
+Recorded on 2026-10-21, before any 1.1 phase branch is cut. CA-001 is the entry gate for 1.1, not a
+change to the published 1.0.0 facts above.
+
+| Item | State | Evidence |
+| --- | --- | --- |
+| Constitution | **2.0.0 ratified** — Principle VII defines a PDF creation, editing and reading library and keeps rendering, conversion, OCR, conformance validation, services and CLIs outside it | `.specify/memory/constitution.md` |
+| ADR | **Accepted** — records the product decision, the PDFsharp 6.5 / PdfPig 0.1.x capability target, the exclusions and the consequences | `docs/adr/0001-pdf-platform-boundary.md` |
+| Product statement | **Updated** — README, manual preface and chapter 1, chapter 2 boundary, chapter 14 status, `docs/README.md` and `CHANGELOG.md` agree with the amendment | the same commit as this record |
+| Release version | **1.1.0 planned**; `<Version>` stays `1.0.0` until the release commit, and the 1.1 entry is written with the bump (G3) | `src/Directory.Build.props`, `CHANGELOG.md` |
+| 1.0 baseline | **561 tests pass on `net10.0` and `net11.0`; Release build has 0 warnings and 0 errors** at `a5d816c` | CI and the local release run |
+| Parity scorecard | **Phase 0 complete** — 21 rows (16 “Must”, 5 non-goal), each with an owner, a named test and a validation command; planned rows are closed by T038/T058/T079/T096 | `docs/parity.md` |
+| Parity corpus | **Phase 0 complete** — 95 deterministic fixtures (60 born-digital, 5 labelled, 14 images, 5 forms, annotations, signatures, 3 PDF/A candidates) | `tests/SharpCorePDF.Tests/Assets/parity/`, `docs/parity/README.md` |
+| API review | **Phase 0 complete** — placement, immutability, naming, no new package and no `System.Drawing`, `SkiaSharp` or `PdfSharp`/`PdfPig` reference | `docs/api/1.1-api-review.md` |
+| Measurement baseline | **Phase 0 complete** — creator and editor scenarios added before implementation; §9 records 14.69 ms and 3.64 ms against SC-002/SC-003 | `docs/measurements.md` §9 |
+
+**Before Phase 1 starts**, all of the following must be true:
+
+- [x] Constitution 2.0.0 is ratified.
+- [x] ADR-001 is accepted.
+- [x] README, the manual and the changelog describe the expanded boundary and the remaining exclusions.
+- [x] This amendment is recorded in the release checklist.
+- [x] `docs/parity.md` has no unowned “Must” row.
+- [x] The parity corpus is reproducible from `docs/tools/make-fixtures.py --parity`.
+- [x] The Phase 0 API review is recorded in `docs/api/1.1-api-review.md`.
+- [x] The 1.0 baseline measurements are re-read and the creator/editor budgets are recorded.
+
+The 1.1 release still clears G1–G9. CA-001 only settles **what the product is**; it does not replace
+the quality, determinism, performance, documentation or publishing gates.
+
+
 ## G0 — the package id, decided before the first push, not after
 
 `SharpCorePDF` is not on nuget.org. That is the last moment at which the name is still a decision

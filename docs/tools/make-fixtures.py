@@ -237,7 +237,21 @@ def make_encrypted_clear_metadata(path: Path):
 
 
 def main():
-    target = Path(sys.argv[1] if len(sys.argv) > 1 else ".")
+    arguments = sys.argv[1:]
+
+    # The parity corpus has its own generator because it is a manifest-driven tree, not one more small
+    # fixture. Keeping it beside this script means the documented command is still this script.
+    if "--parity" in arguments:
+        arguments.remove("--parity")
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+        from make_parity_fixtures import make_parity
+
+        default = Path(__file__).resolve().parents[2] / "tests" / "SharpCorePDF.Tests" / "Assets" / "parity"
+        make_parity(Path(arguments[0]) if arguments else default)
+        return
+
+    target = Path(arguments[0] if arguments else ".")
     target.mkdir(parents=True, exist_ok=True)
 
     # Naming a fixture regenerates only that one, so adding a fixture never rewrites the bytes of the

@@ -45,6 +45,7 @@
   <ItemGroup>
     <None Include="Assets\**\*.pdf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Assets\**\*.ttf" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Assets\parity\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

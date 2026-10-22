@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-21
 
-**Status**: Draft — Phase 0 in progress; constitution 2.0.0 amended, documentation and corpus pending
+**Status**: Draft — Phase 0 in progress; CA-001 complete, tasks generated, parity matrix and corpus pending
 
 **Input**: User description: "Reach PDFsharp and PdfPig feature parity through a staged, dependency-free
 PDF platform: complete authoring with vector graphics, text layout and common image formats; page

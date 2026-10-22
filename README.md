@@ -42,15 +42,20 @@
 
 # SharpCorePDF
 
-A dependency-injection first, domain-driven PDF library for .NET 10 and .NET 11, built around
-document assembly done properly: **merge, inspect and edit existing PDF files** — select, reorder,
-rotate, duplicate and delete pages, and override document information — plus the bounded authoring a
-merge often needs: a cover page written from nothing.
+A dependency-injection first, domain-driven **PDF creation, editing and reading library** for .NET 10
+and .NET 11. The merge story comes first: **merge, inspect and edit existing PDF files** — select,
+reorder, rotate, duplicate and delete pages, and override document information — plus the bounded
+authoring a merge often needs: a cover page written from nothing.
 
 Every PDF byte is read and written by this library. There is no dependency on a third-party PDF
 engine, no native binary and no licence to accept: the reader, the writer and the merge engine are
 part of the package, and they are covered by tests against real-world documents and validated with
 independent implementations (`qpdf` via `pikepdf`, and `pypdf`).
+
+The product boundary is recorded in [ADR-001](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/adr/0001-pdf-platform-boundary.md).
+Release 1.1 targets capability parity with PDFsharp 6.5 for creation and processing and PdfPig 0.1.x
+for reading and layout analysis; rendering, conversion, OCR, conformance validation, services and
+CLIs stay outside the product. Current capability is described below, not the target.
 
 ## What it does
 

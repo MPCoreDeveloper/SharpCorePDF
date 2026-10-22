@@ -1,14 +1,16 @@
 # Preface
 
-SharpCorePDF merges PDF documents in .NET. It reads the documents you give it, copies the pages you
-select into a new document, and writes that document without calling a native library, a command line
-tool or a third-party PDF engine. It also inspects documents, so a service can learn what it is about
-to merge before it commits to merging it.
+SharpCorePDF is a PDF **creation, editing and reading** library for .NET. It merges PDF documents,
+reads the images, text, annotations, forms and bookmarks they already contain, writes fixed-position
+pages from nothing, and changes the assembly of an existing document — which pages it has, in what
+order and with what rotation. It does all of that without calling a native library, a command line
+tool or a third-party PDF engine.
 
-This manual describes version **1.0.0** of the library and the public API of that version. It is
-written for the developer who has to ship a feature, not only for the developer who wants to read
-source code: every chapter explains the behaviour you can rely on, the behaviour you should not rely
-on, and the code that exercises it.
+This manual describes version **1.0.0** of the library and the page-editing additions queued for the
+next release. Chapter 14 is marked **unreleased** because it is not part of the published 1.0.0
+manual PDF. It is written for the developer who has to ship a feature, not only for the developer who
+wants to read source code: every chapter explains the behaviour you can rely on, the behaviour you
+should not rely on, and the code that exercises it.
 
 ## Who this manual is for
 
@@ -42,7 +44,7 @@ The PDF format itself numbers objects from zero internally; that detail never re
 
 **Code is complete enough to compile.** Snippets omit `using` directives and surrounding class
 declarations when they are obvious, but every method call, property and argument name is the one in
-the 1.0.0 API. The cookbook contains full methods for the recipes that need more than a fragment.
+the documented API. The cookbook contains full methods for the recipes that need more than a fragment.
 
 **Warnings are not errors.** A document that was repaired while being read still merges. A chapter
 that had to drop a bookmark still produces a result. Whenever the library makes such a decision it
@@ -53,10 +55,11 @@ as the contract, never the wording of its message.
 GitHub documentation and the PDF. If you find a discrepancy between this text and the code, the code
 is the source of truth; please open an issue so the text can be corrected.
 
-> **Version note.** This manual is written against 1.0.0. The public API is covered by an approved
-> snapshot in each project, so a change to a public member is a deliberate, reviewed event rather than
-> an accident of a refactoring. Code that compiles against 1.0.0 keeps compiling across a patch
-> release, and the changelog records every addition and every change of behaviour.
+> **Version note.** This manual is written against 1.0.0 plus the editing additions in Chapter 14.
+> The public API is covered by an approved snapshot in each project, so a change to a public member
+> is a deliberate, reviewed event rather than an accident of a refactoring. Code that compiles
+> against 1.0.0 keeps compiling across a patch release, and the changelog records every addition and
+> every change of behaviour.
 
 ## What you need
 

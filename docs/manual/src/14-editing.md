@@ -1,5 +1,9 @@
 # 14. Editing an Existing Document
 
+> **Status: unreleased.** This chapter documents the page-editing surface queued for the next release.
+> It is in the manual source so the API and its boundary are reviewed together; it is not part of the
+> published 1.0.0 manual PDF.
+
 A merge builds one document from several. An edit changes one source document and writes the result as
 a new document. The source is only read: an edit never modifies it, needs no write access to it and
 leaves no temporary file beside it.

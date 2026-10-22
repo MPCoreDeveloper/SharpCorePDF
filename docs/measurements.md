@@ -7,7 +7,8 @@ feeling, and so that a budget that does not hold is visible as a number rather t
 
 Sections 1 to 6 record merges. Section 7 records the read side: what it costs to enumerate page details and
 to copy a payload through the copy route. Section 8 records the authoring side: what it costs to write a
-page from nothing.
+page from nothing. Section 9 records the two Release 1.1 acceptance scenarios, the creator and the editor,
+before the code they measure exists.
 
 Recorded: 2026-10-15, .NET 11.0.0-rc.1.26425.128, x64, 12 logical cores, `Release`.
 **No earlier record exists** — this is the baseline, and the first measurement of the engine, so nothing
@@ -306,3 +307,67 @@ What the rows say:
 Not covered: fonts with tens of thousands of glyphs, pages with hundreds of operations, a builder shared
 by concurrent callers (it is not thread safe), and a 1000-page document — the 200-page row is the shape,
 not a limit.
+
+## 9. The Release 1.1 creator and editor baselines
+
+Recorded: 2026-10-21, .NET 11.0.0-rc.2.26504.105, x64, 12 logical cores, workstation GC, `Release`:
+
+```powershell
+dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --creator
+dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --editor
+```
+
+These rows are recorded **before** the 1.1 creator and editor implementation, so the first passing phase
+has a number to be judged against instead of a memory. The creator builds ten A4 pages with twenty
+positioned lines each and one 152 × 87 RGBA PNG; the typeface and the image bytes are prepared outside the
+measured window. The editor reads a generated 100-page document and applies 200 page operations: rotate
+every page (`Clockwise90`), duplicate page 1 fifty times, move page 150 to the front twenty-five times, and
+delete page 125 twenty-five times. The result is written to a counting stream.
+
+Both use one warm-up, five measured rounds, a full collection before each round, allocations from
+`GC.GetTotalAllocatedBytes(precise: true)`, and the median of the five rounds. The creation/modification
+date and the document identifier are fixed, so the bytes are reproducible.
+
+### Creator
+
+| Row | Allocated | Wall | Output | Live after GC |
+| --- | --- | --- | --- | --- |
+| 10 pages, 200 lines, RGBA logo | 3,484 KB | 14.69 ms | 74,094 B | 0.48 MB |
+| 10 pages, 200 lines, no image | 829 KB | 4.54 ms | 72,400 B | 0.48 MB |
+
+The RGBA row is the acceptance shape: the extra 2,655 KB and 10.15 ms are the decode, the RGB/alpha split
+and the two embedded streams of a transparent image. The no-image row is the control, and it shows that
+the page and text work is about 0.45 ms a page when the image path is not taken.
+
+### Editor
+
+| Row | Allocated | Wall | Output | Live after GC |
+| --- | --- | --- | --- | --- |
+| 200 operations, 100 to 125 pages | 1,733 KB | 3.64 ms | 80,004 B | 0.76 MB |
+
+The editor row is cheap because the source pages are simple and the writer copies the object graph once:
+200 operations cost about 8.7 KB and 0.018 ms each on this source. It is a **page-edit** baseline: the
+200 operations are 100 rotate, 50 duplicate, 25 move and 25 delete. Annotation and form edits are added to
+the same scenario in T058, and the full SC-003 scenario is re-timed there.
+
+### Budgets and the 1.0 baseline
+
+| Gate | Baseline | Budget | Verdict |
+| --- | --- | --- | --- |
+| SC-002 creator, ten pages, build/merge/read back | build 14.69 ms (no image 4.54 ms) | < 2 s | **provisional pass**, >100× headroom; the full merge/read-back leg is timed by T038 |
+| SC-003 editor, 100 pages, 200 edits | 3.64 ms to a counting sink | < 3 s | **provisional pass**, ~800× headroom; `qpdf --check` and the annotation/form legs are T058 |
+| §8 authoring allocation, RGB / RGBA / 200 pages | 669 / 416 / 1,827 KB recorded | no regression > 10% | **met**: 672 / 419 / 1,830 KB (+0.4%, +0.7%, +0.2%) |
+| §8 authoring wall time, RGB / RGBA / 200 pages | 0.80 / 1.56 / 7.17 ms recorded | no regression > 10% | **met**: 0.68 / 1.45 / 6.67 ms (faster, within run-to-run noise) |
+| §1 merge, 150 × 1.0 MB | 0.27 s / 531 MB/s recorded | 10 s / 15 MB/s | **met**: 0.265 s / 540 MB/s on re-read |
+| §1 fixed cost per source | 0.54 ms recorded | ≤ 1 ms | **met**: 0.46 ms over 150 sources, 0.30 ms over ten |
+| §1 scaling at constant bytes | 1.20x–1.52x recorded | < 1.20x | **not met**: 0.85x at 75 MB and 1.44x at 150 MB; the open item in §2 |
+
+The merge, authoring and reader code was not changed by Phase 0; the re-read is here to prove the
+harness and the machine still produce the 1.0 shape. The allocation columns are the regression gate,
+because wall time on a 12-core workstation moves by more than 10% between runs. The scaling row remains
+the one budget §2 already records as not reliably met; Phase 0 neither fixes nor hides it.
+
+Not covered by this section: the merge and read-back legs of the creator scenario, annotation and form
+edits, `qpdf --check` on the editor output, server GC, and a 1000-page source. Those are the T038/T058
+acceptance runs, not omissions from the baseline.
+

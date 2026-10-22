@@ -16,7 +16,7 @@ long-form reference for the API.
 | --- | --- |
 | [Preface](manual/src/00-preface.md) | Who the manual is for, how it is organised, and the conventions every chapter uses. |
 | [1. What SharpCorePDF Is](manual/src/01-what-it-is.md) | The four use cases, what a merge guarantees, and what "no third-party engine" means. |
-| [2. What SharpCorePDF Is Not](manual/src/02-what-it-is-not.md) | The deliberate boundary: no layout engine, no page-content editing, rendering, conversion, OCR or PDF/A validation. |
+| [2. What SharpCorePDF Is Not](manual/src/02-what-it-is-not.md) | The deliberate boundary: no layout engine, no page-content rewriting yet, rendering, conversion, OCR or PDF/A validation. |
 | [3. Installation and First Merge](manual/src/03-installation.md) | Install the package, register the services, merge two files, and read the result. |
 | [4. The Merge Plan](manual/src/04-mergeplan-basics.md) | How a plan is built, why source order is the merge order, and how validation and reuse work. |
 | [5. Page Selection](manual/src/05-page-selection.md) | The one-based selection notation, building selections in code, and preflighting a range. |
@@ -57,8 +57,12 @@ page, running footer and bookmarks stay in step.
 
 | Document | What it records |
 | --- | --- |
+| [`parity.md`](parity.md) | The 1.1 capability scorecard: reference behaviour, SharpCorePDF outcome, owner, named test and external validation command for every “Must” row. |
+| [`parity/README.md`](parity/README.md) | The fixture corpus: manifest, provenance, licence, regeneration command and the integrity test. |
+| [`api/1.1-api-review.md`](api/1.1-api-review.md) | The Phase 0 API review: placement, immutability, naming, dependency and platform rules for the 1.1 surface. |
 | [`measurements.md`](measurements.md) | The recorded cost of a merge, of a content read and of writing a page — allocations, wall time, throughput, retained heap and output bytes — and the performance and memory budgets they are read against. |
 | [`release-checklist.md`](release-checklist.md) | The gates a version has to clear before it reaches nuget.org: version, packages, tests, coverage, changelog, symbols and the dry run. |
+| [`adr/`](adr/) | Architecture decision records. ADR-001 records the creation, editing and reading product boundary and the PDFsharp/PdfPig parity target. |
 | [`foundation-readiness.md`](foundation-readiness.md) | Every .NET Foundation eligibility criterion mapped to a repository artifact, with the remaining gaps named. |
 | [`foundation-application.md`](foundation-application.md) | The eight conditions that decide when the Foundation application is filed, and the answers it will contain. |
 
@@ -67,7 +71,7 @@ page, running footer and bookmarks stay in step.
 | Tool | What it does |
 | --- | --- |
 | [`tools/validate-pdf.py`](tools/validate-pdf.py) | Runs `qpdf --check`, decodes every stream, and prints the geometry, rotation and annotations of every page; `--password` does the same for an encrypted document. |
-| [`tools/make-fixtures.py`](tools/make-fixtures.py) | Regenerates the PDF fixtures the test suite uses. |
+| [`tools/make-fixtures.py`](tools/make-fixtures.py) | Regenerates the PDF fixtures the test suite uses; `--parity` regenerates the checked-in parity corpus through [`tools/make_parity_fixtures.py`](tools/make_parity_fixtures.py). |
 
 Both tools run through `uv`, as shown in the repository README:
 

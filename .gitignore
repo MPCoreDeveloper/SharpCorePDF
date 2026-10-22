@@ -8,6 +8,10 @@ docs/manual/build/
 dotnet-sdk-*.exe
 dotnet-sdk-*.tar.gz
 
+# Python tooling (the fixture generators are imported as modules)
+__pycache__/
+*.pyc
+
 # Test output (the test project and the measurement harness both write here)
 TestResults/
 *.trx
