@@ -632,3 +632,346 @@ static SharpCorePDF.Domain.ValueObjects.PdfWarning.operator ==(SharpCorePDF.Doma
 virtual SharpCorePDF.Domain.ValueObjects.PdfEditOperation.EqualityContract.get -> System.Type!
 virtual SharpCorePDF.Domain.ValueObjects.PdfEditOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfEditOperation? other) -> bool
 virtual SharpCorePDF.Domain.ValueObjects.PdfEditOperation.PrintMembers(System.Text.StringBuilder! builder) -> bool
+~override SharpCorePDF.Domain.ValueObjects.PdfMatrix.Equals(object obj) -> bool
+~override SharpCorePDF.Domain.ValueObjects.PdfPoint.Equals(object obj) -> bool
+abstract SharpCorePDF.Domain.ValueObjects.PdfPathSegment.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfPathSegment!
+override sealed SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close.Equals(SharpCorePDF.Domain.ValueObjects.PdfPathSegment? other) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.Equals(SharpCorePDF.Domain.ValueObjects.PdfPathSegment? other) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo.Equals(SharpCorePDF.Domain.ValueObjects.PdfPathSegment? other) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo.Equals(SharpCorePDF.Domain.ValueObjects.PdfPathSegment? other) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.Equals(SharpCorePDF.Domain.ValueObjects.PdfPathSegment? other) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfImageOptions.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfImageOptions.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfImageOptions.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfMatrix.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfMatrix.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfPaint.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfPaint.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfPaint.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfPath.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfPath.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfPath.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close!
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo!
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo!
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo!
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo!
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfPathSegment.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfPoint.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfPoint.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfStroke.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfStroke.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfStroke.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.ToString() -> string!
+SharpCorePDF.Domain.Exceptions.PdfUnsupportedFeatureException.PdfUnsupportedFeatureException(string! feature, string! detail) -> void
+SharpCorePDF.Domain.ValueObjects.PdfBlendMode
+SharpCorePDF.Domain.ValueObjects.PdfBlendMode.Darken = 4 -> SharpCorePDF.Domain.ValueObjects.PdfBlendMode
+SharpCorePDF.Domain.ValueObjects.PdfBlendMode.Lighten = 5 -> SharpCorePDF.Domain.ValueObjects.PdfBlendMode
+SharpCorePDF.Domain.ValueObjects.PdfBlendMode.Multiply = 1 -> SharpCorePDF.Domain.ValueObjects.PdfBlendMode
+SharpCorePDF.Domain.ValueObjects.PdfBlendMode.Normal = 0 -> SharpCorePDF.Domain.ValueObjects.PdfBlendMode
+SharpCorePDF.Domain.ValueObjects.PdfBlendMode.Overlay = 3 -> SharpCorePDF.Domain.ValueObjects.PdfBlendMode
+SharpCorePDF.Domain.ValueObjects.PdfBlendMode.Screen = 2 -> SharpCorePDF.Domain.ValueObjects.PdfBlendMode
+SharpCorePDF.Domain.ValueObjects.PdfColorSpace
+SharpCorePDF.Domain.ValueObjects.PdfColorSpace.DeviceCMYK = 2 -> SharpCorePDF.Domain.ValueObjects.PdfColorSpace
+SharpCorePDF.Domain.ValueObjects.PdfColorSpace.DeviceGray = 0 -> SharpCorePDF.Domain.ValueObjects.PdfColorSpace
+SharpCorePDF.Domain.ValueObjects.PdfColorSpace.DeviceRGB = 1 -> SharpCorePDF.Domain.ValueObjects.PdfColorSpace
+SharpCorePDF.Domain.ValueObjects.PdfFillRule
+SharpCorePDF.Domain.ValueObjects.PdfFillRule.EvenOdd = 1 -> SharpCorePDF.Domain.ValueObjects.PdfFillRule
+SharpCorePDF.Domain.ValueObjects.PdfFillRule.NonZero = 0 -> SharpCorePDF.Domain.ValueObjects.PdfFillRule
+SharpCorePDF.Domain.ValueObjects.PdfGraphicsState
+SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfGraphicsState!
+SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.Alpha.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.BlendMode.get -> SharpCorePDF.Domain.ValueObjects.PdfBlendMode
+SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.ClipFillRule.get -> SharpCorePDF.Domain.ValueObjects.PdfFillRule
+SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.ClipPath.get -> SharpCorePDF.Domain.ValueObjects.PdfPath?
+SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.Equals(SharpCorePDF.Domain.ValueObjects.PdfGraphicsState? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.Fill.get -> SharpCorePDF.Domain.ValueObjects.PdfPaint!
+SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.PdfGraphicsState(SharpCorePDF.Domain.ValueObjects.PdfMatrix? transform = null, SharpCorePDF.Domain.ValueObjects.PdfPaint? fill = null, SharpCorePDF.Domain.ValueObjects.PdfStroke? stroke = null, double alpha = 1, SharpCorePDF.Domain.ValueObjects.PdfBlendMode blendMode = SharpCorePDF.Domain.ValueObjects.PdfBlendMode.Normal, SharpCorePDF.Domain.ValueObjects.PdfPath? clipPath = null, SharpCorePDF.Domain.ValueObjects.PdfFillRule clipFillRule = SharpCorePDF.Domain.ValueObjects.PdfFillRule.NonZero) -> void
+SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.Stroke.get -> SharpCorePDF.Domain.ValueObjects.PdfStroke?
+SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.Transform.get -> SharpCorePDF.Domain.ValueObjects.PdfMatrix
+SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace
+SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace.Cmyk = 2 -> SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace
+SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace.Gray = 0 -> SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace
+SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace.IccBased = 4 -> SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace
+SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace.Indexed = 3 -> SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace
+SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace.Rgb = 1 -> SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace
+SharpCorePDF.Domain.ValueObjects.PdfImageFormat
+SharpCorePDF.Domain.ValueObjects.PdfImageFormat.Bmp = 3 -> SharpCorePDF.Domain.ValueObjects.PdfImageFormat
+SharpCorePDF.Domain.ValueObjects.PdfImageFormat.Gif = 4 -> SharpCorePDF.Domain.ValueObjects.PdfImageFormat
+SharpCorePDF.Domain.ValueObjects.PdfImageFormat.Jpeg = 1 -> SharpCorePDF.Domain.ValueObjects.PdfImageFormat
+SharpCorePDF.Domain.ValueObjects.PdfImageFormat.Png = 2 -> SharpCorePDF.Domain.ValueObjects.PdfImageFormat
+SharpCorePDF.Domain.ValueObjects.PdfImageFormat.Unknown = 0 -> SharpCorePDF.Domain.ValueObjects.PdfImageFormat
+SharpCorePDF.Domain.ValueObjects.PdfImageOptions
+SharpCorePDF.Domain.ValueObjects.PdfImageOptions.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfImageOptions!
+SharpCorePDF.Domain.ValueObjects.PdfImageOptions.Equals(SharpCorePDF.Domain.ValueObjects.PdfImageOptions? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfImageOptions.Interpolate.get -> bool
+SharpCorePDF.Domain.ValueObjects.PdfImageOptions.PdfImageOptions(double? resolution = null, bool interpolate = true) -> void
+SharpCorePDF.Domain.ValueObjects.PdfImageOptions.Resolution.get -> double?
+SharpCorePDF.Domain.ValueObjects.PdfLineCap
+SharpCorePDF.Domain.ValueObjects.PdfLineCap.Butt = 0 -> SharpCorePDF.Domain.ValueObjects.PdfLineCap
+SharpCorePDF.Domain.ValueObjects.PdfLineCap.Round = 1 -> SharpCorePDF.Domain.ValueObjects.PdfLineCap
+SharpCorePDF.Domain.ValueObjects.PdfLineCap.Square = 2 -> SharpCorePDF.Domain.ValueObjects.PdfLineCap
+SharpCorePDF.Domain.ValueObjects.PdfLineJoin
+SharpCorePDF.Domain.ValueObjects.PdfLineJoin.Bevel = 2 -> SharpCorePDF.Domain.ValueObjects.PdfLineJoin
+SharpCorePDF.Domain.ValueObjects.PdfLineJoin.Miter = 0 -> SharpCorePDF.Domain.ValueObjects.PdfLineJoin
+SharpCorePDF.Domain.ValueObjects.PdfLineJoin.Round = 1 -> SharpCorePDF.Domain.ValueObjects.PdfLineJoin
+SharpCorePDF.Domain.ValueObjects.PdfMatrix
+SharpCorePDF.Domain.ValueObjects.PdfMatrix.A.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfMatrix.B.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfMatrix.C.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfMatrix.D.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfMatrix.E.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfMatrix.Equals(SharpCorePDF.Domain.ValueObjects.PdfMatrix other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfMatrix.F.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfMatrix.Multiply(SharpCorePDF.Domain.ValueObjects.PdfMatrix other) -> SharpCorePDF.Domain.ValueObjects.PdfMatrix
+SharpCorePDF.Domain.ValueObjects.PdfMatrix.PdfMatrix() -> void
+SharpCorePDF.Domain.ValueObjects.PdfMatrix.PdfMatrix(double a, double b, double c, double d, double e, double f) -> void
+SharpCorePDF.Domain.ValueObjects.PdfMatrix.Transform(SharpCorePDF.Domain.ValueObjects.PdfPoint point) -> SharpCorePDF.Domain.ValueObjects.PdfPoint
+SharpCorePDF.Domain.ValueObjects.PdfPaint
+SharpCorePDF.Domain.ValueObjects.PdfPaint.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfPaint!
+SharpCorePDF.Domain.ValueObjects.PdfPaint.Alpha.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfPaint.Color.get -> SharpCorePDF.Domain.ValueObjects.PdfColor
+SharpCorePDF.Domain.ValueObjects.PdfPaint.ColorSpace.get -> SharpCorePDF.Domain.ValueObjects.PdfColorSpace
+SharpCorePDF.Domain.ValueObjects.PdfPaint.Equals(SharpCorePDF.Domain.ValueObjects.PdfPaint? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPaint.FillRule.get -> SharpCorePDF.Domain.ValueObjects.PdfFillRule
+SharpCorePDF.Domain.ValueObjects.PdfPaint.PdfPaint(SharpCorePDF.Domain.ValueObjects.PdfColor color, double alpha = 1, SharpCorePDF.Domain.ValueObjects.PdfFillRule fillRule = SharpCorePDF.Domain.ValueObjects.PdfFillRule.NonZero, SharpCorePDF.Domain.ValueObjects.PdfColorSpace colorSpace = SharpCorePDF.Domain.ValueObjects.PdfColorSpace.DeviceRGB) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPath
+SharpCorePDF.Domain.ValueObjects.PdfPath.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfPath!
+SharpCorePDF.Domain.ValueObjects.PdfPath.Equals(SharpCorePDF.Domain.ValueObjects.PdfPath? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPath.IsClosed.get -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPath.PdfPath(System.Collections.Generic.IEnumerable<SharpCorePDF.Domain.ValueObjects.PdfPathSegment!>! segments, bool isClosed = false) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPath.Segments.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfPathSegment!>!
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close.Close() -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close.Equals(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.Control1.get -> SharpCorePDF.Domain.ValueObjects.PdfPoint
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.Control1.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.Control2.get -> SharpCorePDF.Domain.ValueObjects.PdfPoint
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.Control2.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.CubicTo(SharpCorePDF.Domain.ValueObjects.PdfPoint Control1, SharpCorePDF.Domain.ValueObjects.PdfPoint Control2, SharpCorePDF.Domain.ValueObjects.PdfPoint End) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.Deconstruct(out SharpCorePDF.Domain.ValueObjects.PdfPoint Control1, out SharpCorePDF.Domain.ValueObjects.PdfPoint Control2, out SharpCorePDF.Domain.ValueObjects.PdfPoint End) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.End.get -> SharpCorePDF.Domain.ValueObjects.PdfPoint
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.End.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.Equals(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo.Deconstruct(out SharpCorePDF.Domain.ValueObjects.PdfPoint Point) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo.Equals(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo.LineTo(SharpCorePDF.Domain.ValueObjects.PdfPoint Point) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo.Point.get -> SharpCorePDF.Domain.ValueObjects.PdfPoint
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo.Point.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo.Deconstruct(out SharpCorePDF.Domain.ValueObjects.PdfPoint Point) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo.Equals(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo.MoveTo(SharpCorePDF.Domain.ValueObjects.PdfPoint Point) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo.Point.get -> SharpCorePDF.Domain.ValueObjects.PdfPoint
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo.Point.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.PdfPathSegment(SharpCorePDF.Domain.ValueObjects.PdfPathSegment! original) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.Control.get -> SharpCorePDF.Domain.ValueObjects.PdfPoint
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.Control.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.Deconstruct(out SharpCorePDF.Domain.ValueObjects.PdfPoint Control, out SharpCorePDF.Domain.ValueObjects.PdfPoint End) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.End.get -> SharpCorePDF.Domain.ValueObjects.PdfPoint
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.End.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.Equals(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.QuadraticTo(SharpCorePDF.Domain.ValueObjects.PdfPoint Control, SharpCorePDF.Domain.ValueObjects.PdfPoint End) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPoint
+SharpCorePDF.Domain.ValueObjects.PdfPoint.Equals(SharpCorePDF.Domain.ValueObjects.PdfPoint other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPoint.PdfPoint() -> void
+SharpCorePDF.Domain.ValueObjects.PdfPoint.PdfPoint(double x, double y) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPoint.X.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfPoint.Y.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfStroke
+SharpCorePDF.Domain.ValueObjects.PdfStroke.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfStroke!
+SharpCorePDF.Domain.ValueObjects.PdfStroke.Cap.get -> SharpCorePDF.Domain.ValueObjects.PdfLineCap
+SharpCorePDF.Domain.ValueObjects.PdfStroke.DashArray.get -> System.Collections.Generic.IReadOnlyList<double>!
+SharpCorePDF.Domain.ValueObjects.PdfStroke.DashPhase.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfStroke.Equals(SharpCorePDF.Domain.ValueObjects.PdfStroke? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfStroke.Join.get -> SharpCorePDF.Domain.ValueObjects.PdfLineJoin
+SharpCorePDF.Domain.ValueObjects.PdfStroke.MiterLimit.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfStroke.Paint.get -> SharpCorePDF.Domain.ValueObjects.PdfPaint!
+SharpCorePDF.Domain.ValueObjects.PdfStroke.PdfStroke(SharpCorePDF.Domain.ValueObjects.PdfPaint! paint, double width = 1, SharpCorePDF.Domain.ValueObjects.PdfLineCap cap = SharpCorePDF.Domain.ValueObjects.PdfLineCap.Butt, SharpCorePDF.Domain.ValueObjects.PdfLineJoin join = SharpCorePDF.Domain.ValueObjects.PdfLineJoin.Miter, double miterLimit = 10, System.Collections.Generic.IReadOnlyList<double>? dashArray = null, double dashPhase = 0, SharpCorePDF.Domain.ValueObjects.PdfStrokeAdjustment? strokeAdjustment = null) -> void
+SharpCorePDF.Domain.ValueObjects.PdfStroke.StrokeAdjustment.get -> SharpCorePDF.Domain.ValueObjects.PdfStrokeAdjustment?
+SharpCorePDF.Domain.ValueObjects.PdfStroke.Width.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfStrokeAdjustment
+SharpCorePDF.Domain.ValueObjects.PdfStrokeAdjustment.Default = 0 -> SharpCorePDF.Domain.ValueObjects.PdfStrokeAdjustment
+SharpCorePDF.Domain.ValueObjects.PdfStrokeAdjustment.Disabled = 2 -> SharpCorePDF.Domain.ValueObjects.PdfStrokeAdjustment
+SharpCorePDF.Domain.ValueObjects.PdfStrokeAdjustment.Enabled = 1 -> SharpCorePDF.Domain.ValueObjects.PdfStrokeAdjustment
+SharpCorePDF.Domain.ValueObjects.PdfTextAlignment
+SharpCorePDF.Domain.ValueObjects.PdfTextAlignment.Center = 1 -> SharpCorePDF.Domain.ValueObjects.PdfTextAlignment
+SharpCorePDF.Domain.ValueObjects.PdfTextAlignment.Justify = 3 -> SharpCorePDF.Domain.ValueObjects.PdfTextAlignment
+SharpCorePDF.Domain.ValueObjects.PdfTextAlignment.Left = 0 -> SharpCorePDF.Domain.ValueObjects.PdfTextAlignment
+SharpCorePDF.Domain.ValueObjects.PdfTextAlignment.Right = 2 -> SharpCorePDF.Domain.ValueObjects.PdfTextAlignment
+SharpCorePDF.Domain.ValueObjects.PdfTextDirection
+SharpCorePDF.Domain.ValueObjects.PdfTextDirection.LeftToRight = 0 -> SharpCorePDF.Domain.ValueObjects.PdfTextDirection
+SharpCorePDF.Domain.ValueObjects.PdfTextDirection.RightToLeft = 1 -> SharpCorePDF.Domain.ValueObjects.PdfTextDirection
+SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions
+SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions!
+SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.Alignment.get -> SharpCorePDF.Domain.ValueObjects.PdfTextAlignment
+SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.BreakWords.get -> bool
+SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.Direction.get -> SharpCorePDF.Domain.ValueObjects.PdfTextDirection
+SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.Equals(SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.LineHeight.get -> double?
+SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.MaxWidth.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.Overflow.get -> SharpCorePDF.Domain.ValueObjects.PdfTextOverflow
+SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.PdfTextLayoutOptions(double maxWidth, SharpCorePDF.Domain.ValueObjects.PdfTextAlignment alignment = SharpCorePDF.Domain.ValueObjects.PdfTextAlignment.Left, double? lineHeight = null, bool breakWords = false, SharpCorePDF.Domain.ValueObjects.PdfTextOverflow overflow = SharpCorePDF.Domain.ValueObjects.PdfTextOverflow.Refuse, SharpCorePDF.Domain.ValueObjects.PdfTextDirection direction = SharpCorePDF.Domain.ValueObjects.PdfTextDirection.LeftToRight) -> void
+SharpCorePDF.Domain.ValueObjects.PdfTextMetrics
+SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfTextMetrics!
+SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.Ascent.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.CapHeight.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.Deconstruct(out double Ascent, out double Descent, out double LineGap, out double CapHeight, out double XHeight, out int UnitsPerEm) -> void
+SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.Descent.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.Equals(SharpCorePDF.Domain.ValueObjects.PdfTextMetrics? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.LineGap.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.LineHeight(double fontSize) -> double
+SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.PdfTextMetrics(double Ascent, double Descent, double LineGap, double CapHeight, double XHeight, int UnitsPerEm) -> void
+SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.UnitsPerEm.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.XHeight.get -> double
+SharpCorePDF.Domain.ValueObjects.PdfTextOverflow
+SharpCorePDF.Domain.ValueObjects.PdfTextOverflow.Clip = 1 -> SharpCorePDF.Domain.ValueObjects.PdfTextOverflow
+SharpCorePDF.Domain.ValueObjects.PdfTextOverflow.Continue = 2 -> SharpCorePDF.Domain.ValueObjects.PdfTextOverflow
+SharpCorePDF.Domain.ValueObjects.PdfTextOverflow.Refuse = 0 -> SharpCorePDF.Domain.ValueObjects.PdfTextOverflow
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.AnnotationAppearanceRegenerated = 48 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.AnnotationDestinationUnresolved = 47 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.FormAppearanceGenerated = 49 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.GifAdditionalFramesIgnored = 45 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ImageColorConverted = 44 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ImageDownsampled = 43 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ImageOrientationApplied = 42 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.OutputIntentSubstituted = 52 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PathOutsidePage = 39 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.RemovedPageHadDestination = 46 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.SignatureChainUntrusted = 51 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.SignatureTimestampUnavailable = 50 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.TextLineBreakFallback = 40 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.TextOverflowClipped = 41 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+static SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.Default.get -> SharpCorePDF.Domain.ValueObjects.PdfGraphicsState!
+static SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.operator !=(SharpCorePDF.Domain.ValueObjects.PdfGraphicsState? left, SharpCorePDF.Domain.ValueObjects.PdfGraphicsState? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfGraphicsState.operator ==(SharpCorePDF.Domain.ValueObjects.PdfGraphicsState? left, SharpCorePDF.Domain.ValueObjects.PdfGraphicsState? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfImageOptions.Default.get -> SharpCorePDF.Domain.ValueObjects.PdfImageOptions!
+static SharpCorePDF.Domain.ValueObjects.PdfImageOptions.operator !=(SharpCorePDF.Domain.ValueObjects.PdfImageOptions? left, SharpCorePDF.Domain.ValueObjects.PdfImageOptions? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfImageOptions.operator ==(SharpCorePDF.Domain.ValueObjects.PdfImageOptions? left, SharpCorePDF.Domain.ValueObjects.PdfImageOptions? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfMatrix.Identity.get -> SharpCorePDF.Domain.ValueObjects.PdfMatrix
+static SharpCorePDF.Domain.ValueObjects.PdfMatrix.operator !=(SharpCorePDF.Domain.ValueObjects.PdfMatrix left, SharpCorePDF.Domain.ValueObjects.PdfMatrix right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfMatrix.operator ==(SharpCorePDF.Domain.ValueObjects.PdfMatrix left, SharpCorePDF.Domain.ValueObjects.PdfMatrix right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfMatrix.Rotate(double degrees) -> SharpCorePDF.Domain.ValueObjects.PdfMatrix
+static SharpCorePDF.Domain.ValueObjects.PdfMatrix.Scale(double factor) -> SharpCorePDF.Domain.ValueObjects.PdfMatrix
+static SharpCorePDF.Domain.ValueObjects.PdfMatrix.Scale(double x, double y) -> SharpCorePDF.Domain.ValueObjects.PdfMatrix
+static SharpCorePDF.Domain.ValueObjects.PdfMatrix.Translate(double x, double y) -> SharpCorePDF.Domain.ValueObjects.PdfMatrix
+static SharpCorePDF.Domain.ValueObjects.PdfPaint.Black.get -> SharpCorePDF.Domain.ValueObjects.PdfPaint!
+static SharpCorePDF.Domain.ValueObjects.PdfPaint.operator !=(SharpCorePDF.Domain.ValueObjects.PdfPaint? left, SharpCorePDF.Domain.ValueObjects.PdfPaint? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPaint.operator ==(SharpCorePDF.Domain.ValueObjects.PdfPaint? left, SharpCorePDF.Domain.ValueObjects.PdfPaint? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPath.operator !=(SharpCorePDF.Domain.ValueObjects.PdfPath? left, SharpCorePDF.Domain.ValueObjects.PdfPath? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPath.operator ==(SharpCorePDF.Domain.ValueObjects.PdfPath? left, SharpCorePDF.Domain.ValueObjects.PdfPath? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close.operator !=(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close? left, SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close.operator ==(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close? left, SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Close? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.operator !=(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo? left, SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo.operator ==(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo? left, SharpCorePDF.Domain.ValueObjects.PdfPathSegment.CubicTo? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo.operator !=(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo? left, SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo.operator ==(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo? left, SharpCorePDF.Domain.ValueObjects.PdfPathSegment.LineTo? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo.operator !=(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo? left, SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo.operator ==(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo? left, SharpCorePDF.Domain.ValueObjects.PdfPathSegment.MoveTo? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPathSegment.operator !=(SharpCorePDF.Domain.ValueObjects.PdfPathSegment? left, SharpCorePDF.Domain.ValueObjects.PdfPathSegment? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPathSegment.operator ==(SharpCorePDF.Domain.ValueObjects.PdfPathSegment? left, SharpCorePDF.Domain.ValueObjects.PdfPathSegment? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.operator !=(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo? left, SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo.operator ==(SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo? left, SharpCorePDF.Domain.ValueObjects.PdfPathSegment.QuadraticTo? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPoint.operator !=(SharpCorePDF.Domain.ValueObjects.PdfPoint left, SharpCorePDF.Domain.ValueObjects.PdfPoint right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPoint.operator ==(SharpCorePDF.Domain.ValueObjects.PdfPoint left, SharpCorePDF.Domain.ValueObjects.PdfPoint right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPoint.Origin.get -> SharpCorePDF.Domain.ValueObjects.PdfPoint
+static SharpCorePDF.Domain.ValueObjects.PdfStroke.operator !=(SharpCorePDF.Domain.ValueObjects.PdfStroke? left, SharpCorePDF.Domain.ValueObjects.PdfStroke? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfStroke.operator ==(SharpCorePDF.Domain.ValueObjects.PdfStroke? left, SharpCorePDF.Domain.ValueObjects.PdfStroke? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.operator !=(SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions? left, SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions.operator ==(SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions? left, SharpCorePDF.Domain.ValueObjects.PdfTextLayoutOptions? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.operator !=(SharpCorePDF.Domain.ValueObjects.PdfTextMetrics? left, SharpCorePDF.Domain.ValueObjects.PdfTextMetrics? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfTextMetrics.operator ==(SharpCorePDF.Domain.ValueObjects.PdfTextMetrics? left, SharpCorePDF.Domain.ValueObjects.PdfTextMetrics? right) -> bool
+virtual SharpCorePDF.Domain.ValueObjects.PdfPathSegment.EqualityContract.get -> System.Type!
+virtual SharpCorePDF.Domain.ValueObjects.PdfPathSegment.Equals(SharpCorePDF.Domain.ValueObjects.PdfPathSegment? other) -> bool
+virtual SharpCorePDF.Domain.ValueObjects.PdfPathSegment.PrintMembers(System.Text.StringBuilder! builder) -> bool
+abstract SharpCorePDF.Domain.ValueObjects.PdfImageSource.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfImageSource!
+override sealed SharpCorePDF.Domain.ValueObjects.PdfBmpImage.Equals(SharpCorePDF.Domain.ValueObjects.PdfImageSource? other) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfGifImage.Equals(SharpCorePDF.Domain.ValueObjects.PdfImageSource? other) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfJpegImage.Equals(SharpCorePDF.Domain.ValueObjects.PdfImageSource? other) -> bool
+override sealed SharpCorePDF.Domain.ValueObjects.PdfPngImage.Equals(SharpCorePDF.Domain.ValueObjects.PdfImageSource? other) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfBmpImage.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfBmpImage!
+override SharpCorePDF.Domain.ValueObjects.PdfBmpImage.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfBmpImage.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfBmpImage.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfGifImage.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfGifImage!
+override SharpCorePDF.Domain.ValueObjects.PdfGifImage.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfGifImage.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfGifImage.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfImageSource.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfImageSource.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfImageSource.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfJpegImage.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfJpegImage!
+override SharpCorePDF.Domain.ValueObjects.PdfJpegImage.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfJpegImage.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfJpegImage.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfPngImage.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfPngImage!
+override SharpCorePDF.Domain.ValueObjects.PdfPngImage.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfPngImage.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfPngImage.ToString() -> string!
+SharpCorePDF.Domain.ValueObjects.PdfBmpImage
+SharpCorePDF.Domain.ValueObjects.PdfBmpImage.Equals(SharpCorePDF.Domain.ValueObjects.PdfBmpImage? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfBmpImage.PdfBmpImage(System.ReadOnlyMemory<byte> bmp, int widthPixels, int heightPixels, SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace colorSpace = SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace.Rgb, int bitsPerComponent = 8, bool hasAlpha = false, bool isPassthrough = false, double? naturalWidthPoints = null, double? naturalHeightPoints = null) -> void
+SharpCorePDF.Domain.ValueObjects.PdfGifImage
+SharpCorePDF.Domain.ValueObjects.PdfGifImage.Equals(SharpCorePDF.Domain.ValueObjects.PdfGifImage? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfGifImage.PdfGifImage(System.ReadOnlyMemory<byte> gif, int widthPixels, int heightPixels, SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace colorSpace = SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace.Rgb, int bitsPerComponent = 8, bool hasAlpha = false, bool isPassthrough = false, double? naturalWidthPoints = null, double? naturalHeightPoints = null) -> void
+SharpCorePDF.Domain.ValueObjects.PdfImageSource
+SharpCorePDF.Domain.ValueObjects.PdfImageSource.BitsPerComponent.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfImageSource.ColorSpace.get -> SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace
+SharpCorePDF.Domain.ValueObjects.PdfImageSource.Encoded.get -> System.ReadOnlyMemory<byte>
+SharpCorePDF.Domain.ValueObjects.PdfImageSource.Filter.get -> string!
+SharpCorePDF.Domain.ValueObjects.PdfImageSource.Format.get -> SharpCorePDF.Domain.ValueObjects.PdfImageFormat
+SharpCorePDF.Domain.ValueObjects.PdfImageSource.HasAlpha.get -> bool
+SharpCorePDF.Domain.ValueObjects.PdfImageSource.HeightPixels.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfImageSource.IsPassthrough.get -> bool
+SharpCorePDF.Domain.ValueObjects.PdfImageSource.NaturalHeightPoints.get -> double?
+SharpCorePDF.Domain.ValueObjects.PdfImageSource.NaturalWidthPoints.get -> double?
+SharpCorePDF.Domain.ValueObjects.PdfImageSource.PdfImageSource(SharpCorePDF.Domain.ValueObjects.PdfImageSource! original) -> void
+SharpCorePDF.Domain.ValueObjects.PdfImageSource.WidthPixels.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfJpegImage
+SharpCorePDF.Domain.ValueObjects.PdfJpegImage.Equals(SharpCorePDF.Domain.ValueObjects.PdfJpegImage? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfJpegImage.PdfJpegImage(System.ReadOnlyMemory<byte> jpeg, int widthPixels, int heightPixels, SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace colorSpace = SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace.Rgb, int bitsPerComponent = 8, bool hasAlpha = false, bool isPassthrough = true, double? naturalWidthPoints = null, double? naturalHeightPoints = null) -> void
+SharpCorePDF.Domain.ValueObjects.PdfPngImage
+SharpCorePDF.Domain.ValueObjects.PdfPngImage.Equals(SharpCorePDF.Domain.ValueObjects.PdfPngImage? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfPngImage.PdfPngImage(System.ReadOnlyMemory<byte> png, int widthPixels, int heightPixels, SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace colorSpace = SharpCorePDF.Domain.ValueObjects.PdfImageColorSpace.Rgb, int bitsPerComponent = 8, bool hasAlpha = false, bool isPassthrough = false, double? naturalWidthPoints = null, double? naturalHeightPoints = null) -> void
+static SharpCorePDF.Domain.ValueObjects.PdfBmpImage.operator !=(SharpCorePDF.Domain.ValueObjects.PdfBmpImage? left, SharpCorePDF.Domain.ValueObjects.PdfBmpImage? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfBmpImage.operator ==(SharpCorePDF.Domain.ValueObjects.PdfBmpImage? left, SharpCorePDF.Domain.ValueObjects.PdfBmpImage? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfGifImage.operator !=(SharpCorePDF.Domain.ValueObjects.PdfGifImage? left, SharpCorePDF.Domain.ValueObjects.PdfGifImage? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfGifImage.operator ==(SharpCorePDF.Domain.ValueObjects.PdfGifImage? left, SharpCorePDF.Domain.ValueObjects.PdfGifImage? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfImageSource.operator !=(SharpCorePDF.Domain.ValueObjects.PdfImageSource? left, SharpCorePDF.Domain.ValueObjects.PdfImageSource? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfImageSource.operator ==(SharpCorePDF.Domain.ValueObjects.PdfImageSource? left, SharpCorePDF.Domain.ValueObjects.PdfImageSource? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfJpegImage.operator !=(SharpCorePDF.Domain.ValueObjects.PdfJpegImage? left, SharpCorePDF.Domain.ValueObjects.PdfJpegImage? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfJpegImage.operator ==(SharpCorePDF.Domain.ValueObjects.PdfJpegImage? left, SharpCorePDF.Domain.ValueObjects.PdfJpegImage? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPngImage.operator !=(SharpCorePDF.Domain.ValueObjects.PdfPngImage? left, SharpCorePDF.Domain.ValueObjects.PdfPngImage? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfPngImage.operator ==(SharpCorePDF.Domain.ValueObjects.PdfPngImage? left, SharpCorePDF.Domain.ValueObjects.PdfPngImage? right) -> bool
+virtual SharpCorePDF.Domain.ValueObjects.PdfImageSource.EqualityContract.get -> System.Type!
+virtual SharpCorePDF.Domain.ValueObjects.PdfImageSource.Equals(SharpCorePDF.Domain.ValueObjects.PdfImageSource? other) -> bool
+virtual SharpCorePDF.Domain.ValueObjects.PdfImageSource.PrintMembers(System.Text.StringBuilder! builder) -> bool

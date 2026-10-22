@@ -18,6 +18,19 @@ public sealed class PdfUnsupportedFeatureException : PdfException
         Feature = feature;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PdfUnsupportedFeatureException"/> class for a
+    /// feature refused while a document is being authored, when there is no source file to name.
+    /// </summary>
+    /// <param name="feature">The name of the unsupported feature.</param>
+    /// <param name="detail">Additional, actionable detail.</param>
+    public PdfUnsupportedFeatureException(string feature, string detail)
+        : base($"The authored document uses an unsupported feature '{feature}': {detail}")
+    {
+        SourceName = "the authored document";
+        Feature = feature;
+    }
+
     /// <summary>Gets the display name of the source that uses the feature.</summary>
     public string SourceName { get; }
 
