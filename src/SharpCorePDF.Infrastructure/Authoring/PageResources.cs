@@ -98,6 +98,7 @@ internal sealed class PageResources
     private readonly AuthoringResources owner;
     private readonly Dictionary<PdfTypeface, FontResource> fonts = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<string, ImageResource> images = new(StringComparer.Ordinal);
+    private PdfDictionary? graphicsStates;
 
     /// <summary>Initializes a new instance of the <see cref="PageResources"/> class.</summary>
     /// <param name="owner">The resources of the document.</param>
@@ -125,6 +126,14 @@ internal sealed class PageResources
         var resource = owner.UseImage(image);
         images.TryAdd(resource.Key, resource);
         return resource;
+    }
+
+    /// <summary>Adds the graphics states the content stream selects.</summary>
+    /// <param name="registry">The registry of the page's content stream.</param>
+    public void AddGraphicsStates(ContentResourceRegistry registry)
+    {
+        ArgumentNullException.ThrowIfNull(registry);
+        graphicsStates = registry.ToDictionary();
     }
 
     /// <summary>Builds the resource dictionary of the page.</summary>
@@ -155,6 +164,11 @@ internal sealed class PageResources
             }
 
             resources.Set("XObject", entries);
+        }
+
+        if (graphicsStates is not null)
+        {
+            resources.Set("ExtGState", graphicsStates);
         }
 
         return resources;

@@ -78,8 +78,8 @@ in memory and mergeable with existing PDFs.
 
 ### Implementation for User Story 1
 
-- [ ] T026 [US1] Implement `PdfPageCanvas.DrawLine`, `DrawRectangle`, `DrawEllipse`, `DrawPath`, `SaveState`, `RestoreState`, `SetClip` and `SetTransform` in `src/SharpCorePDF.Infrastructure/PdfPageCanvas.cs`.
-- [ ] T027 [US1] Implement `DrawTextLayout` and the layout-to-content translation in `src/SharpCorePDF.Infrastructure/Authoring/TextLayoutWriter.cs`.
+- [x] T026 [US1] Implement `PdfPageCanvas.DrawLine`, `DrawRectangle`, `DrawEllipse`, `DrawPath`, `SaveState`, `RestoreState`, `SetClip` and `SetTransform` in `src/SharpCorePDF.Infrastructure/PdfPageCanvas.cs`.
+- [x] T027 [US1] Implement `DrawTextLayout` and the layout-to-content translation in `src/SharpCorePDF.Infrastructure/Authoring/TextLayoutWriter.cs`.
 - [ ] T028 [US1] Extend `PdfTypeface` with `Ascent`, `Descent`, `LineGap`, `CapHeight`, `XHeight`, `Measure` and the `head`/`hhea`/`maxp`/`hmtx`/`cmap` readers in `src/SharpCorePDF.Infrastructure/PdfTypeface.cs` and `src/SharpCorePDF.Infrastructure/Authoring/TrueTypeFont.cs`.
 - [ ] T029 [US1] Implement deterministic greedy wrapping, line height, left/center/right/justify alignment and overflow handling in `src/SharpCorePDF.Infrastructure/Authoring/TextLayoutWriter.cs`.
 - [ ] T030 [US1] Add `JpegImage` with SOF/SOS parsing, EXIF orientation and Adobe APP14 transform detection in `src/SharpCorePDF.Infrastructure/Authoring/JpegImage.cs`.

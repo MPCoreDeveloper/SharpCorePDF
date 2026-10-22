@@ -25,7 +25,10 @@ namespace SharpCorePDF.Infrastructure;
 /// </remarks>
 public sealed class PdfPageCanvas
 {
+    private const double EllipseControl = 0.5522847498307936;
+
     private readonly List<IPageOperation> operations = [];
+    private int stateDepth;
 
     internal PdfPageCanvas(PdfPageSize size)
     {
@@ -95,6 +98,218 @@ public sealed class PdfPageCanvas
         return this;
     }
 
+    /// <summary>Draws laid-out text, placing the top-left of its bounds at a point.</summary>
+    /// <param name="layout">The layout to draw.</param>
+    /// <param name="origin">The top-left corner the layout is drawn from, in points.</param>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    /// <remarks>
+    /// Every run of every line is one text operation, so the characters can be extracted again. The
+    /// style's character spacing, word spacing, horizontal scale and rise are written as PDF text state.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="layout"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The origin is not finite.</exception>
+    public PdfPageCanvas DrawTextLayout(PdfTextLayout layout, PdfPoint origin)
+    {
+        ArgumentNullException.ThrowIfNull(layout);
+        ValidatePosition(origin.X, origin.Y, nameof(origin), nameof(origin));
+
+        var left = layout.Bounds.IsEmpty ? 0d : layout.Bounds.Left;
+        var top = layout.Bounds.IsEmpty ? 0d : layout.Bounds.Top;
+        var style = layout.Style;
+
+        foreach (var line in layout.Lines)
+        {
+            foreach (var run in line.Runs)
+            {
+                if (run.Text.Length == 0)
+                {
+                    continue;
+                }
+
+                operations.Add(new TextOperation(
+                    run.Text,
+                    origin.X + run.Start.X - left,
+                    origin.Y + line.Baseline - top,
+                    style.Typeface,
+                    style.FontSize,
+                    style.Color,
+                    style.CharacterSpacing,
+                    style.WordSpacing,
+                    style.HorizontalScale,
+                    style.Rise));
+            }
+        }
+
+        return this;
+    }
+
+    /// <summary>Draws one straight line.</summary>
+    /// <param name="from">The start point, in points from the top-left corner.</param>
+    /// <param name="to">The end point, in points from the top-left corner.</param>
+    /// <param name="stroke">The line width, colour and dash pattern.</param>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="stroke"/> is <see langword="null"/>.</exception>
+    public PdfPageCanvas DrawLine(PdfPoint from, PdfPoint to, PdfStroke stroke)
+    {
+        ArgumentNullException.ThrowIfNull(stroke);
+
+        return AddPath(
+            new PdfPath([new PdfPathSegment.MoveTo(from), new PdfPathSegment.LineTo(to)]),
+            fill: null,
+            stroke);
+    }
+
+    /// <summary>Draws a rectangle, filled, stroked, or both.</summary>
+    /// <param name="rectangle">The rectangle, in points from the top-left corner.</param>
+    /// <param name="fill">The fill, or <see langword="null"/> for no fill.</param>
+    /// <param name="stroke">The outline, or <see langword="null"/> for no outline.</param>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="rectangle"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The rectangle encloses no area, or neither a fill nor a stroke is supplied.</exception>
+    public PdfPageCanvas DrawRectangle(PdfRectangle rectangle, PdfPaint? fill, PdfStroke? stroke)
+    {
+        ArgumentNullException.ThrowIfNull(rectangle);
+        EnsurePaint(fill, stroke);
+
+        if (rectangle.IsEmpty)
+        {
+            throw new ArgumentException(
+                "A rectangle drawn on a page needs a width and a height greater than zero.",
+                nameof(rectangle));
+        }
+
+        var path = new PdfPath(
+            [
+                new PdfPathSegment.MoveTo(new PdfPoint(rectangle.Left, rectangle.Bottom)),
+                new PdfPathSegment.LineTo(new PdfPoint(rectangle.Right, rectangle.Bottom)),
+                new PdfPathSegment.LineTo(new PdfPoint(rectangle.Right, rectangle.Top)),
+                new PdfPathSegment.LineTo(new PdfPoint(rectangle.Left, rectangle.Top)),
+            ],
+            isClosed: true);
+
+        return AddPath(path, fill, stroke);
+    }
+
+    /// <summary>Draws an ellipse that fills a rectangle.</summary>
+    /// <param name="bounds">The box the ellipse fills, in points from the top-left corner.</param>
+    /// <param name="fill">The fill, or <see langword="null"/> for no fill.</param>
+    /// <param name="stroke">The outline, or <see langword="null"/> for no outline.</param>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    /// <remarks>The ellipse is four cubic Bézier curves, the approximation PDF viewers themselves use.</remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="bounds"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The box encloses no area, or neither a fill nor a stroke is supplied.</exception>
+    public PdfPageCanvas DrawEllipse(PdfRectangle bounds, PdfPaint? fill, PdfStroke? stroke)
+    {
+        ArgumentNullException.ThrowIfNull(bounds);
+        EnsurePaint(fill, stroke);
+
+        if (bounds.IsEmpty)
+        {
+            throw new ArgumentException(
+                "An ellipse drawn on a page needs a width and a height greater than zero.",
+                nameof(bounds));
+        }
+
+        var centerX = bounds.Left + (bounds.Width / 2.0);
+        var centerY = bounds.Bottom + (bounds.Height / 2.0);
+        var radiusX = bounds.Width / 2.0;
+        var radiusY = bounds.Height / 2.0;
+        var controlX = radiusX * EllipseControl;
+        var controlY = radiusY * EllipseControl;
+
+        var path = new PdfPath(
+            [
+                new PdfPathSegment.MoveTo(new PdfPoint(centerX + radiusX, centerY)),
+                new PdfPathSegment.CubicTo(
+                    new PdfPoint(centerX + radiusX, centerY + controlY),
+                    new PdfPoint(centerX + controlX, centerY + radiusY),
+                    new PdfPoint(centerX, centerY + radiusY)),
+                new PdfPathSegment.CubicTo(
+                    new PdfPoint(centerX - controlX, centerY + radiusY),
+                    new PdfPoint(centerX - radiusX, centerY + controlY),
+                    new PdfPoint(centerX - radiusX, centerY)),
+                new PdfPathSegment.CubicTo(
+                    new PdfPoint(centerX - radiusX, centerY - controlY),
+                    new PdfPoint(centerX - controlX, centerY - radiusY),
+                    new PdfPoint(centerX, centerY - radiusY)),
+                new PdfPathSegment.CubicTo(
+                    new PdfPoint(centerX + controlX, centerY - radiusY),
+                    new PdfPoint(centerX + radiusX, centerY - controlY),
+                    new PdfPoint(centerX + radiusX, centerY)),
+            ],
+            isClosed: true);
+
+        return AddPath(path, fill, stroke);
+    }
+
+    /// <summary>Draws a path, filled, stroked, or both.</summary>
+    /// <param name="path">The path, in points from the top-left corner.</param>
+    /// <param name="fill">The fill, or <see langword="null"/> for no fill.</param>
+    /// <param name="stroke">The outline, or <see langword="null"/> for no outline.</param>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Neither a fill nor a stroke is supplied.</exception>
+    public PdfPageCanvas DrawPath(PdfPath path, PdfPaint? fill, PdfStroke? stroke)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        EnsurePaint(fill, stroke);
+
+        return AddPath(path, fill, stroke);
+    }
+
+    /// <summary>Saves the graphics state so a transform, clip or paint can be undone.</summary>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    public PdfPageCanvas SaveState()
+    {
+        operations.Add(new SaveStateOperation());
+        stateDepth++;
+        return this;
+    }
+
+    /// <summary>Restores the graphics state saved by the matching <see cref="SaveState"/>.</summary>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    /// <exception cref="InvalidOperationException">No save is waiting to be restored.</exception>
+    public PdfPageCanvas RestoreState()
+    {
+        if (stateDepth == 0)
+        {
+            throw new InvalidOperationException(
+                "The graphics state cannot be restored because no matching SaveState was made.");
+        }
+
+        operations.Add(new RestoreStateOperation());
+        stateDepth--;
+        return this;
+    }
+
+    /// <summary>Restricts subsequent drawing to the inside of a path.</summary>
+    /// <param name="path">The clipping path, in points from the top-left corner.</param>
+    /// <param name="fillRule">The rule that decides what is inside.</param>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="fillRule"/> is not defined.</exception>
+    public PdfPageCanvas SetClip(PdfPath path, PdfFillRule fillRule = PdfFillRule.NonZero)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+
+        if (!Enum.IsDefined(fillRule))
+        {
+            throw new ArgumentOutOfRangeException(nameof(fillRule), fillRule, "The fill rule is not one the engine defines.");
+        }
+
+        operations.Add(new ClipOperation(path, fillRule));
+        return this;
+    }
+
+    /// <summary>Concatenates a transform onto the current one for subsequent drawing.</summary>
+    /// <param name="matrix">The transform, in the canvas's top-left coordinate system.</param>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    public PdfPageCanvas SetTransform(SharpCorePDF.Domain.ValueObjects.PdfMatrix matrix)
+    {
+        operations.Add(new TransformOperation(matrix));
+        return this;
+    }
+
     /// <summary>Draws a PNG image at an explicit size.</summary>
     /// <param name="png">The bytes of a PNG file.</param>
     /// <param name="x">The x coordinate of the top-left corner, in points from the left edge.</param>
@@ -140,6 +355,29 @@ public sealed class PdfPageCanvas
             y,
             image.NaturalWidthPoints ?? image.Width,
             image.NaturalHeightPoints ?? image.Height);
+    }
+
+    /// <summary>Records a path and the paint that finishes it.</summary>
+    /// <param name="path">The path.</param>
+    /// <param name="fill">The fill, or null.</param>
+    /// <param name="stroke">The stroke, or null.</param>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    private PdfPageCanvas AddPath(PdfPath path, PdfPaint? fill, PdfStroke? stroke)
+    {
+        operations.Add(new PathOperation(path, fill, stroke));
+        return this;
+    }
+
+    /// <summary>Refuses a path that would be constructed but never painted.</summary>
+    /// <param name="fill">The fill, or null.</param>
+    /// <param name="stroke">The stroke, or null.</param>
+    /// <exception cref="ArgumentException">Neither a fill nor a stroke is supplied.</exception>
+    private static void EnsurePaint(PdfPaint? fill, PdfStroke? stroke)
+    {
+        if (fill is null && stroke is null)
+        {
+            throw new ArgumentException("A path needs a fill, a stroke, or both before it can be drawn.");
+        }
     }
 
     /// <summary>Validates the size an image is drawn at.</summary>
@@ -202,13 +440,21 @@ internal interface IPageOperation;
 /// <param name="Typeface">The face the text is set in.</param>
 /// <param name="Size">The font size in points.</param>
 /// <param name="Color">The fill colour.</param>
+/// <param name="CharacterSpacing">Extra space after every glyph, in points.</param>
+/// <param name="WordSpacing">Extra space after every space character, in points.</param>
+/// <param name="HorizontalScale">The horizontal scale as a percentage.</param>
+/// <param name="Rise">The baseline offset, in points.</param>
 internal sealed record TextOperation(
     string Text,
     double X,
     double Y,
     PdfTypeface Typeface,
     double Size,
-    PdfColor Color) : IPageOperation;
+    PdfColor Color,
+    double CharacterSpacing = 0d,
+    double WordSpacing = 0d,
+    double HorizontalScale = 100d,
+    double Rise = 0d) : IPageOperation;
 
 /// <summary>One image at a position and size.</summary>
 /// <param name="Image">The parsed image.</param>
@@ -222,3 +468,29 @@ internal sealed record ImageOperation(
     double Y,
     double Width,
     double Height) : IPageOperation;
+
+/// <summary>One path and the fill and stroke that finish it.</summary>
+/// <param name="Path">The path.</param>
+/// <param name="Fill">The fill, or null for no fill.</param>
+/// <param name="Stroke">The stroke, or null for no outline.</param>
+internal sealed record PathOperation(
+    PdfPath Path,
+    PdfPaint? Fill,
+    PdfStroke? Stroke) : IPageOperation;
+
+/// <summary>A saved graphics state (<c>q</c>).</summary>
+internal sealed record SaveStateOperation : IPageOperation;
+
+/// <summary>A restored graphics state (<c>Q</c>).</summary>
+internal sealed record RestoreStateOperation : IPageOperation;
+
+/// <summary>A clipping path (<c>W</c> or <c>W*</c> followed by <c>n</c>).</summary>
+/// <param name="Path">The clipping path.</param>
+/// <param name="FillRule">The rule that decides what is inside.</param>
+internal sealed record ClipOperation(
+    PdfPath Path,
+    PdfFillRule FillRule) : IPageOperation;
+
+/// <summary>A transform concatenated onto the current one (<c>cm</c>).</summary>
+/// <param name="Matrix">The transform, in the canvas's top-left coordinate system.</param>
+internal sealed record TransformOperation(SharpCorePDF.Domain.ValueObjects.PdfMatrix Matrix) : IPageOperation;
