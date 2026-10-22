@@ -278,7 +278,7 @@ internal sealed class ContentStreamBuilder
         content.Advance(length);
     }
 
-    private void WriteByte(byte value)
+    internal void WriteByte(byte value)
     {
         content.GetSpan(1)[0] = value;
         content.Advance(1);

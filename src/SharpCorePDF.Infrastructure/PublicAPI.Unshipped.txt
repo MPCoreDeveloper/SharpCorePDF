@@ -30,10 +30,19 @@ SharpCorePDF.Infrastructure.PdfEditEngine.PdfEditEngine(SharpCorePDF.Infrastruct
 SharpCorePDF.Infrastructure.PdfEngineOptions.MaxInlineContentBytes.get -> int
 SharpCorePDF.Infrastructure.PdfEngineOptions.MaxInlineContentBytes.init -> void
 SharpCorePDF.Infrastructure.PdfPageCanvas
+SharpCorePDF.Infrastructure.PdfPageCanvas.DrawEllipse(SharpCorePDF.Domain.ValueObjects.PdfRectangle! bounds, SharpCorePDF.Domain.ValueObjects.PdfPaint? fill, SharpCorePDF.Domain.ValueObjects.PdfStroke? stroke) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
 SharpCorePDF.Infrastructure.PdfPageCanvas.DrawImage(System.ReadOnlyMemory<byte> png, double x, double y, double width, double height) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
 SharpCorePDF.Infrastructure.PdfPageCanvas.DrawImage(System.ReadOnlyMemory<byte> png, double x, double y) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.DrawLine(SharpCorePDF.Domain.ValueObjects.PdfPoint from, SharpCorePDF.Domain.ValueObjects.PdfPoint to, SharpCorePDF.Domain.ValueObjects.PdfStroke! stroke) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.DrawPath(SharpCorePDF.Domain.ValueObjects.PdfPath! path, SharpCorePDF.Domain.ValueObjects.PdfPaint? fill, SharpCorePDF.Domain.ValueObjects.PdfStroke? stroke) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.DrawRectangle(SharpCorePDF.Domain.ValueObjects.PdfRectangle! rectangle, SharpCorePDF.Domain.ValueObjects.PdfPaint? fill, SharpCorePDF.Domain.ValueObjects.PdfStroke? stroke) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
 SharpCorePDF.Infrastructure.PdfPageCanvas.DrawText(string! text, double x, double y, SharpCorePDF.Infrastructure.PdfTypeface! typeface, double fontSize, SharpCorePDF.Domain.ValueObjects.PdfColor? color = null) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.DrawTextLayout(SharpCorePDF.Infrastructure.Authoring.PdfTextLayout! layout, SharpCorePDF.Domain.ValueObjects.PdfPoint origin) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
 SharpCorePDF.Infrastructure.PdfPageCanvas.Height.get -> double
+SharpCorePDF.Infrastructure.PdfPageCanvas.RestoreState() -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.SaveState() -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.SetClip(SharpCorePDF.Domain.ValueObjects.PdfPath! path, SharpCorePDF.Domain.ValueObjects.PdfFillRule fillRule = SharpCorePDF.Domain.ValueObjects.PdfFillRule.NonZero) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.SetTransform(SharpCorePDF.Domain.ValueObjects.PdfMatrix matrix) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
 SharpCorePDF.Infrastructure.PdfPageCanvas.Size.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
 SharpCorePDF.Infrastructure.PdfPageCanvas.Width.get -> double
 SharpCorePDF.Infrastructure.PdfPageContentReader

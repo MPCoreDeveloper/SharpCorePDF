@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
-using System.Text;
-using SharpCorePDF.Infrastructure.Pdf;
+using SharpCorePDF.Domain.ValueObjects;
 
 namespace SharpCorePDF.Infrastructure.Authoring;
 
@@ -24,7 +23,7 @@ internal static class PageContentWriter
     /// <returns>The content stream.</returns>
     public static byte[] Write(PdfPageCanvas page, PageResources resources, IncrementalHash hash)
     {
-        using var content = new MemoryStream();
+        var content = new ContentStreamBuilder();
 
         foreach (var operation in page.Operations)
         {
@@ -37,10 +36,31 @@ internal static class PageContentWriter
                 case ImageOperation image:
                     WriteImage(content, page, image, resources);
                     break;
+
+                case PathOperation path:
+                    WritePath(content, page, path);
+                    break;
+
+                case SaveStateOperation:
+                    content.SaveState();
+                    break;
+
+                case RestoreStateOperation:
+                    content.RestoreState();
+                    break;
+
+                case ClipOperation clip:
+                    content.SetClip(ToPdfPath(clip.Path, page.Height), clip.FillRule);
+                    break;
+
+                case TransformOperation transform:
+                    content.Transform(ToPdfMatrix(transform.Matrix, page.Height));
+                    break;
             }
         }
 
-        var bytes = content.ToArray();
+        resources.AddGraphicsStates(content.Resources);
+        var bytes = content.Build();
         hash.AppendData(bytes);
         return bytes;
     }
@@ -51,34 +71,11 @@ internal static class PageContentWriter
     /// <param name="text">The operation.</param>
     /// <param name="resources">The resources of the page.</param>
     private static void WriteText(
-        Stream destination,
+        ContentStreamBuilder destination,
         PdfPageCanvas page,
         TextOperation text,
-        PageResources resources)
-    {
-        var font = resources.Font(text.Typeface);
-        var codes = font.Encode(text.Text, out var hexadecimal);
-
-        Write(destination, "BT\n");
-        Write(destination, "/");
-        Write(destination, font.Name);
-        Write(destination, " ");
-        WriteNumber(destination, text.Size);
-        Write(destination, " Tf\n");
-        WriteNumber(destination, text.Color.Red / 255d);
-        Write(destination, " ");
-        WriteNumber(destination, text.Color.Green / 255d);
-        Write(destination, " ");
-        WriteNumber(destination, text.Color.Blue / 255d);
-        Write(destination, " rg\n");
-        Write(destination, "1 0 0 1 ");
-        WriteNumber(destination, text.X);
-        Write(destination, " ");
-        WriteNumber(destination, page.Height - text.Y);
-        Write(destination, " Tm\n");
-        WriteTextString(destination, codes, hexadecimal);
-        Write(destination, " Tj\nET\n");
-    }
+        PageResources resources) =>
+        TextLayoutWriter.Write(destination, page, text, resources);
 
     /// <summary>Writes one image operation.</summary>
     /// <param name="destination">The content stream.</param>
@@ -86,99 +83,82 @@ internal static class PageContentWriter
     /// <param name="image">The operation.</param>
     /// <param name="resources">The resources of the page.</param>
     private static void WriteImage(
-        Stream destination,
+        ContentStreamBuilder destination,
         PdfPageCanvas page,
         ImageOperation image,
         PageResources resources)
     {
         var resource = resources.Image(image.Image);
 
-        Write(destination, "q\n");
-        WriteNumber(destination, image.Width);
-        Write(destination, " 0 0 ");
-        WriteNumber(destination, image.Height);
-        Write(destination, " ");
-        WriteNumber(destination, image.X);
-        Write(destination, " ");
-        WriteNumber(destination, page.Height - image.Y - image.Height);
-        Write(destination, " cm\n/");
-        Write(destination, resource.Name);
-        Write(destination, " Do\nQ\n");
+        destination.Write("q\n");
+        destination.WriteNumber(image.Width);
+        destination.Write(" 0 0 ");
+        destination.WriteNumber(image.Height);
+        destination.Write(" ");
+        destination.WriteNumber(image.X);
+        destination.Write(" ");
+        destination.WriteNumber(page.Height - image.Y - image.Height);
+        destination.Write(" cm\n/");
+        destination.Write(resource.Name);
+        destination.Write(" Do\nQ\n");
     }
 
-    /// <summary>Writes a string operand in the form its font needs.</summary>
+    /// <summary>Writes one path operation.</summary>
     /// <param name="destination">The content stream.</param>
-    /// <param name="codes">The codes of the string.</param>
-    /// <param name="hexadecimal">Whether the codes are written as a hexadecimal string.</param>
-    private static void WriteTextString(Stream destination, byte[] codes, bool hexadecimal)
+    /// <param name="page">The page, which states the height canvas coordinates are measured from.</param>
+    /// <param name="path">The operation.</param>
+    private static void WritePath(ContentStreamBuilder destination, PdfPageCanvas page, PathOperation path) =>
+        destination.DrawPath(ToPdfPath(path.Path, page.Height), path.Fill, path.Stroke);
+
+    /// <summary>Converts a path from top-left canvas coordinates to PDF user space.</summary>
+    /// <param name="path">The path.</param>
+    /// <param name="height">The height of the page.</param>
+    /// <returns>The path in PDF user space.</returns>
+    private static PdfPath ToPdfPath(PdfPath path, double height)
     {
-        if (hexadecimal)
+        var segments = new PdfPathSegment[path.Segments.Count];
+
+        for (var index = 0; index < segments.Length; index++)
         {
-            destination.WriteByte((byte)'<');
-
-            foreach (var code in codes)
+            segments[index] = path.Segments[index] switch
             {
-                destination.WriteByte((byte)HexDigit(code >> 4));
-                destination.WriteByte((byte)HexDigit(code & 0x0F));
-            }
-
-            destination.WriteByte((byte)'>');
-            return;
+                PdfPathSegment.MoveTo move => new PdfPathSegment.MoveTo(ToPdfPoint(move.Point, height)),
+                PdfPathSegment.LineTo line => new PdfPathSegment.LineTo(ToPdfPoint(line.Point, height)),
+                PdfPathSegment.CubicTo cubic => new PdfPathSegment.CubicTo(
+                    ToPdfPoint(cubic.Control1, height),
+                    ToPdfPoint(cubic.Control2, height),
+                    ToPdfPoint(cubic.End, height)),
+                PdfPathSegment.QuadraticTo quadratic => new PdfPathSegment.QuadraticTo(
+                    ToPdfPoint(quadratic.Control, height),
+                    ToPdfPoint(quadratic.End, height)),
+                PdfPathSegment.Close close => close,
+                var unknown => throw new ArgumentException(
+                    $"The path segment {unknown.GetType().Name} is not one the engine writes.",
+                    nameof(path)),
+            };
         }
 
-        destination.WriteByte((byte)'(');
-
-        foreach (var code in codes)
-        {
-            switch (code)
-            {
-                case (byte)'(':
-                case (byte)')':
-                case (byte)'\\':
-                    destination.WriteByte((byte)'\\');
-                    destination.WriteByte(code);
-                    break;
-
-                case < 32:
-                case > 126:
-                    destination.WriteByte((byte)'\\');
-                    destination.WriteByte((byte)('0' + ((code >> 6) & 0x07)));
-                    destination.WriteByte((byte)('0' + ((code >> 3) & 0x07)));
-                    destination.WriteByte((byte)('0' + (code & 0x07)));
-                    break;
-
-                default:
-                    destination.WriteByte(code);
-                    break;
-            }
-        }
-
-        destination.WriteByte((byte)')');
+        return new PdfPath(segments, path.IsClosed);
     }
 
-    /// <summary>Writes a number in the form PDF expects.</summary>
-    /// <param name="destination">The content stream.</param>
-    /// <param name="value">The number.</param>
-    private static void WriteNumber(Stream destination, double value)
-    {
-        Span<byte> scratch = stackalloc byte[32];
+    /// <summary>Converts a point from top-left canvas coordinates to PDF user space.</summary>
+    /// <param name="point">The point.</param>
+    /// <param name="height">The height of the page.</param>
+    /// <returns>The point in PDF user space.</returns>
+    private static PdfPoint ToPdfPoint(PdfPoint point, double height) => new(point.X, height - point.Y);
 
-        if (!PdfNumberFormat.TryFormat(value, scratch, out var written))
-        {
-            throw new InvalidOperationException($"The number {value} could not be formatted for a content stream.");
-        }
-
-        destination.Write(scratch[..written]);
-    }
-
-    /// <summary>Writes an ASCII keyword.</summary>
-    /// <param name="destination">The content stream.</param>
-    /// <param name="text">The keyword.</param>
-    private static void Write(Stream destination, string text) =>
-        destination.Write(Encoding.ASCII.GetBytes(text));
-
-    /// <summary>Gets the hexadecimal digit of a nibble.</summary>
-    /// <param name="value">The nibble.</param>
-    /// <returns>The digit, as an ASCII code.</returns>
-    private static char HexDigit(int value) => (char)(value < 10 ? '0' + value : 'A' + value - 10);
+    /// <summary>
+    /// Converts a transform stated in top-left coordinates to the equivalent transform in PDF user space.
+    /// </summary>
+    /// <param name="matrix">The transform.</param>
+    /// <param name="height">The height of the page.</param>
+    /// <returns>The transform to concatenate with <c>cm</c>.</returns>
+    private static SharpCorePDF.Domain.ValueObjects.PdfMatrix ToPdfMatrix(SharpCorePDF.Domain.ValueObjects.PdfMatrix matrix, double height) =>
+        new(
+            matrix.A,
+            -matrix.B,
+            -matrix.C,
+            matrix.D,
+            (matrix.C * height) + matrix.E,
+            height - (matrix.D * height) - matrix.F);
 }
