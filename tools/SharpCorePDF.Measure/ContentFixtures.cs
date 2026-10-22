@@ -14,7 +14,23 @@ namespace SharpCorePDF.Measure;
 /// bytes it measured. Like the rest of the harness this is not part of the library.
 /// </remarks>
 internal static class ContentFixtures
-    {
+{
+    /// <summary>
+    /// The RGBA logo the creator row draws. It is a 152 by 87 image with an alpha channel, so the row
+    /// measures the decode-and-split path rather than a pass-through PNG.
+    /// </summary>
+    public static byte[] RgbaLogo => Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAJgAAABXCAYAAAD4fIxAAAAA6klEQVR42u3awQkAIAwEwevEPmwm/VehLzsQDDgH20CYZ5LLG7OWdApgAkyAASbABJgAA0yACTABBpgAE2ACDDABJsAcVYAJMAEGmAATYAIMMAEmwAQYYAJMgEmACTABBpgAE2ACDDABJsAEGGACTIC16vUAAwwwwAADDDDAAAMMMMAAAwwwwAADDDDAAAMMMMAAAwwwwAADDDDAAAPMP5gAE2CACTABJsAAE2ACTIABJsAEmAADTIAJMAkwASbAABNgAkyAASbABJgAA0yACTABBpgAE2CACTABJsAAE2ACTIABJsAEmP5sA9V2M2TFwZ3JAAAAAElFTkSuQmCC");
+
+    /// <summary>Returns the one-hundred-page source the editor row applies its operations to.</summary>
+    /// <param name="pages">The number of pages in the source.</param>
+    /// <returns>The bytes of the document.</returns>
+    /// <remarks>
+    /// The source is generated here rather than read from the corpus, so the editor row states the
+    /// exact page count and text it measured and does not depend on a checked-in file changing.
+    /// </remarks>
+    public static byte[] EditorSource(int pages) => Text(pages);
+
     /// <summary>Builds a document with one page per requested page, each drawing the same image.</summary>
     /// <param name="pages">The number of pages.</param>
     /// <returns>The bytes of the document.</returns>

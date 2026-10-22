@@ -1,7 +1,8 @@
 # Implementation Plan: PDF Platform Parity
 
 **Feature**: `003-pdf-platform-parity` | **Spec**: [spec.md](./spec.md) | **Status**: Design complete;
-Phase 0 in progress (CA-001 amendment applied; documentation, ADR and corpus pending)
+Phase 0 complete (CA-001 closed; `tasks.md` generated; parity matrix, corpus, API review and measurement
+scenarios recorded). Phase 1 is unblocked.
 
 ## Summary
 
@@ -430,9 +431,10 @@ Release 1.1 is tagged only when all of the following are true:
 
 ## Next Actions
 
-1. Review and merge **CA-001**; do not start Phase 1 before it lands.
-2. Create `docs/parity.md` and the Phase 0 corpus; run `/speckit-tasks` to break Phase 0 and Phase 1
-   into executable tasks.
+1. Review and merge **CA-001**; do not start Phase 1 before it lands. **Complete** in `a5d816c`
+   plus the ADR, documentation and release-checklist record.
+2. Execute Phase 0 tasks T003–T013 in [`tasks.md`](./tasks.md): create `docs/parity.md`, the corpus,
+   the API review and the measurement scenarios; run `/speckit-tasks` again only if the design changes.
 3. Re-run the 1.0 measurements and record the baseline for the creator and editor scenarios.
 4. Start Phase 1 only after the gate in `spec.md` is satisfied.
 

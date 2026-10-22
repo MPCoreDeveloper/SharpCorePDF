@@ -130,6 +130,12 @@ against an empty feed.
 
 ### Changed
 
+- **The product boundary now includes creation and editing.** Constitution 2.0.0 and
+  [ADR-001](docs/adr/0001-pdf-platform-boundary.md) define SharpCorePDF as a dependency-free PDF
+  creation, editing and reading library. The 1.1 target is capability parity with PDFsharp 6.5 for
+  creation and processing and PdfPig 0.1.x for reading and layout analysis; rendering, conversion,
+  OCR, conformance validation, services and CLIs stay outside the product. This release implements
+  page-assembly editing only — page content, annotations and forms are still copied, not rewritten.
 - **A release waits for the quality gate, on the commit being released.** `publish.yml` reads the SonarCloud
   verdict in a `sonar-gate` job that runs before the build, before the pack and before the OIDC exchange, and
   stops when the gate is red, when the snapshot it judged carried no coverage report, or when the newest

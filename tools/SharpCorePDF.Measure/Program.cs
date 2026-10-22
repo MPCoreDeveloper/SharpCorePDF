@@ -8,6 +8,7 @@ using SharpCorePDF.Domain.Ports;
 using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure;
 using SharpCorePDF.Infrastructure.Extensions;
+using SharpCorePDF.Infrastructure.Pdf;
 using SharpCorePDF.Infrastructure.Sources;
 using SharpCorePDF.Measure;
 
@@ -45,6 +46,23 @@ if (args.Contains("--content"))
 if (args.Contains("--author"))
 {
     Authoring();
+    return;
+}
+
+// The creator and editor rows are the Release 1.1 acceptance shapes. They are recorded before the
+// implementation so that the first passing phase already has a baseline to be judged against:
+//
+//   dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --creator
+//   dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --editor
+if (args.Contains("--creator"))
+{
+    CreatorParity();
+    return;
+}
+
+if (args.Contains("--editor"))
+{
+    await EditorParity();
     return;
 }
 
@@ -535,12 +553,9 @@ static string Pad(string source, string destination, int size)
 /// <summary>Measures what writing a page costs: one cover and a 200 page document.</summary>
 static void Authoring()
 {
-    const string RgbaLogo =
-        "iVBORw0KGgoAAAANSUhEUgAAAJgAAABXCAYAAAD4fIxAAAAA6klEQVR42u3awQkAIAwEwevEPmwm/VehLzsQDDgH20CYZ5LLG7OWdApgAkyAASbABJgAA0yACTABBpgAE2ACDDABJsAcVYAJMAEGmAATYAIMMAEmwAQYYAJMgEmACTABBpgAE2ACDDABJsAEGGACTIC16vUAAwwwwAADDDDAAAMMMMAAAwwwwAADDDDAAAMMMMAAAwwwwAADDDDAAAPMP5gAE2CACTABJsAAE2ACTIABJsAEmAADTIAJMAkwASbAABNgAkyAASbABJgAA0yACTABBpgAE2CACTABJsAAE2ACTIABJsAEmP5sA9V2M2TFwZ3JAAAAAElFTkSuQmCC";
-
     var root = RepositoryRoot();
     var rgbLogo = File.ReadAllBytes(Path.Combine(root, "Logo-256.png"));
-    var rgbaLogo = Convert.FromBase64String(RgbaLogo);
+    var rgbaLogo = ContentFixtures.RgbaLogo;
     var body = PdfTypeface.FromTrueType(
         File.ReadAllBytes(Path.Combine(root, "examples", "SharpCorePDF.Examples", "Assets", "DejaVuSans-subset.ttf")));
     var heading = PdfTypeface.Standard(StandardFont.Helvetica);
@@ -622,4 +637,156 @@ static void AuthoringRow(string label, Func<byte[]> build)
     Console.WriteLine(
         $"{label,-46} : {allocated[Rounds / 2] / 1024.0,9:N0} KB  {elapsed[Rounds / 2],8:N2} ms  "
         + $"{size,9:N0} B output  live after GC {ManagedHeapBytes() / 1024.0 / 1024.0,5:N2} MB");
+}
+
+/// <summary>
+/// Measures the creator acceptance shape: ten A4 pages carrying two hundred positioned text lines and
+/// one RGBA image, using the same parsed typeface for every round.
+/// </summary>
+static void CreatorParity()
+{
+    const int PageCount = 10;
+    const int LinesPerPage = 20;
+
+    var root = RepositoryRoot();
+    var body = PdfTypeface.FromTrueType(
+        File.ReadAllBytes(Path.Combine(root, "examples", "SharpCorePDF.Examples", "Assets", "DejaVuSans-subset.ttf")));
+    var heading = PdfTypeface.Standard(StandardFont.Helvetica);
+    var logo = ContentFixtures.RgbaLogo;
+
+    var options = PdfAuthoringOptions.Default with
+    {
+        CreationDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+        DocumentId = "00112233445566778899AABBCCDDEEFF",
+    };
+
+    Console.WriteLine(
+        $"environment: {RuntimeInformation.FrameworkDescription}, {RuntimeInformation.OSArchitecture}, "
+        + $"{Environment.ProcessorCount} logical cores, server GC {GCSettings.IsServerGC}");
+    Console.WriteLine(
+        $"creator: {PageCount} A4 pages, {PageCount * LinesPerPage} positioned lines, one RGBA logo; "
+        + "typeface and image bytes are prepared outside the measured window");
+    Console.WriteLine();
+
+    byte[] Build(bool withLogo)
+    {
+        var builder = PdfDocumentBuilder.Create(options);
+
+        for (var index = 0; index < PageCount; index++)
+        {
+            var number = index + 1;
+            builder.AddPage(PdfPageSize.A4, page =>
+            {
+                page.DrawText($"Parity page {number}/{PageCount}", 40, 40, heading, 16);
+
+                for (var line = 0; line < LinesPerPage; line++)
+                {
+                    page.DrawText(
+                        $"Line {line + 1:D2}: the quick brown fox jumps over the lazy dog — 0123456789",
+                        40,
+                        80 + (line * 28),
+                        body,
+                        12);
+                }
+
+                if (withLogo)
+                {
+                    page.DrawImage(logo, x: 40, y: 700, width: 152, height: 87);
+                }
+            });
+        }
+
+        return builder.ToArray();
+    }
+
+    AuthoringRow("creator: 10 pages, 200 lines, RGBA logo", () => Build(withLogo: true));
+    AuthoringRow("creator: 10 pages, 200 lines, no image", () => Build(withLogo: false));
+}
+
+/// <summary>
+/// Measures the editor acceptance shape: two hundred operations over a hundred-page source (rotate every
+/// page, duplicate fifty, move twenty-five, delete twenty-five) and writes the result to a counting sink.
+/// </summary>
+static async Task EditorParity()
+{
+    const int SourcePages = 100;
+    const int Rounds = 5;
+
+    var source = new PdfByteArraySource(ContentFixtures.EditorSource(SourcePages), "editor-source.pdf");
+    var editor = new PdfDocumentEditorService(
+        new PdfDocumentReader(PdfEngineOptions.Default),
+        new PdfEditEngine(PdfEngineOptions.Default));
+
+    var options = PdfEditOutputOptions.Default with
+    {
+        ModificationDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+        DocumentId = "00112233445566778899AABBCCDDEEFF",
+    };
+
+    static PdfEditPlan Plan(PdfEditOutputOptions output)
+    {
+        var plan = PdfEditPlan.Create(output);
+
+        for (var page = 1; page <= SourcePages; page++)
+        {
+            plan = plan.RotatePage(page, PageRotation.Clockwise90);
+        }
+
+        for (var index = 0; index < 50; index++)
+        {
+            plan = plan.DuplicatePage(1, 101 + index);
+        }
+
+        for (var index = 0; index < 25; index++)
+        {
+            plan = plan.MovePage(150, 1);
+        }
+
+        for (var index = 0; index < 25; index++)
+        {
+            plan = plan.DeletePage(125);
+        }
+
+        return plan;
+    }
+
+    var plan = Plan(options);
+
+    Console.WriteLine(
+        $"environment: {RuntimeInformation.FrameworkDescription}, {RuntimeInformation.OSArchitecture}, "
+        + $"{Environment.ProcessorCount} logical cores, server GC {GCSettings.IsServerGC}");
+    Console.WriteLine(
+        $"editor: {SourcePages} pages in, {plan.OperationCount} operations ({SourcePages} rotate, 50 duplicate, "
+        + "25 move, 25 delete), 125 pages out, written to a counting sink");
+    Console.WriteLine();
+
+    // One warm-up, so JIT compilation and the first PDF parse are outside the measured rounds.
+    await editor.ApplyAsync(source, plan, new CountingStream()).ConfigureAwait(false);
+
+    var allocated = new List<long>(Rounds);
+    var elapsed = new List<double>(Rounds);
+    var size = 0L;
+
+    for (var round = 0; round < Rounds; round++)
+    {
+        CollectForMeasurement();
+
+        var destination = new CountingStream();
+        var before = GC.GetTotalAllocatedBytes(precise: true);
+        var watch = Stopwatch.StartNew();
+        await editor.ApplyAsync(source, plan, destination).ConfigureAwait(false);
+        watch.Stop();
+
+        allocated.Add(GC.GetTotalAllocatedBytes(precise: true) - before);
+        elapsed.Add(watch.Elapsed.TotalMilliseconds);
+        size = destination.Written;
+    }
+
+    allocated.Sort();
+    elapsed.Sort();
+
+    Console.WriteLine(
+        $"{"editor: 200 operations, 100 to 125 pages",-46} : {allocated[Rounds / 2] / 1024.0,9:N0} KB  "
+        + $"{elapsed[Rounds / 2],8:N2} ms  {size,9:N0} B output  "
+        + $"live after GC {ManagedHeapBytes() / 1024.0 / 1024.0,5:N2} MB");
 }
