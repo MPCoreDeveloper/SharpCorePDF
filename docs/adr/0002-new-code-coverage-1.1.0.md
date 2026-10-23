@@ -1,4 +1,4 @@
-# ADR-002: Release 1.1.0 with its new-code coverage recorded at 77.8%
+# ADR-002: Release 1.1.0 with its new-code coverage recorded at 77.76%
 
 - **Status**: Proposed — the release owner signs this before `v1.1.0` is tagged
 - **Date**: 2026-10-23
@@ -7,9 +7,10 @@
 
 ## Context
 
-The release gate requires **90% coverage on new code** (`docs/release-checklist.md` G9, and the same number
-entered on the SonarCloud quality gate). T103 asks the tree that question locally, before a service is
-consulted: one instrumented Release run on `net11.0`, merged to a Visual Studio coverage XML, intersected
+The release gate requires **90% coverage on new code** (`docs/release-checklist.md` G9, measured locally by
+`docs/tools/coverage-on-new-code.py`; the SonarCloud quality gate, which does not carry this number, runs
+`Sonar way`'s own 80). T103 asks the tree that question locally, before a service is consulted: one
+instrumented Release run on `net11.0`, merged to a Visual Studio coverage XML, intersected
 with the lines `git diff --unified=0 v1.0.0 -- src` adds, by `docs/tools/coverage-on-new-code.py`.
 
 The answer is **6,842 of 8,799 executable added lines covered — 77.76%**, against a floor of 90%. It is not a
