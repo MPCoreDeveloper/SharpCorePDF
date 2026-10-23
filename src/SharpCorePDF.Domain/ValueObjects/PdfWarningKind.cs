@@ -313,6 +313,18 @@ public enum PdfWarningKind
     OutputIntentSubstituted,
 
     /// <summary>
+    /// A feature the PDF/A profile forbids was removed from the document and the caller was told, for
+    /// example a JavaScript name tree or a catalog open action.
+    /// </summary>
+    PdfAFeatureRemoved,
+
+    /// <summary>
+    /// The document was written for a PDF/A profile. The remark names the profile and states that
+    /// conformance itself is established by an external validator, never by the writer.
+    /// </summary>
+    PdfAProfileWritten,
+
+    /// <summary>
     /// A crop box was inverted or reached outside the media box, so it was normalised to the part
     /// that lies inside the page. The page is written with the normalised box.
     /// </summary>

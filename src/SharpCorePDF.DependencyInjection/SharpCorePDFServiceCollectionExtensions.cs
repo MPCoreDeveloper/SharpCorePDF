@@ -6,6 +6,7 @@ using SharpCorePDF.Application.Ports;
 using SharpCorePDF.Application.Services;
 using SharpCorePDF.Domain.Ports;
 using SharpCorePDF.Infrastructure;
+using SharpCorePDF.Infrastructure.Authoring;
 using SharpCorePDF.Infrastructure.Reading;
 
 namespace SharpCorePDF.DependencyInjection;
@@ -86,6 +87,7 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
         services.TryAddSingleton(sp => new PdfObjectInspector(sp.GetRequiredService<PdfEngineOptions>()));
         services.TryAddSingleton(sp => new PdfDocumentSigner(sp.GetRequiredService<PdfEngineOptions>()));
         services.TryAddSingleton(sp => new PdfDocumentSignatureValidator(sp.GetRequiredService<PdfEngineOptions>()));
+        services.TryAddSingleton(sp => new PdfAWriter(sp.GetRequiredService<PdfEngineOptions>()));
 
         services.TryAddSingleton<IPdfDocumentReader>(sp => sp.GetRequiredService<PdfDocumentReader>());
         services.TryAddSingleton<IPdfMergeEngine>(sp => sp.GetRequiredService<PdfMergeEngine>());
@@ -95,6 +97,7 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
         services.TryAddSingleton<IPdfDocumentObjectInspector>(sp => sp.GetRequiredService<PdfObjectInspector>());
         services.TryAddSingleton<IPdfDocumentSigner>(sp => sp.GetRequiredService<PdfDocumentSigner>());
         services.TryAddSingleton<IPdfDocumentSignatureValidator>(sp => sp.GetRequiredService<PdfDocumentSignatureValidator>());
+        services.TryAddSingleton<IPdfDocumentAWriter>(sp => sp.GetRequiredService<PdfAWriter>());
         services.TryAddSingleton<IPdfMerger, PdfMergerService>();
         services.TryAddSingleton<IPdfDocumentEditor, PdfDocumentEditorService>();
         services.TryAddSingleton<IPdfInspector, PdfInspectorService>();
@@ -103,6 +106,7 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
         services.TryAddSingleton<IPdfObjectInspector, PdfObjectInspectorService>();
         services.TryAddSingleton<IPdfSigner, PdfSignerService>();
         services.TryAddSingleton<IPdfSignatureValidator, PdfSignatureValidatorService>();
+        services.TryAddSingleton<IPdfAWriter, PdfAWriterService>();
 
         return services;
     }

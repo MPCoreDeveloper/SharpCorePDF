@@ -308,6 +308,41 @@ Not covered: fonts with tens of thousands of glyphs, pages with hundreds of oper
 by concurrent callers (it is not thread safe), and a 1000-page document — the 200-page row is the shape,
 not a limit.
 
+### Issue-closure re-run, 2026-10-22
+
+The question's scenario was re-run on the release branch to close `002-page-authoring`:
+`dotnet run -c Release --project .\examples\SharpCorePDF.Examples -- author-page` reports `ok (222 ms)`
+for the build, the merge and the read-back, and writes an 8,835-byte `cover.pdf` and a three-page
+`cover-and-summary.pdf`. These are single-run wall times from the example, not the medians of the table
+above, so they are recorded against SC-001's 400 ms budget rather than as a new baseline. `validate-pdf.py`
+(pikepdf 10.17.0, which runs qpdf) reports no problems for both files; `pypdf` 6.19.0 with `strict=True`
+extracts the accented line unchanged and shows the logo as a 152 × 87 image with an `/SMask`; PyMuPDF at
+72 dpi gives the logo colour at `(100, 45)` and white at `(50, 45)`. The authoring tests are 33 on each
+target framework, and their build allocates and writes within the budgets of §9.
+
+Since 2026-10-23 those three checks are one command, so the gate re-run costs a paste rather than a
+session:
+
+```powershell
+# Runs the example, then C1 (qpdf), C2 (pypdf) and C3 (PyMuPDF); prints a markdown transcript.
+uv run --with pikepdf --with pypdf --with pymupdf python docs/tools/verify-cover.py
+
+# The same run, with the transcript written as UTF-8 as well. This is the form a pull request uses:
+# a PowerShell pipe re-decodes the output and mangles × and —.
+uv run --with pikepdf --with pypdf --with pymupdf python docs/tools/verify-cover.py --output artifacts\c5-transcript.md
+
+# The same checks on files that already exist — what a release-commit re-run needs.
+uv run --with pikepdf --with pypdf --with pymupdf python docs/tools/verify-cover.py <cover.pdf> <cover-and-summary.pdf>
+```
+
+`docs/tools/verify-cover.py` asserts every value in the paragraph above and exits non-zero when one of
+them moves, so the evidence is a test rather than a memory. Its rehearsal reproduced them exactly
+(1 and 3 pages, 14 and 19 objects, 6 and 8 streams decoded with none failing, 8,835 bytes, the same two
+pixels). The example's own `ok (…)` line reads 202–392 ms across five runs on the same tree — `dotnet run`
+startup is inside that number — which is why SC-001's timing leg is the harness of §9 and T101, not this
+line. `--output <path>` writes the transcript as UTF-8, so the copy attached to the request is the copy
+the tool printed.
+
 ## 9. The Release 1.1 creator and editor baselines
 
 Recorded: 2026-10-21, .NET 11.0.0-rc.2.26504.105, x64, 12 logical cores, workstation GC, `Release`:

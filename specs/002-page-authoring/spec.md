@@ -173,3 +173,26 @@ logo and one in its transparent margin.
 - Reading system fonts, font fallback, text shaping and kerning beyond the font program's own tables.
 - Encrypting the authored page; the merge output can be encrypted as before.
 - A `MeasureString` API: metrics belong to the font file and to a text shaper.
+
+## Verification (2026-10-22)
+
+Re-checked on the release branch after the parity work of `003-pdf-platform-parity` moved the authoring
+code into `Authoring/`:
+
+* Acceptance scenarios 1–4 of US1: 33 authoring tests pass on `net10.0` and `net11.0`; `pypdf` 6.19.0
+  (`strict=True`) reads page 1's MediaBox as `595.276 × 841.89` pt, the three-page merge, the exact
+  accented text and a 152 × 87 image with an `/SMask`; PyMuPDF at 72 dpi shows `(31, 58, 95)` at
+  `(100, 45)` and white at `(50, 45)`; the rebuild is byte-identical.
+* US2 and US3: `pypdf` and the library's own `IPdfContentReader` return the same line; the embedded
+  DejaVu subset extracts through its `/ToUnicode` map, and the full programme writes a 58 KB file.
+* FR-012: `python docs/tools/validate-pdf.py` (pikepdf 10.17.0, qpdf inside) reports `qpdf check: no
+  problems` for `cover.pdf` (1 page, 14 objects) and `cover-and-summary.pdf` (3 pages, 19 objects).
+* SC-001: `author-page` reports `ok (222 ms)` for build, merge and read-back. SC-002: the example's page
+  is 8,835 bytes. SC-003's "549 tests" is now the whole 1.1 suite — 738 passed on `net10.0` and on
+  `net11.0` — because the parity work lives in the same tree; T103 records the release run.
+* The Non-Goals above still hold: there is no `MeasureString`, no wrapping and no JPEG/GIF. Those are rows
+  2–4 of `docs/parity.md`, and Gate 0 of `specs/003-pdf-platform-parity/tasks.md` records the decision
+  they hang from.
+* **Release**: the owner decided **D3** on 2026-10-22 — `1.1.0` is the release that delivers this
+  specification, because everything it asks for is implemented and evidenced here. Rows 2–4's remaining
+  items are `1.2.0` parity commitments, so no part of this question waits for them.

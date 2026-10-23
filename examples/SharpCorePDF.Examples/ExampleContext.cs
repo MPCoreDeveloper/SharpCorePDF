@@ -68,6 +68,9 @@ internal sealed class ExampleContext : IDisposable
     /// <summary>Gets the object inspector, exactly as an application would resolve it.</summary>
     public IPdfObjectInspector ObjectInspector => services.GetRequiredService<IPdfObjectInspector>();
 
+    /// <summary>Gets the archival writer, exactly as an application would resolve it.</summary>
+    public IPdfAWriter ArchiveWriter => services.GetRequiredService<IPdfAWriter>();
+
     /// <summary>Creates the sample documents and the container the examples run against.</summary>
     /// <returns>The context; dispose it to release the container.</returns>
     public static ExampleContext Create()

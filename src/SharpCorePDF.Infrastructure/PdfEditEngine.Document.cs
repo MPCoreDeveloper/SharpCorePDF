@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using SharpCorePDF.Domain.Aggregates;
 using SharpCorePDF.Domain.ValueObjects;
+using SharpCorePDF.Infrastructure.Authoring;
 using SharpCorePDF.Infrastructure.Pdf;
 
 namespace SharpCorePDF.Infrastructure;
@@ -16,11 +17,17 @@ public sealed partial class PdfEditEngine
     /// <summary>The name of the tree of named destinations, which is carried over as a whole.</summary>
     private const string DestsEntry = "Dests";
 
+    /// <summary>The registry the sRGB output condition of an archival document is registered with.</summary>
+    private const string ColorRegistryName = "https://www.color.org";
+
     /// <summary>Builds the catalog of the edited document.</summary>
     /// <param name="reader">The source document.</param>
     /// <param name="copier">The copier that writes the source objects into the result.</param>
+    /// <param name="writer">The writer of the result, which receives the archival entries.</param>
     /// <param name="pagesNodeNumber">The object number of the page tree node of the result.</param>
     /// <param name="plan">The plan being applied.</param>
+    /// <param name="profile">The archival profile the result is written for, or <see langword="null"/>.</param>
+    /// <param name="metadata">The document information the XMP packet mirrors.</param>
     /// <param name="layoutChanged">Whether an operation changed the order or number of pages.</param>
     /// <param name="warnings">The list that receives remarks about features an edit could not keep.</param>
     /// <returns>The catalog.</returns>
@@ -28,13 +35,17 @@ public sealed partial class PdfEditEngine
     /// Page-independent features are carried over as they are. Features that name pages — bookmarks,
     /// named destinations, a form — are carried over too, with every reference to a source page
     /// redirected to the first page that survived. Page labels and XMP are the two features that
-    /// cannot be carried over truthfully after an edit, so they are dropped and reported.
+    /// cannot be carried over truthfully after an edit, so they are dropped and reported. A profile
+    /// replaces the XMP packet and the output intent with the ones it requires.
     /// </remarks>
     private static PdfDictionary BuildCatalog(
         PdfFileReader reader,
         PdfObjectCopier copier,
+        PdfWriter writer,
         int pagesNodeNumber,
         PdfEditPlan plan,
+        PdfAProfile? profile,
+        PdfMetadata metadata,
         bool layoutChanged,
         List<PdfWarning> warnings)
     {
@@ -48,10 +59,22 @@ public sealed partial class PdfEditEngine
         CopyFromSource(copier, source, catalog, "PageMode");
         CopyFromSource(copier, source, catalog, "Lang");
         CopyFromSource(copier, source, catalog, "MarkInfo");
-        CopyFromSource(copier, source, catalog, "OutputIntents");
         CopyFromSource(copier, source, catalog, "Outlines");
-        CopyFromSource(copier, source, catalog, "AcroForm");
         CopyNameTrees(reader, copier, source, catalog);
+
+        if (profile is null)
+        {
+            CopyFromSource(copier, source, catalog, "OutputIntents");
+            CopyFromSource(copier, source, catalog, "AcroForm");
+        }
+        else if (source is not null && reader.ResolveDictionary(source.Get("AcroForm")) is { } sourceForm)
+        {
+            // PDF/A requires a reader to be able to paint the form without running anything, so the
+            // flag that asks it to build appearances itself is cleared rather than copied.
+            var form = (PdfDictionary)copier.Clone(sourceForm);
+            form.Set("NeedAppearances", PdfBoolean.False);
+            catalog.Set("AcroForm", form);
+        }
 
         if (source?.Get("PageLabels") is not null)
         {
@@ -67,7 +90,7 @@ public sealed partial class PdfEditEngine
             }
         }
 
-        if (source?.Get("Metadata") is not null)
+        if (profile is null && source?.Get("Metadata") is not null)
         {
             var informationOverridden = plan.Output.Metadata is not null
                 || plan.Operations.Any(operation => operation is PdfSetMetadataOperation);
@@ -84,7 +107,64 @@ public sealed partial class PdfEditEngine
             }
         }
 
+        if (profile is { } archival)
+        {
+            WriteArchivalEntries(writer, catalog, archival, metadata);
+        }
+
         return catalog;
+    }
+
+    /// <summary>
+    /// Writes the XMP packet and the output intent a PDF/A profile requires, and points the catalog at
+    /// them.
+    /// </summary>
+    /// <param name="writer">The writer of the result.</param>
+    /// <param name="catalog">The catalog being built.</param>
+    /// <param name="profile">The profile the document is written for.</param>
+    /// <param name="metadata">The document information the packet mirrors.</param>
+    /// <remarks>
+    /// The packet is never compressed, which PDF/A-1 requires and the later parts allow, and the output
+    /// intent names the sRGB colour space the profile was built for. Both replace whatever the source
+    /// carried: a packet that describes a different document would contradict the information
+    /// dictionary, and a copied intent would describe a colour space the pages may not use.
+    /// </remarks>
+    private static void WriteArchivalEntries(
+        PdfWriter writer,
+        PdfDictionary catalog,
+        PdfAProfile profile,
+        PdfMetadata metadata)
+    {
+        var profileData = SRgbColorProfile.Bytes;
+        var iccNumber = writer.AllocateObject();
+
+        writer.WriteObject(
+            iccNumber,
+            new PdfStream(new PdfDictionary().SetInteger("N", 3), profileData));
+
+        var intent = new PdfDictionary()
+            .SetName("Type", "OutputIntent")
+            .SetName("S", "GTS_PDFA1")
+            .Set("OutputCondition", PdfString.FromText("sRGB IEC61966-2.1"))
+            .Set("OutputConditionIdentifier", PdfString.FromText("sRGB IEC61966-2.1"))
+            .Set("RegistryName", PdfString.FromText(ColorRegistryName)) // NOSONAR S5332: an ICC registry identifier, not a request
+            .Set("Info", PdfString.FromText("sRGB IEC61966-2.1"))
+            .Set("DestOutputProfile", new PdfReference(iccNumber, 0));
+
+        var intentNumber = writer.AllocateObject();
+        writer.WriteObject(intentNumber, intent);
+
+        var packet = XmpPacket.Build(profile, metadata);
+        var metadataNumber = writer.AllocateObject();
+
+        writer.WriteObject(
+            metadataNumber,
+            new PdfStream(
+                new PdfDictionary().SetName("Type", "Metadata").SetName("Subtype", "XML"),
+                packet));
+
+        catalog.Set("OutputIntents", new PdfArray([new PdfReference(intentNumber, 0)]));
+        catalog.Set("Metadata", new PdfReference(metadataNumber, 0));
     }
 
     /// <summary>Copies named destinations and embedded files from the source.</summary>
@@ -137,16 +217,14 @@ public sealed partial class PdfEditEngine
         }
     }
 
-    /// <summary>Writes the document information dictionary and returns its object number.</summary>
+    /// <summary>Resolves the document information the result is written with.</summary>
     /// <param name="reader">The source document.</param>
     /// <param name="plan">The plan being applied.</param>
-    /// <param name="writer">The writer of the result.</param>
     /// <param name="modificationDate">The moment written as the modification date.</param>
-    /// <returns>The object number of the document information dictionary.</returns>
-    private static int WriteInformation(
+    /// <returns>The document information of the result.</returns>
+    private static PdfMetadata ResolveMetadata(
         PdfFileReader reader,
         PdfEditPlan plan,
-        PdfWriter writer,
         DateTimeOffset modificationDate)
     {
         var metadata = PdfDocumentInspection.ReadMetadata(reader);
@@ -163,12 +241,19 @@ public sealed partial class PdfEditEngine
 
         // The producer and the modification date always describe the document that was just written,
         // never the document it was made from.
-        metadata = metadata with
+        return metadata with
         {
             Producer = plan.Output.Producer,
             ModificationDate = modificationDate,
         };
+    }
 
+    /// <summary>Writes the document information dictionary and returns its object number.</summary>
+    /// <param name="writer">The writer of the result.</param>
+    /// <param name="metadata">The document information of the result.</param>
+    /// <returns>The object number of the document information dictionary.</returns>
+    private static int WriteInformation(PdfWriter writer, PdfMetadata metadata)
+    {
         var number = writer.AllocateObject();
         var information = new PdfDictionary();
 
@@ -189,7 +274,9 @@ public sealed partial class PdfEditEngine
         }
 
         information.Set("Producer", Text(metadata.Producer));
-        information.Set("ModDate", PdfString.FromText(PdfDate.Format(modificationDate)));
+        information.Set(
+            "ModDate",
+            PdfString.FromText(PdfDate.Format(metadata.ModificationDate ?? DateTimeOffset.UtcNow)));
 
         writer.WriteObject(number, information);
         return number;
@@ -200,22 +287,32 @@ public sealed partial class PdfEditEngine
     /// <param name="catalogNumber">The object number of the catalog.</param>
     /// <param name="infoNumber">The object number of the document information dictionary.</param>
     /// <param name="identifier">The identifier written as both elements of the <c>ID</c> entry.</param>
+    /// <param name="security">The encryption of the result, or <see langword="null"/> when it is written in the clear.</param>
     private static void WriteTrailer(
         PdfWriter writer,
         int catalogNumber,
         int infoNumber,
-        PdfString identifier)
+        PdfString identifier,
+        PdfSecurityWriter? security)
     {
         var trailer = new PdfDictionary();
         trailer.Set("Root", new PdfReference(catalogNumber, 0));
         trailer.Set("Info", new PdfReference(infoNumber, 0));
         trailer.Set("ID", new PdfArray(new PdfObject[] { identifier, identifier }));
 
+        if (security is not null)
+        {
+            // The trailer is written in the clear, so its strings are never encrypted: a reader has to
+            // reach the encryption dictionary before it has a key.
+            trailer.Set("Encrypt", new PdfReference(writer.WriteEncryptionDictionary(security), 0));
+        }
+
         writer.Complete(trailer);
     }
 
     /// <summary>Builds the identifier written twice in the trailer of the result.</summary>
     /// <param name="plan">The plan being applied.</param>
+    /// <param name="version">The PDF version of the result.</param>
     /// <param name="pageCount">The number of pages the result contains.</param>
     /// <param name="modificationDate">The moment written as the modification date of the result.</param>
     /// <returns>The identifier as a hexadecimal string.</returns>
@@ -227,12 +324,13 @@ public sealed partial class PdfEditEngine
     /// </remarks>
     private static PdfString BuildFileIdentifier(
         PdfEditPlan plan,
+        PdfVersion version,
         int pageCount,
         DateTimeOffset modificationDate)
     {
         var seed = string.Create(
             CultureInfo.InvariantCulture,
-            $"{plan.Output.TargetVersion}|{modificationDate:O}|{pageCount}|{plan.Output.DocumentId}|{string.Join(';', plan.Operations)}");
+            $"{version}|{plan.Output.PdfAProfile}|{modificationDate:O}|{pageCount}|{plan.Output.DocumentId}|{string.Join(';', plan.Operations)}");
 
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(seed));
 

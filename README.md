@@ -53,9 +53,12 @@ part of the package, and they are covered by tests against real-world documents 
 independent implementations (`qpdf` via `pikepdf`, and `pypdf`).
 
 The product boundary is recorded in [ADR-001](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/adr/0001-pdf-platform-boundary.md).
-Release 1.1 targets capability parity with PDFsharp 6.5 for creation and processing and PdfPig 0.1.x
-for reading and layout analysis; rendering, conversion, OCR, conformance validation, services and
-CLIs stay outside the product. Current capability is described below, not the target.
+The capability target is PDFsharp 6.5 for creation and processing and PdfPig 0.1.x for reading and layout
+analysis; rendering, conversion, OCR, conformance validation, services and CLIs stay outside the product.
+`1.1.0` ships the part of that target which is implemented and evidenced — authoring, page editing,
+reading with layout analysis, signatures and PDF/A — and the remainder is scheduled for `1.2.0` in
+[`docs/parity.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/parity.md), which names
+the release of every row. Current capability is described below, not the target.
 
 ## What it does
 

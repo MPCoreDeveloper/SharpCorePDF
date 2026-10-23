@@ -147,3 +147,7 @@ SharpCorePDF.Infrastructure.PdfDocumentSigner
 SharpCorePDF.Infrastructure.PdfDocumentSigner.Options.get -> SharpCorePDF.Infrastructure.PdfEngineOptions!
 SharpCorePDF.Infrastructure.PdfDocumentSigner.PdfDocumentSigner(SharpCorePDF.Infrastructure.PdfEngineOptions? options = null) -> void
 SharpCorePDF.Infrastructure.PdfDocumentSigner.SignAsync(string! sourceName, System.IO.Stream! content, System.IO.Stream! destination, SharpCorePDF.Domain.ValueObjects.PdfSignatureOptions! options, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfSignatureInfo!>!
+SharpCorePDF.Infrastructure.Authoring.PdfAWriter
+SharpCorePDF.Infrastructure.Authoring.PdfAWriter.ConvertAsync(string! sourceName, System.IO.Stream! content, System.IO.Stream! destination, SharpCorePDF.Domain.ValueObjects.PdfAProfile profile, SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions? options = null, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfAConversionResult!>!
+SharpCorePDF.Infrastructure.Authoring.PdfAWriter.Options.get -> SharpCorePDF.Infrastructure.PdfEngineOptions!
+SharpCorePDF.Infrastructure.Authoring.PdfAWriter.PdfAWriter(SharpCorePDF.Infrastructure.PdfEngineOptions? options = null) -> void

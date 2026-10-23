@@ -25,9 +25,11 @@ is change what a page draws. There is no API to replace text or an image, remove
 form, add a digital signature, add a redaction, or change a page's media box, crop box or size. Page
 content and page geometry that survive an edit are copied verbatim.
 
-The 1.1 parity plan extends editing to page content, annotations, forms and page geometry. None of
-that is implemented yet, and this chapter will be rewritten as each capability ships; until then the
-boundary above is the accurate one. The capabilities that stay outside the product at every release —
+The 1.1 parity plan extends editing to page content, annotations, forms and page geometry. Page geometry
+and the page-level operations ship in `1.1.0`; page content, annotation and form authoring are `1.2.0`
+commitments under the scope amendment recorded in the specification, and this chapter will be rewritten as
+each capability ships. Until then the boundary above is the accurate one. The capabilities that stay
+outside the product at every release —
 rendering, conversion, OCR, conformance validation, services and CLIs — are the sections below.
 
 **Use instead:** a viewer/editor SDK for interactive editing, a form-filling library when field values
