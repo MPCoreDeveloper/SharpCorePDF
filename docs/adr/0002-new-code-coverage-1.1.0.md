@@ -1,6 +1,6 @@
 # ADR-002: Release 1.1.0 with its new-code coverage recorded at 77.76%
 
-- **Status**: Proposed — the release owner signs this before `v1.1.0` is tagged
+- **Status**: Accepted — signed by the release owner on 2026-10-23, before `v1.1.0` was tagged
 - **Date**: 2026-10-23
 - **Related**: T103 and T106 in [`specs/003-pdf-platform-parity/tasks.md`](../../specs/003-pdf-platform-parity/tasks.md);
   G9 in [`docs/release-checklist.md`](../release-checklist.md); [`docs/tools/coverage-on-new-code.py`](../tools/coverage-on-new-code.py)
@@ -84,7 +84,8 @@ the header does not state, and an image with no `EI`), and the signing pair reac
 
 | Role | Name | Date |
 | --- | --- | --- |
-| Release owner | | |
+| Release owner | MPCoreDeveloper | 2026-10-23 |
 
-Until this table is signed, the status stays **Proposed**, T103 stays open with the decision named, and T106
-does not run: no tag is cut on an unsigned waiver.
+Signed, so the status is **Accepted**: T103 closes on the number measured above, and T106 may tag. The
+signature releases the number, not the work — the tag still has to name `1.1.0` (G7) and the analysis of the
+commit it names still has to be green (G9).
