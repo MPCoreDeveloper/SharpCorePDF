@@ -412,21 +412,25 @@ from the same file.
 | G3 — notes a consumer can read | **Yes** | `CHANGELOG.md` holds `## [1.1.0] - 2026-10-23`, written in the same commit as the bump, with a *Known limits at 1.1.0* section that names the coverage figure and the two 1.0 limits that remain |
 | G4 — symbols and reproducible binaries | **Still partly** | no `.snupkg` is packed and nothing is code-signed; `<Deterministic>true</Deterministic>` is set, and T102 proves the *output* is stable run to run, which is not the two-build comparison this gate asks for |
 | G5 — trusted publishing and `NUGET_USERNAME` | **Unchanged, outside the tree** | the policy and the secret live on nuget.org and in the repository settings; the 1.0.0 push proved both, and `1.1.0` needs no new subject |
-| G6 — a dry run on the commit to be tagged | **To be re-run** | dispatch `publish` with `publish: false` on `main` **after** the merge and **before** the tag: its `sonar-gate` job compares `github.sha` with the newest analysis of `main`, so a dispatch from the branch is refused by design and not by a red gate. The 1.0.0 dispatch proved the handshake, not this commit |
-| G7 — the tag equals `<Version>` | **To be cut** | the tag must read `v1.1.0`; `publish.yml` refuses any other value |
-| G8 — the packages install and open a document | **After the push** | the same three checks as at 1.0.0, on `1.1.0` |
-| G9 — the quality gate on the tagged commit | **Local number recorded, 77.76%; the gate passed on the release commit** | T103's measurement and [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md). SonarCloud's own `new_coverage` is 83.5% against its floor of 80, so coverage was never the failing condition; `new_reliability_rating` = 3 was, from one new bug in `PdfImageFilters`, fixed in the release commit — after which the run on `ea95c78` reported `QUALITY GATE STATUS: PASSED`. `publish.yml` still reads the gate on the commit the tag names |
+| G6 — a dry run on the commit to be tagged | **Yes, 2026-10-23 — `publish: false`, run `39967722848`** | dispatched on `main` **after** the merge and **before** the tag, because its `sonar-gate` job compares `github.sha` with the newest analysis of `main` and refuses a commit `main` has not analysed. Sonar-gate, build, both legs, pack, the pre-push checks and the local-feed handshake all `success`; `NuGet login` and `Push to nuget.org` correctly `skipped` |
+| G7 — the tag equals `<Version>` | **Yes — `v1.1.0` on `effe5de`, `<Version>` 1.1.0** | an annotated tag whose message is `SharpCorePDF 1.1.0`, on the commit whose analysis was newest on `main`; `publish.yml` checked the equality itself before it packed anything |
+| G8 — the packages install and open a document | **Yes, 2026-10-23** | all five packages resolve at `1.1.0`; an empty `net11.0` app referencing only `SharpCorePDF` merged two corpus documents (**6 pages, 6,623 bytes, PDF 1.7, 0 warnings**), the inspector read it back with 6 outline items, and `validate-pdf.py` reported `qpdf check: no problems`; the same program on `net10.0` produced **9 pages, 934,348 bytes, 0 warnings**. API compatibility is the diff that G8 asks for as a report: `PublicAPI.Shipped.txt` is unchanged since `v1.0.0` and the unshipped snapshots grow by 1,788 lines |
+| G9 — the quality gate on the tagged commit | **Green on `effe5de`, the tagged commit; local new-code coverage 77.76% recorded** | T103's measurement and [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md). SonarCloud's own `new_coverage` is **84.2%** against its floor of 80, so coverage was never the failing condition; `new_reliability_rating` = 3 was, from one new bug in `PdfImageFilters`, fixed before the merge. The tag's own `publish` run (`39968375808`) re-read the gate for `effe5de` and got six `OK` conditions before it pushed |
 
-Two things stood between this table and a tag, and neither of them was code. The first is done:
+Both of the things that stood between this table and a tag are done, and neither of them was code:
 
 1. **ADR-002 is signed** — `Accepted`, `MPCoreDeveloper`, 2026-10-23 — so T103's box closes on the measured
    77.76% rather than on the threshold being met.
-2. **The tag must name the commit whose SonarCloud analysis is the newest on `main`** (G9, T106), which is why
-   the analysis is read after the merge rather than before it — and why the G6 dry run is dispatched on `main`
-   between the two, since its `sonar-gate` job refuses a commit that `main` has not analysed.
+2. **The tag names the commit whose SonarCloud analysis was the newest on `main`** (G9, T106): `v1.1.0` on
+   `effe5de`, cut after the merge, after that commit's CI run, and after the G6 dry run — which had to be
+   dispatched on `main` for the same reason, since its `sonar-gate` job refuses a commit `main` has not analysed.
 
-The pull request that used to be on that list exists:
-[#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4), `003-pdf-platform-parity` → `main`, nineteen commits.
+The pull request was
+[#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4), `003-pdf-platform-parity` → `main`, twenty-one
+commits, merged with `--rebase` on 2026-10-23 so that `main` stays linear and keeps the branch's commit series;
+its tip became `effe5de`. The rebase rewrote the branch's SHAs, so hashes quoted earlier in this file as
+"the release commit" and "the run that reported the gate green" name commits that are no longer on `main` — the
+runs are still there, and the merged tree is the same tree they tested.
 `artifacts/t104-release-transcript.md` is ignored by Git, so the transcript is in the body under a collapsed block
 rather than attached as a file, and the body says why. It also says that the summary row reading 76.36% is the
 run's own figure before the five tests the release commit adds — 77.76% is what the release ships with.

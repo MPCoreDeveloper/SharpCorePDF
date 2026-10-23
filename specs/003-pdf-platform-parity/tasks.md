@@ -19,12 +19,12 @@ and US4 trust. Phase 6 hardens and releases.
 trust (17). **Gate/foundation**: 21 tasks. **Polish**: 10 tasks. **MVP of the parity target**: T001–T038.
 **What `1.1.0` needs**: T097–T106 — see the release lanes in Gate 0.
 
-**Status (2026-10-23)**: 69 of 106 tasks done, 37 open — and **only T106 is on the 1.1.0 path**;
-lanes A and B (T097–T100) are closed, every Gate 0 item `C1`–`C6` is closed, and lanes C and D are through
-their gate: T101, T102, T104 and T105 are done and recorded, T103's build and both legs pass while its coverage
-gate measured 77.76% against 90% — recorded rather than waived, and signed in ADR-002 on 2026-10-23, so the box
-is closed on the signature — and T106 is clean: the whitespace pass and the release commit are done, the branch
-is pushed as pull request #4, and the merge, the G6 dry run and the tag are what remain.
+**Status (2026-10-23)**: 70 of 106 tasks done, 36 open — every open task is the 1.2 backlog, and
+**nothing is left on the 1.1.0 path**. Lanes A and B (T097–T100) are closed, every Gate 0 item `C1`–`C6` is
+closed, lanes C and D are closed: T101, T102, T104 and T105 are done and recorded, T103's coverage measured
+77.76% against 90% and is recorded rather than waived, signed in ADR-002 on 2026-10-23, and T106 is done —
+`v1.1.0` is tagged on `effe5de`, the commit whose SonarCloud analysis was newest on `main`, and the five
+packages are published to nuget.org.
 **D3 is decided** (Gate 0): 1.1.0 ships what this tree already implements, so the 36 open story tasks —
 US1's 13, US2's 17, US3's 4 and US4's 2 — are the 1.2 backlog and keep their unchecked boxes here.
 
@@ -495,7 +495,7 @@ and veraPDF reports conformance for all three profiles.
     between that table and a tag: the ADR-002 signature, the pull request, and the tag naming the commit whose
     analysis is newest on `main`.
   - `dotnet build SharpCorePDF.slnx -c Release` after the bump: **0 warnings, 0 errors**; both legs 748/748.
-- [ ] T106 Run `git diff --check`, confirm the tree is clean apart from the release commit, and tag only the commit whose SonarCloud analysis is the newest on `main`.
+- [x] T106 Run `git diff --check`, confirm the tree is clean apart from the release commit, and tag only the commit whose SonarCloud analysis is the newest on `main`.
   - **`git diff --check` was not clean; it is now, 2026-10-23.** The working-tree check passed — 33 changed
     paths before the release commit, none after it — but the check this gate is really about is against the
     last tag, and `git diff --check v1.0.0 -- .` found 31 blank lines before end-of-file in files 1.1 touched
@@ -511,10 +511,43 @@ and veraPDF reports conformance for all three profiles.
     **748/748**; `git diff --check` and `git diff --check v1.0.0` both exit 0.
   - **The release commit** — *Close the 1.1.0 release gates and record the coverage it ships with* — sits on
     `003-pdf-platform-parity` holding lanes A, B, C and D, with a clean tree behind it.
-  - **Not done, and deliberately: the tag.** It waits on the ADR-002 signature (T103) and on the merge of
-    [#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4) (T104), because this gate tags the commit whose
-    SonarCloud analysis is the newest on `main`, and that commit does not exist until both are true. `v1.1.0`
-    must also equal `<Version>` 1.1.0 — G7 — which `publish.yml` checks for itself.
+  - **Not done then, and done on 2026-10-23: the tag.** It waited on the ADR-002 signature (T103) and on the
+    merge of [#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4) (T104), because this gate tags the
+    commit whose SonarCloud analysis is the newest on `main`, and that commit did not exist until both were
+    true. `v1.1.0` must also equal `<Version>` 1.1.0 — G7 — which `publish.yml` checks for itself.
+  - **The merge.** `gh pr merge 4 --rebase` replayed the branch's twenty-one commits onto `main`; the tip is
+    `effe5de` — *Sign the coverage record: 1.1.0 ships with 77.76% named, not waived*. The rebase rewrote the
+    branch SHAs, so the pre-merge hashes quoted above (`ea95c78`, `2d85a69`) no longer name commits on `main`;
+    the runs they identify are still there, and the merge commit is the one this gate tags. CI on `effe5de`
+    passed, and SonarCloud's newest analysis of `main` is that same revision.
+  - **The gate, read before the tag:** six conditions, all `OK` — `new_coverage` **84.2%** against its 80 floor,
+    `new_duplicated_lines_density` 1.3%, the three ratings at 1, hotspots reviewed 100%.
+  - **G6, on `main`, after the merge and before the tag** (`publish: false`, run `39967722848`): sonar-gate
+    `success`, then build, both legs, pack, the pre-push checks and the local-feed handshake `success`, with
+    `NuGet login` and `Push to nuget.org` correctly `skipped`. This is why the dry run cannot be dispatched from
+    the branch: its first job compares `github.sha` with the newest analysis of `main`.
+  - **The tag.** `git tag -a v1.1.0 effe5de` — annotated, message `SharpCorePDF 1.1.0`, matching `<Version>`
+    1.1.0 and naming the analysed commit. The tag push ran `publish` (`39968375808`): sonar-gate `success`,
+    OIDC login `success`, **`Push to nuget.org` `success`**, with the local-feed handshake `skipped` because the
+    run was publishing rather than rehearsing.
+  - **G8, after the push.** All five packages resolve at `1.1.0` from `api.nuget.org`
+    (`sharpcorepdf`, `.domain`, `.application`, `.infrastructure`, `.dependencyinjection`); the
+    [`SharpCorePDF` page](https://www.nuget.org/packages/SharpCorePDF/1.1.0) renders the README, the logo and the
+    four dependencies at `>= 1.1.0` for both legs, and carries no assemblies of its own. An empty `net11.0`
+    console app that references only `SharpCorePDF` 1.1.0 merged two corpus documents —
+    **6 pages, 6,623 bytes, PDF 1.7, 0 warnings** — and the inspector reported it readable with 6 outline
+    items and a uniform 595.28 × 841.89 pt page; `validate-pdf.py` said `qpdf check: no problems`, version 1.7,
+    6 pages, 6 bookmarks, 6 streams decoded, 0 failed. The same program on `net10.0` merged `SafeWebCore.pdf`
+    with a third corpus document — **9 pages, 934,348 bytes, 0 warnings**, readable, 3 outline items, page size
+    not uniform (Letter and A4) — and validated the same way. One thing a consumer learns and the README does
+    not say: `Microsoft.Extensions.DependencyInjection` is needed to build the provider that
+    `AddSharpCorePDF()` registers into, because the four layer packages reference the abstractions and not the
+    container.
+  - **API compatibility, which G8 asks for as a report and this tree can prove as a diff:**
+    `git diff v1.0.0 -- 'src/*/PublicAPI.Shipped.txt'` is **empty** — no shipped member was removed or changed
+    since 1.0.0 — while the unshipped snapshots grow by **1,788 lines** (Domain 1,551, Infrastructure 152,
+    Application 85). The release is additive by construction: `RS0016`/`RS0017` are build errors, so an addition
+    cannot be made without being recorded and a removal cannot be made without failing the build.
 
 ---
 
