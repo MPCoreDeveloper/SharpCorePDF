@@ -78,7 +78,7 @@ What `1.1.0` delivers, row by row: **1** (page, text, fonts), the path writer of
 **4**, every page operation of **5** except its external run, the information dictionary of **7**, **11**
 (signatures), **12** (PDF/A-1b/2b/3b), **13** (layout) and the parts of **14–16** the suite already
 covers. Deferred to `1.2.0`: **3** entirely, and the remainder of **2**, **4**, **5**, **6**, **7**,
-**8**, **9**, **10**, **14**, **15** and **16** — 37 tasks, recorded with their numbers in `tasks.md`.
+**8**, **9**, **10**, **14**, **15** and **16** — 36 tasks, recorded with their numbers in `tasks.md`.
 
 ## Row closure protocol
 
