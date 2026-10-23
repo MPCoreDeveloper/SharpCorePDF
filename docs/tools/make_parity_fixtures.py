@@ -496,7 +496,14 @@ def entry(root: Path, path: Path, kind: str, description: str) -> dict[str, obje
 
 
 def write_manifest(root: Path, files: list[dict[str, object]]) -> None:
-    """Writes the manifest with stable ordering and no environment-specific data."""
+    """Writes the manifest with stable ordering and no environment-specific data.
+
+    The newline is pinned to LF rather than the platform's, and the same is done for the labelled
+    exports below, because this file records the SHA-256 and byte count of every fixture: a corpus
+    written with CRLF on Windows matches its manifest on Windows and fails on Linux, which is what
+    the CI leg found. Pinning the newline is the generator's half of the fix; `.gitattributes` pins
+    the checkout so Git does not convert the bytes back.
+    """
     manifest = {
         "schema": 1,
         "generator": "docs/tools/make-fixtures.py --parity",
@@ -510,6 +517,7 @@ def write_manifest(root: Path, files: list[dict[str, object]]) -> None:
     path.write_text(
         json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 
@@ -633,6 +641,7 @@ def make_labelled(root: Path) -> list[dict[str, object]]:
         label_path.write_text(
             json.dumps(labels, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
             encoding="utf-8",
+            newline="\n",
         )
 
         pdf_entry = entry(root, pdf_path, "labelled", f"Labelled reading-order document {identifier}")
