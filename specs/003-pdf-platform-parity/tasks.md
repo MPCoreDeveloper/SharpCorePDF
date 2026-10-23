@@ -16,7 +16,132 @@ and US4 trust. Phase 6 hardens and releases.
 `net11.0`. Do not regress that count or either leg.
 
 **Task count**: 106 tasks. **Stories**: US1 creator (17), US2 editing (20), US3 reading (21), US4
-trust (17). **Gate/foundation**: 21 tasks. **Polish**: 10 tasks. **MVP**: T001–T038.
+trust (17). **Gate/foundation**: 21 tasks. **Polish**: 10 tasks. **MVP of the parity target**: T001–T038.
+**What `1.1.0` needs**: T097–T106 — see the release lanes in Gate 0.
+
+**Status (2026-10-23)**: 59 of 106 tasks done, 47 open — and **only T097–T106 are on the 1.1.0 path**;
+the Gate 0 items `C1`–`C6` are all closed.
+**D3 is decided** (Gate 0): 1.1.0 ships what this tree already implements, so the 37 open story tasks —
+US1's 13, US2's 17, US3's 5 and US4's 2 — are the 1.2 backlog and keep their unchecked boxes here.
+
+---
+
+## Gate 0: the cover-page question (`002-page-authoring`) — priority 0
+
+`specs/002-page-authoring/spec.md` is the request this repository exists to answer: an A4 page with six
+lines of text and a 152 × 87 PNG, written in memory and used directly as a `MergePlan` source, without
+PdfSharpCore. It is implemented on this branch — it is the authoring block of `CHANGELOG.md`
+`[Unreleased]` — and it is not in the tagged `v1.0.0`, so the release that delivers it is the next one,
+`1.1.0`. That spec declares word wrap, a `MeasureString` API, vector graphics and JPEG/GIF as
+**non-goals**, so T028–T031, T033 and T034 are parity commitments for `docs/parity.md` rows 2–4; they
+are not conditions of the question. Everything the question does ask for was verified on this tree on
+2026-10-22:
+
+| Condition | Evidence | Status |
+| --- | --- | --- |
+| US1/AC1 — create a page, get the bytes | `PdfDocumentBuilderTests.Writes_an_a4_page_with_its_text`; `pypdf` 6.19.0 (strict) reads `595.276 × 841.89` pt | Met |
+| US1/AC2 — merge from memory | `Merges_the_authored_page_in_front_of_a_document`; `author-page` prints 3 pages, page 1 A4, page 1 text = the cover text; `Build()` returns a `PdfByteArraySource`, so no temporary file | Met |
+| US1/AC3 — RGBA PNG with a soft mask | `Writes_an_rgba_png_with_a_soft_mask`; `pypdf` reads `/Im1 /Image 152 × 87` with `/SMask`; PyMuPDF 72 dpi: `(100, 45)` = `(31, 58, 95)`, `(50, 45)` = white | Met |
+| US1/AC4 — byte-identical rebuild | `Writes_the_same_bytes_for_the_same_input` (a changed date changes the bytes; a derived identifier stays repeatable) | Met |
+| US2/FR-005, FR-009 — accents round-trip | `Round_trips_the_accented_characters_of_a_standard_font`; `pypdf` extracts `é è à ç ô ï`, the apostrophe, the slash and the vertical bar unchanged, `WinAnsiEncoding` only | Met |
+| US2/FR-006 — embedded face, no system font | `Embeds_a_truetype_font_and_reads_its_text_back`; the full DejaVu Sans (756 KB) writes a 58 KB PDF whose text extracts | Met |
+| US3/FR-007, FR-008 — PNG policy | `Writes_an_rgba_png_with_a_soft_mask`, `Writes_an_rgb_png_with_a_colour_key`, `Writes_a_palette_png_with_transparency`, `Writes_a_greyscale_png_with_alpha`, `Uses_the_resolution_of_a_png_for_its_natural_size`, `Writes_one_image_object_for_a_logo_used_on_two_pages`, `Refuses_an_interlaced_png`, `Refuses_a_sixteen_bit_png` | Met |
+| FR-011 — document information | `Records_the_metadata`; `PdfMetadata.CustomProperties` carries the custom entries | Met |
+| FR-012 — qpdf, pypdf and the inspector | `python docs/tools/validate-pdf.py` (pikepdf 10.17.0, which runs qpdf) — `qpdf check: no problems` on `cover.pdf` (1 page, 14 objects) and `cover-and-summary.pdf` (3 pages, 19 objects), 6 and 8 streams decoded, 0 failed; `pypdf` reads the page size back | Met |
+| FR-013, SC-003, SC-005 — suite, snapshot, legs | 33 authoring tests pass on `net10.0` and `net11.0`; full suite 738/738 on both legs; Release build 0 warnings, 0 errors | Met (T103 re-runs it on the release commit) |
+| FR-014 — refusals by name | `Refuses_text_a_standard_font_cannot_encode`, `Refuses_a_line_break_inside_a_text_operation`, `Refuses_a_missing_glyph_of_an_embedded_font`, `Refuses_an_interlaced_png`, `Refuses_a_sixteen_bit_png`, `Refuses_an_unusable_identifier`, `Refuses_a_document_without_a_page` | Met |
+| SC-001, SC-002 — cost and size | `author-page` Release run: `ok (222 ms)` including the merge and the read-back; `cover.pdf` is 8,835 bytes | Met |
+
+**What the question still needs is bookkeeping, not code:**
+
+- [x] C1 Run `qpdf --check` through pikepdf on the example's two outputs — 2026-10-22, no problems.
+- [x] C2 Run the strict `pypdf` read of page size, text and image XObject — 2026-10-22, exact.
+- [x] C3 Run the 72 dpi PyMuPDF pixel check inside and outside the logo — 2026-10-22, as recorded above.
+- [x] C4 Record C1–C3 and the two test counts in `docs/parity.md` rows 1–4 and `docs/measurements.md` §8 —
+  2026-10-22, under “Phase 2 progress — authoring” and “Issue-closure re-run”.
+- [x] C5 Repeat C1–C3 on the release commit and attach both transcripts to the pull request (T104); the test
+  counts are already both legs (33 authoring tests and 738 suite tests on `net10.0` and `net11.0`).
+  - **Provisional pass, 2026-10-23.** The three checks are one command now:
+    `uv run --with pikepdf --with pypdf --with pymupdf python docs/tools/verify-cover.py`. It runs the
+    `author-page` example, asks qpdf, `pypdf` and PyMuPDF the three questions, asserts every value
+    recorded on 2026-10-22, prints a markdown transcript and exits non-zero if one of them moves. The
+    rehearsal on this branch head broke 0 of them: 8,835 bytes, `ok (290 ms)` (202–392 ms across five
+    runs), 1 and 3 pages, 14 and 19 objects, 6 and 8 streams decoded with none failing, `/Im1` 152 × 87
+    with `/SMask`, MediaBox 595.276 × 841.890 pt, `(100, 45)` = `(31, 58, 95)` and `(50, 45)` white.
+  - What closes it: lane C re-runs the same command on the tagged commit (`verify-cover.py <cover.pdf>
+    <merged.pdf>`) and pastes its output into the pull request, which is T104's step. The run is a
+    paste, not a repeat of the work.
+- [x] C6 Settle D1, D2 or D3 before `1.1.0` is tagged — **D3 decided by the owner on 2026-10-22**; T105
+  forbids shipping an unevidenced “Must” row, so every row D3 does not complete is renamed in the same
+  commit that tags the release.
+
+### Decided: D3 — `1.1.0` ships what is implemented (2026-10-22)
+
+`1.1.0` delivers the surface the branch already implements and evidences, and every row it does not
+complete is rewritten in `docs/parity.md` as a `1.2` promise **in the same commit that tags it**. The
+alternative — 37 story tasks, 37–51 developer-days — was rejected as too slow for a release whose reason
+to exist (the cover page of `002-page-authoring`) is already implemented and evidenced.
+
+**Ships in 1.1.0**
+
+- Authoring: A4 and custom pages, standard and embedded TrueType, one line per `DrawText`, PNG with an
+  `/SMask`, a colour key, a palette or greyscale, an in-memory `PdfByteArraySource`, metadata and a
+  byte-identical rebuild. That is row 1 and the PNG half of row 4.
+- The path writer of row 2: `m l c v y h re f S B W n q Q cm gs`, ellipses as Béziers, clipping and
+  constant alpha.
+- Editing: rotate, delete, move, duplicate, reorder, crop, resize, extract, split, import, insert, append
+  and `SetMetadata`, with verbatim page copy, materialised inherited geometry and reproducible output
+  options. Every page operation row 5 lists is implemented; only its external closure run is 1.2.
+- Reading: letters, words, blocks, reading order, the ALTO/PAGE XML/hOCR/SVG exporters, hyperlinks,
+  annotations, form fields, images, metadata, bookmarks and the object graph — row 13 and the parts of
+  14–16 the suite already covers.
+- Signatures with pyHanko evidence and PDF/A-1b/2b/3b with veraPDF evidence — rows 11 and 12 complete.
+
+**Moves to 1.2** — the 37 open story tasks, unchanged and unchecked:
+
+| 1.2 work | Tasks | Rows |
+| --- | --- | --- |
+| Font metrics, `MeasureString`, greedy wrapping, leading, alignment | T023, T028, T029 | 3 |
+| Dash/cap/join/`SetTransform` tests, `PdfImage` factories, PNG ICC and 16-bit policy | T022, T032, T033 | 2, 4 |
+| JPEG pass-through, BMP and GIF | T024, T030, T031 | 4 |
+| XMP, outlines, page labels and viewer preferences; overlay/underlay operations | T045, T049 | 6, 7 |
+| Incremental writer, annotations, forms and their scenarios | the rest of US2 | 8, 9, 10 |
+| Hyperlink and pixel-decode tests, segmentation strategies, chapters, closure runs | T061, T064, T072, T078, T079 | 14, 15, 16 |
+| `sign-and-archive` and the US4 closure run | T094, T096 | 11, 12 |
+
+**What it costs, said plainly**: `1.1.0` is not the parity release the Product Outcome of `spec.md`
+describes, so that document carries a dated scope amendment, `docs/parity.md` names `1.2` in the Release
+cell of every incomplete row, and SC-001 becomes “100% of the rows that name 1.1”. A caller who installs
+`1.1.0` expecting word wrap, `MeasureString`, JPEG/BMP/GIF, overlays, annotations, forms or incremental
+updates gets a `1.2` promise with a task number — not a silent absence and not a “Must” row that was
+quietly dropped.
+
+### 1.1.0 release lanes — four workers, one tag
+
+Phase 6 is ten tasks and only its last two are genuinely ordered. Each lane writes its own files and
+nothing else; that ownership rule is what makes parallel work possible without a merge conflict.
+
+| Lane | Tasks | Files only this lane writes | Blocked by |
+| --- | --- | --- | --- |
+| A — public surface | T097, T098 | `src/*/PublicAPI.Unshipped.txt`, the public-surface contract test, `docs/migration/**` | nothing |
+| B — manual and examples | T099, T100 | `docs/manual/**`, `examples/**`, `docs/SharpCorePDF-Manual-1.1.0.pdf` | nothing |
+| C — evidence | T101, T102, T103, T104 | `docs/measurements.md`, the pull-request transcript | A for the snapshot count, B for the example runs |
+| D — release | T105, T106 | `CHANGELOG.md`, `<Version>`, `docs/release-checklist.md`, `docs/parity.md` | A, B and C |
+
+Three rules keep the lanes honest:
+
+1. **One lane, one branch, one commit series.** `CHANGELOG.md` and `docs/parity.md` belong to lane D
+   alone; a lane that needs a line there asks for it in the pull request instead of editing the file.
+2. **A lane is done when its command output is attached**, not when its prose reads well. C4 and C5 exist
+   because “looks right” has already been wrong once — and C5 is now the template: one command,
+   `docs/tools/verify-cover.py`, that prints the transcript and fails on a changed value.
+3. **No lane changes a public signature to make its own task easier.** T097 is additive; a rename is a
+   design decision and goes back to the plan.
+
+The critical path is D → tag, so the fastest arrangement is A and B together, C as soon as either
+finishes, and D last. That is roughly 7.5–10.5 developer-days of work: 2–3 calendar days with four hands
+on four lanes (or four agent sessions in four worktrees), 4–6 days with two. The bottleneck is the review
+of what comes back, not the typing.
 
 ---
 
@@ -65,16 +190,28 @@ reproducible corpus before implementation starts.
 **Goal**: A ten-page report with vector paths, wrapped text, two typefaces, a JPEG and a PNG, built
 in memory and mergeable with existing PDFs.
 
-**Independent Test**: `quickstart.md` step 3 passes: the builder tests are green, the
-`creator-parity` example writes the document, and `docs/tools/validate-pdf.py --check-syntax --text
---render --images` accepts it.
+**Independent Test**: `quickstart.md` step 3 passes: the builder tests are green, the creator example
+writes the document, and `python docs/tools/validate-pdf.py <output.pdf>` (pikepdf/qpdf) plus a `pypdf`
+read and a PyMuPDF render accept it.
+
+> **Scope note (2026-10-22).** Gate 0 closes the question this repository exists for; the tasks below are
+> parity work for `docs/parity.md` rows 2–4. Word wrap, `MeasureString`, vector graphics and JPEG/GIF are
+> named non-goals of `002-page-authoring`, so T028–T031 and T033 are not conditions of that question.
+> Under decision D3 they are `1.2` work: rows 2–4 name `1.2` in `docs/parity.md`, and nothing in US1 is a
+> condition of tagging `1.1.0`.
 
 ### Tests for User Story 1
 
 - [ ] T022 [P] [US1] Add failing tests for path, colour, dash, cap, join, clip and transform operators in `tests/SharpCorePDF.Tests/PdfDocumentBuilderTests.Drawing.cs`.
+  - Half done: eleven tests already cover a stroked line, a closed rectangle, an ellipse of four Béziers,
+    a caller path with its fill rule, a translucent fill, balanced `q`/`Q`, a clipping path and the
+    unbalanced-restore refusal. Dash, cap, join and `SetTransform` have no test yet.
 - [ ] T023 [P] [US1] Add failing tests for metrics, greedy wrapping, alignment, leading, accents and overflow refusal in `tests/SharpCorePDF.Tests/PdfDocumentBuilderTests.TextLayout.cs`.
 - [ ] T024 [P] [US1] Add failing tests for JPEG pass-through, EXIF orientation, CMYK/APP14 refusal, BMP, GIF first frame and PNG variants in `tests/SharpCorePDF.Tests/PdfDocumentBuilderTests.Images.cs`.
-- [ ] T025 [P] [US1] Add a byte-identity test for the same pages, fonts, images, `CreationDate` and `DocumentId` in `tests/SharpCorePDF.Tests/PdfDocumentBuilderTests.Determinism.cs`.
+- [x] T025 [P] [US1] Add a byte-identity test for the same pages, fonts, images, `CreationDate` and `DocumentId` in `tests/SharpCorePDF.Tests/PdfDocumentBuilderTests.Determinism.cs`.
+  - Done in `PdfDocumentBuilderTests.Writes_the_same_bytes_for_the_same_input` (the base file, not the
+    planned suffix): fixed date and identifier give identical bytes, a later date changes them, and a
+    derived identifier is still repeatable.
 
 ### Implementation for User Story 1
 
@@ -85,12 +222,32 @@ in memory and mergeable with existing PDFs.
 - [ ] T030 [US1] Add `JpegImage` with SOF/SOS parsing, EXIF orientation and Adobe APP14 transform detection in `src/SharpCorePDF.Infrastructure/Authoring/JpegImage.cs`.
 - [ ] T031 [US1] Add `BmpImage` and first-frame `GifImage` decoding in `src/SharpCorePDF.Infrastructure/Authoring/BmpImage.cs` and `GifImage.cs`.
 - [ ] T032 [US1] Extend `PngImage` for the Phase 1 matrix (interlaced, 16-bit, palette `tRNS`, ICC) in `src/SharpCorePDF.Infrastructure/Authoring/PngImage.cs`; refuse by name what is not supported.
+  - Half done: colour types 0, 2, 3, 4 and 6 at eight bits, palette `tRNS` expanded to RGB plus an
+    `/SMask`, `pHYs` natural size, and by-name refusal of interlaced and sixteen-bit images are in the
+    tree and tested. An `iCCP` chunk is ignored rather than declared: the ICC policy is still open.
 - [ ] T033 [US1] Add `PdfImage.Open/FromJpeg/FromPng/FromBmp/FromGif` and the image registry in `src/SharpCorePDF.Infrastructure/Authoring/PdfImage.cs`; one image drawn twice is one object.
 - [ ] T034 [US1] Add `PdfDocumentBuilder.WithMetadata`, `WithXmp`, `WithOutline`, `ImportPage` and `ImportPages` in `src/SharpCorePDF.Infrastructure/PdfDocumentBuilder.cs`; imported pages keep content, resources, annotations and geometry.
-- [ ] T035 [US1] Enforce fixed `CreationDate`/`DocumentId` determinism through `PdfAuthoringOptions` and the writer in `src/SharpCorePDF.Infrastructure/PdfAuthoringOptions.cs`.
+- [x] T035 [US1] Enforce fixed `CreationDate`/`DocumentId` determinism through `PdfAuthoringOptions` and the writer in `src/SharpCorePDF.Infrastructure/PdfAuthoringOptions.cs`.
+  - Done: `PdfAuthoringOptions.CreationDate`/`DocumentId` are validated by `Validate()` before the first
+    object is written, the identifier is derived from the content when it is absent, and T025's test holds
+    it byte for byte.
 - [ ] T036 [US1] Add the `creator-parity` scenario to `examples/SharpCorePDF.Examples/Scenarios.cs` and a creator example file beside `AuthoringExamples.cs`.
+  - Half done: `author-page` is registered and runs the question's flow end to end — a 152 × 87 RGBA logo,
+    six text lines with accents, an embedded DejaVu face, `Build()` into a `MergePlan`, a 3-page result and
+    a read-back that prints page 1's text. The wider creator scenario (JPEG, a second page size, outline)
+    waits for T030/T034.
 - [ ] T037 [US1] Write manual chapters `15-drawing.md`, `16-text-layout.md` and `17-image-formats.md`, and update `docs/README.md` and `docs/manual/build-manual.py`.
+  - Half done: `docs/manual/src/12-authoring.md` documents the surface that exists — coordinates, standard
+    and embedded faces, the PNG policy, determinism and the subset size. The three chapters split out of it
+    when layout (T028/T029) and the extra image formats (T030/T031) land, because a chapter that describes
+    wrapping before the code wraps would be a lie.
 - [ ] T038 [US1] Run T022–T025 plus `validate-pdf.py --check-syntax --text --render --images`; record the results and close the creator rows in `docs/parity.md`.
+  - Half done, 2026-10-22: `validate-pdf.py` (pikepdf 10.17.0 / qpdf) reports `qpdf check: no problems` for
+    `cover.pdf` (1 page, 14 objects) and `cover-and-summary.pdf` (3 pages, 19 objects); `pypdf` 6.19.0
+    strict reads `595.276 × 841.89` pt, extracts the accented line exactly and shows `/Im1` 152 × 87 with
+    `/SMask`; PyMuPDF at 72 dpi gives `(31, 58, 95)` at (100, 45) and white at (50, 45); 33 authoring tests
+    pass on `net10.0` and `net11.0`. Rows 1 and 4's PNG half are closed; row 2 stays Partial (no dash, cap,
+    join or transform test) and row 3 stays Planned (T023, T028, T029).
 
 **Checkpoint**: US1 is independently shippable; existing merge, inspection and editing tests still pass.
 
@@ -117,6 +274,12 @@ the result, checks order/geometry/metadata, and passes `validate-pdf.py --check-
 ### Implementation for User Story 2
 
 - [ ] T045 [US2] Extend `PdfEditPlan` and `PdfEditOperation` with `CropPage`, `ResizePage`, `InsertPage`, `ImportPage`, `Append`, `ReorderPages`, `SplitDocument`, `ExtractPages`, `Overlay`, `Underlay`, `SetXmp`, `SetOutline`, `SetPageLabels` and `SetViewerPreferences` in `src/SharpCorePDF.Domain/Aggregates/PdfEditPlan.cs` and `src/SharpCorePDF.Domain/ValueObjects/PdfEditOperation.cs`.
+  - Half done, 2026-10-22: `PdfCropPageOperation`, `PdfResizePageOperation`, `PdfInsertPageOperation`,
+    `PdfImportPageOperation`, `PdfAppendOperation`, `PdfReorderPagesOperation`,
+    `PdfSplitDocumentOperation` and `PdfExtractPagesOperation` exist and are covered by
+    `PdfDocumentEditorTests`, `.Composition` and `.Geometry`. The six that do not exist — `Overlay`,
+    `Underlay`, `SetXmp`, `SetOutline`, `SetPageLabels`, `SetViewerPreferences` — are the 1.2 remainder and
+    belong with T048 and T049.
 - [x] T046 [US2] Implement crop and resize (`Scale` and `Preserve`) with explicit materialised geometry and normalisation warnings in `src/SharpCorePDF.Infrastructure/PdfEditEngine.Pages.cs` and `src/SharpCorePDF.Infrastructure/Editing/PageOperations.cs`.
 - [x] T047 [US2] Implement import, insert, append, reorder, split and extract through the existing object copier in `src/SharpCorePDF.Infrastructure/PdfEditEngine.Pages.cs`.
 - [ ] T048 [US2] Implement `Overlay`/`Underlay` as recorded content in front of or behind the original stream, with clipping and `ExtGState` opacity in `src/SharpCorePDF.Infrastructure/Editing/OverlayWriter.cs`.
@@ -148,6 +311,10 @@ agreement and 95% reading-order agreement on the labelled corpus; every export v
 - [x] T059 [P] [US3] Add failing tests for letter fields, ordering, direction and unreadable-glyph warnings in `tests/SharpCorePDF.Tests/PdfLayoutReaderTests.Letters.cs`.
 - [x] T060 [P] [US3] Add failing tests for each word, segmentation and reading-order strategy, including two-column pages, in `tests/SharpCorePDF.Tests/PdfLayoutReaderTests.Layout.cs`.
 - [ ] T061 [P] [US3] Add failing tests for hyperlinks, image pixel decoding and unsupported filters in `tests/SharpCorePDF.Tests/PdfLayoutReaderTests.Hyperlinks.cs`.
+  - Half done, 2026-10-22: `PdfLayoutReaderTests.Hyperlinks.cs` holds four green tests
+    (`Reads_the_links_of_a_page_and_their_uris`, `Resolves_a_direct_and_a_named_destination`,
+    `Keeps_an_unresolved_destination_and_says_so`, `Reads_a_page_without_links_as_no_links`). Pixel
+    decoding and the unsupported-filter cases are T072's 1.2 work.
 - [x] T062 [P] [US3] Add failing tests for the read-only object graph, dangling references and content-operation offsets in `tests/SharpCorePDF.Tests/PdfObjectInspectorTests.cs`.
 - [x] T063 [P] [US3] Add failing tests for ALTO, PAGE XML, hOCR and SVG text exports in `tests/SharpCorePDF.Tests/PdfLayoutExportTests.cs`.
 
@@ -195,7 +362,7 @@ and veraPDF reports conformance for all three profiles.
 
 - [x] T080 [P] [US4] Add failing tests for detached CMS signing, byte range, visible appearance, certificate-without-key refusal and prior-revision preservation in `tests/SharpCorePDF.Tests/PdfDocumentSignerTests.cs` (depends on T050).
 - [x] T081 [P] [US4] Add failing tests for valid/invalid/unknown integrity, separate trust, multiple signatures, tampering and unsupported algorithms in `tests/SharpCorePDF.Tests/PdfDocumentSignatureValidatorTests.cs`.
-- [ ] T082 [P] [US4] Add failing tests for PDF/A-1b, -2b and -3b output, encryption conflict, unembeddable font refusal and unsatisfied requirements in `tests/SharpCorePDF.Tests/PdfATests.cs`.
+- [x] T082 [P] [US4] Add failing tests for PDF/A-1b, -2b and -3b output, encryption conflict, unembeddable font refusal and unsatisfied requirements in `tests/SharpCorePDF.Tests/PdfATests.cs`.
 
 ### Implementation for User Story 4
 
@@ -206,16 +373,18 @@ and veraPDF reports conformance for all three profiles.
 - [x] T087 [US4] Implement the optional RFC 3161 timestamp handshake through the caller callback in `src/SharpCorePDF.Infrastructure/Signatures/CmsBuilder.cs`; the library opens no socket.
 - [x] T088 [US4] Implement `SignatureValidator` parsing every signature and computing `Integrity` in `src/SharpCorePDF.Infrastructure/Signatures/SignatureValidator.cs`; unreadable structures are `Unknown`, never `Valid`.
 - [x] T089 [US4] Implement certificate-chain trust as a separate result against caller-supplied roots in `src/SharpCorePDF.Infrastructure/Signatures/TrustEvaluator.cs`; no machine store and no online revocation.
-- [ ] T090 [US4] Add `PdfAProfile` and `PdfAConversionResult` in `src/SharpCorePDF.Domain/ValueObjects/` and `src/SharpCorePDF.Domain/ReadModels/`.
-- [ ] T091 [US4] Implement `PdfAWriter` in `src/SharpCorePDF.Infrastructure/Authoring/PdfAWriter.cs`: embed fonts, write XMP and output intent, and remove or refuse profile-forbidden features.
-- [ ] T092 [US4] Enforce profile restrictions and the `IsWritten = false` refusal path in `src/SharpCorePDF.Infrastructure/PdfEditEngine.Document.cs`; never label an unconformant file as PDF/A.
-- [ ] T093 [P] [US4] Add `docs/tools/validate-signatures.py` and `docs/tools/validate-pdfa.py` with the pyHanko and veraPDF commands from `quickstart.md`.
-  - Half done: `docs/tools/validate-signatures.py` is in the tree and was run against pyHanko on 2026-10-23, with `--require-trusted` so a bad chain fails the run. `validate-pdfa.py` waits for T091: there is no PDF/A output for veraPDF to check yet.
+- [x] T090 [US4] Add `PdfAProfile` and `PdfAConversionResult` in `src/SharpCorePDF.Domain/ValueObjects/` and `src/SharpCorePDF.Domain/ReadModels/`.
+  - Also `PdfAConversionOptions`, `IPdfAWriter`, the application port and service, and `PdfEditOutputOptions.PdfAProfile`/`Encryption`; the profile/encryption conflict is validated there.
+- [x] T091 [US4] Implement `PdfAWriter` in `src/SharpCorePDF.Infrastructure/Authoring/PdfAWriter.cs`: embed fonts, write XMP and output intent, and remove or refuse profile-forbidden features.
+  - The analysis in `PdfARequirements` runs before a byte is written; `XmpPacket` mirrors the information dictionary, and `SRgbColorProfile` builds the `/N 3` output intent in code.
+- [x] T092 [US4] Enforce profile restrictions and the `IsWritten = false` refusal path in `src/SharpCorePDF.Infrastructure/PdfEditEngine.Document.cs`; never label an unconformant file as PDF/A.
+- [x] T093 [P] [US4] Add `docs/tools/validate-signatures.py` and `docs/tools/validate-pdfa.py` with the pyHanko and veraPDF commands from `quickstart.md`.
+  - Both scripts are in the tree and take `--help`. `validate-pdfa.py` finds veraPDF on `PATH`, through `VERAPDF_HOME` or with `--verapdf`, states the flavour with `--profile`, and exits 0/1/2 for pass/fail/cannot-run.
 - [ ] T094 [US4] Add the `sign-and-archive` scenario to `examples/SharpCorePDF.Examples/Scenarios.cs`, using local certificates and a caller-supplied timestamp token; ship no key.
-- [ ] T095 [US4] Write manual chapters `23-signatures.md` and `24-pdf-a.md`; state the integrity/trust split, the no-network rule and the external-validator evidence requirement.
-  - Half done: `docs/manual/src/23-signatures.md` is written — the appended revision, the parts of the signed revision, the caller's timestamp, the integrity/trust split, what validation does not do, and the pyHanko/qpdf evidence. `24-pdf-a.md` waits for T091.
+- [x] T095 [US4] Write manual chapters `23-signatures.md` and `24-pdf-a.md`; state the integrity/trust split, the no-network rule and the external-validator evidence requirement.
+  - Done: `docs/manual/src/23-signatures.md` and `docs/manual/src/24-pdf-a.md` are written — the appended revision and the integrity/trust split, the profile table, what is removed versus refused, archival edits, and the pyHanko/qpdf/veraPDF evidence. Both carry the unreleased banner until the release boundary (T099).
 - [ ] T096 [US4] Run T080–T082, pyHanko, veraPDF and the incremental-signature scenario; close the US4 rows in `docs/parity.md`.
-  - Half done: T080–T081 pass on both frameworks, pyHanko and qpdf are recorded under "Phase 4 progress — signatures" in `docs/parity.md`, and parity row 11 is closed as Met. veraPDF and the incremental-signature scenario (T094) are still missing.
+  - Half done: T080–T082 pass on both frameworks, pyHanko and qpdf are recorded under "Phase 4 progress — signatures", veraPDF 1.30.3 reports `PASS` for 1b/2b/3b of an authored page and of `SafeWebCore.pdf` under "Phase 4 progress — archival output", and parity rows 11 and 12 are closed as Met. The `sign-and-archive` scenario (T094) is still missing.
 
 **Checkpoint**: US4 is independently shippable once US2's incremental writer exists.
 
@@ -231,7 +400,13 @@ and veraPDF reports conformance for all three profiles.
 - [ ] T102 Run the determinism, empty-font, no-network and no-new-package checks from `quickstart.md` step 8.
 - [ ] T103 Run the full Release build and both test legs; require 0 warnings, 0 errors, all 1.0 tests unchanged and at least 90% coverage on new code.
 - [ ] T104 Run every `quickstart.md` phase command on the release commit and record the commands, versions and outputs in the pull request.
+  - The gate's own transcript is not a phase command: run
+    `uv run --with pikepdf --with pypdf --with pymupdf python docs/tools/verify-cover.py --output artifacts\c5-transcript.md`
+    and attach that file — it is C5's evidence for the tagged commit.
 - [ ] T105 Confirm `docs/parity.md` has no unevidenced “Must” row, then update the 1.1 entry in `CHANGELOG.md`, bump `<Version>`, and complete `docs/release-checklist.md` G1–G9.
+  - The first half starts at Gate 0: `C5`/`C6` prove the question's rows, and `C6` is decided — D3. A “Must”
+    row that 1.1 does not deliver is either implemented or moved with the recorded decision; it is never
+    left Planned in a tagged release, and `docs/parity.md` is edited in the same commit as the tag.
 - [ ] T106 Run `git diff --check`, confirm the tree is clean apart from the release commit, and tag only the commit whose SonarCloud analysis is the newest on `main`.
 
 ---
@@ -242,11 +417,14 @@ and veraPDF reports conformance for all three profiles.
 
 - **Phase 0** blocks every implementation phase. A parity row without evidence is not done.
 - **Phase 1** blocks US1, US2 and US3. US4 also needs T050 from US2.
-- **US1 (P1)** is the MVP: Phase 0 + Phase 1 + T022–T038.
+- **US1 (P1)** is the MVP of the parity target: Phase 0 + Phase 1 + T022–T038. After D3 it is the first
+  block of `1.2.0`, not of `1.1.0`.
 - **US2 (P2)** starts after Phase 1; T050 (incremental writer) blocks US4.
 - **US3 (P3)** starts after Phase 1 and may run in parallel with US2 and US4.
 - **US4 (P4)** starts after T050; signing and PDF/A can then run in parallel.
-- **Phase 6** starts only when the desired stories are complete.
+- **Phase 6** normally starts only when the desired stories are complete. Under D3 it starts now, because
+  the desired stories for `1.1.0` are the ones already in the tree; T050 and the rest of US2–US4 are
+  `1.2.0` work that no longer blocks this release.
 
 ### Story dependencies
 
@@ -273,12 +451,36 @@ A test must fail before its implementation task starts.
 
 ## Implementation Strategy
 
-### MVP first
+### 1.1.0 path (D3)
 
-1. Finish Phase 0 evidence and Phase 1 foundation.
-2. Deliver US1 only (T022–T038).
-3. Stop and validate `quickstart.md` step 3 independently.
-4. Ship the creator preview only when the evidence is recorded.
+1. **Gate 0 is closed** — `C6` decided (D3) and `C5` reduced to one command, `docs/tools/verify-cover.py`,
+   whose rehearsal on 2026-10-23 broke none of the recorded values. Lane C re-runs it on the tagged commit
+   and pastes the transcript.
+2. Lanes A and B in parallel (T097–T100).
+3. Lane C (T101–T104) once A and B are green.
+4. Lane D (T105–T106): parity rows, changelog entry, `<Version>`, checklist G1–G9, tag.
+5. `1.2.0` opens with the 37 story tasks in the order US1 → US2 → US3 → US4; its first commit restores
+   rows 2–16 to their full `1.2` target and a second scope decision is written if that slips again.
+
+### Remaining effort, 2026-10-23 (D3)
+
+| Scope | Tasks | What is left | Estimate |
+| --- | --- | --- | --- |
+| **1.1.0 — Gate 0** | C5, C6 | **closed 2026-10-23**: `verify-cover.py` is C1–C3 in one command, and its rehearsal broke 0 recorded values | spent |
+| **1.1.0 — lane A** | T097, T098 | public-surface snapshot and contract test, two migration guides | 2–3 days |
+| **1.1.0 — lane B** | T099, T100 | manual index and the 1.1.0 PDF from 25 chapters, every example run | 2–3 days |
+| **1.1.0 — lane C** | T101–T104 | measurements, determinism/no-network/no-package, both legs, quickstart and C1–C3 transcripts | 2 days |
+| **1.1.0 — lane D** | T105, T106 | parity rewrite, changelog, `<Version>`, checklist G1–G9, tag | 1–2 days |
+| **1.1.0 total** | 10 tasks | | **7.5–10.5 days serial, 2–3 days on four lanes** |
+| 1.2 — US1 creator | 13 | metrics, wrap, JPEG/BMP/GIF, `PdfImage`, import/outline, chapters | 12–16 days |
+| 1.2 — US2 editing | 17 | overlay, XMP/outlines, incremental writer, annotations, forms | 20–28 days |
+| 1.2 — US3 reading | 5 | links, pixels, chapters, closure run | 4–6 days |
+| 1.2 — US4 trust | 2 | `sign-and-archive`, closure run | 1 day |
+| **1.2 total** | **37** | | **37–51 days (7–10 weeks solo)** |
+
+The 1.1.0 rows are the release. The 1.2 rows are the parity promise the specification still describes:
+nothing there is cut, it is moved, with a date and a task number, and `1.2.0` cannot be tagged without
+them because its own SC-001 names the rows it must evidence.
 
 ### Incremental delivery
 

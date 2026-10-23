@@ -8,7 +8,7 @@
 
 # SharpCorePDF examples
 
-Eleven runnable examples that show how the library is used, and the console app that runs them. Everything
+Fourteen runnable examples that show how the library is used, and the console app that runs them. Everything
 here is code that compiles and executes against the package, so nothing in the documentation is a
 snippet that was never run.
 
@@ -42,6 +42,7 @@ when every example ran, `1` when one failed, and `2` when a name on the command 
 | `extract-layout` | Reading the layout of a page: the block of every paragraph in reading order with the segmentation and the order that produced them, the box and baseline of every letter, and the same reading written as ALTO, PAGE XML, hOCR and SVG. |
 | `inspect-objects` | Walking a document as the object graph it is — every object, its dangling references and the warnings — and the operators of page 1's content stream with the offset each one starts at. |
 | `options` | Metadata policy and override, outline and page-label policy, the target version, and a reproducible result (byte for byte). |
+| `archive-pdfa` | One authored page written for PDF/A-1b, -2b and -3b — the version, the XMP packet and the output intent each profile requires — and the refusal of a page set in a standard font, with the destination left empty. |
 | `protect-result` | A result written with AES-256, a user and an owner password and a permission set: what a reader is asked for, what it is allowed to do, and how an encrypted source is merged into a document that is sealed again under new passwords. |
 | `warnings` | The two channels: what inspection reports about a document, and what the merge reports about its own work. |
 | `errors` | Every refusal a caller can meet, with the exception type and the message the library produces, and the merge that succeeds once the encrypted sample is given its password. |

@@ -19,6 +19,7 @@ internal sealed class FontResource
     private readonly int descriptorNumber;
     private readonly int fontFileNumber;
     private readonly int toUnicodeNumber;
+    private readonly int cidSetNumber;
     private readonly Dictionary<ushort, int> glyphText = [];
 
     /// <summary>Initializes a new instance of the <see cref="FontResource"/> class.</summary>
@@ -38,6 +39,7 @@ internal sealed class FontResource
             descriptorNumber = writer.AllocateObject();
             fontFileNumber = writer.AllocateObject();
             toUnicodeNumber = writer.AllocateObject();
+            cidSetNumber = writer.AllocateObject();
             Fingerprint = SHA256.HashData(trueType.Data);
         }
         else
@@ -132,6 +134,11 @@ internal sealed class FontResource
             toUnicodeNumber,
             new PdfStream(new PdfDictionary(), BuildToUnicode()));
 
+        // PDF/A-1 requires every subset of a CID font to state which CIDs its program describes. The
+        // subset keeps the glyph numbering of its source, so a CID is a glyph number and the set is a
+        // bitmap over them.
+        writer.WriteObject(cidSetNumber, new PdfStream(new PdfDictionary(), BuildCidSet()));
+
         writer.WriteObject(descriptorNumber, BuildDescriptor(trueType, baseFont));
         writer.WriteObject(descendantNumber, BuildDescendant(trueType, baseFont));
         writer.WriteObject(ObjectNumber, BuildComposite(baseFont));
@@ -186,7 +193,29 @@ internal sealed class FontResource
             .SetInteger("Descent", Scale(font, font.Descender))
             .SetInteger("CapHeight", Scale(font, font.CapHeight))
             .SetInteger("StemV", 80)
-            .Set("FontFile2", new PdfReference(fontFileNumber, 0));
+            .Set("FontFile2", new PdfReference(fontFileNumber, 0))
+            .Set("CIDSet", new PdfReference(cidSetNumber, 0));
+    }
+
+    /// <summary>Builds the <c>CIDSet</c> stream of the subset.</summary>
+    /// <returns>A bitmap with one bit per CID, the highest bit of a byte being its lowest CID.</returns>
+    /// <remarks>
+    /// The subset keeps a slot for every glyph of its source program, so every CID up to the glyph count
+    /// is present in it: a slot the document never draws holds an empty outline rather than no glyph at
+    /// all. The set therefore states the whole range, which is what both the first and the second part
+    /// of ISO 19005 ask of a subset whose numbering was preserved.
+    /// </remarks>
+    private byte[] BuildCidSet()
+    {
+        var glyphCount = trueType!.GlyphCount;
+        var bitmap = new byte[((glyphCount - 1) / 8) + 1];
+
+        for (var cid = 0; cid < glyphCount; cid++)
+        {
+            bitmap[cid / 8] |= (byte)(0x80 >> (cid % 8));
+        }
+
+        return bitmap;
     }
 
     /// <summary>Builds the descendant font of a composite font.</summary>

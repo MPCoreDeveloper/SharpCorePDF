@@ -37,6 +37,34 @@ public sealed record PdfEditOutputOptions
     /// </summary>
     public string? DocumentId { get; init; }
 
+    /// <summary>
+    /// Gets the encryption the result is written with, or <see langword="null"/> — the default — for a
+    /// document that anyone can read.
+    /// </summary>
+    /// <remarks>
+    /// An edit writes its result in the clear unless this is set, even when the source was encrypted:
+    /// the result is a new document, and the password of its source is not carried into it.
+    /// </remarks>
+    public PdfEncryptionOptions? Encryption { get; init; }
+
+    /// <summary>
+    /// Gets the archival profile the result is written for, or <see langword="null"/> for an ordinary
+    /// PDF document.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The profile decides the version of the result — PDF/A-1b is a PDF 1.4 document, -2b and -3b are
+    /// PDF 1.7 — and adds the XMP packet and the output intent it requires. Every font must be
+    /// embedded, and features the profile forbids are removed or refused; a document that cannot be
+    /// made conformant is refused rather than written with a label it does not deserve.
+    /// </para>
+    /// <para>
+    /// A profile cannot be combined with <see cref="Encryption"/>, because ISO 19005 forbids encrypted
+    /// archival documents.
+    /// </para>
+    /// </remarks>
+    public PdfAProfile? PdfAProfile { get; init; }
+
     /// <summary>Validates these options.</summary>
     /// <returns>Every problem found, or an empty list when the options are usable.</returns>
     public IReadOnlyList<string> Validate()
@@ -62,6 +90,27 @@ public sealed record PdfEditOutputOptions
         if (DocumentId is not null && string.IsNullOrWhiteSpace(DocumentId))
         {
             errors.Add("the document identifier must be a non-empty string when it is set.");
+        }
+
+        if (Encryption is { } encryption)
+        {
+            // The encryption has to be told the version, because the crypt filters of AES-128 and
+            // AES-256 are newer than the formats that precede them.
+            errors.AddRange(encryption.Validate(TargetVersion));
+        }
+
+        if (PdfAProfile is { } profile)
+        {
+            if (!Enum.IsDefined(profile))
+            {
+                errors.Add($"PDF/A profile '{(int)profile}' is not defined.");
+            }
+
+            if (Encryption is not null)
+            {
+                errors.Add(
+                    $"the PDF/A profile {profile} cannot be combined with encryption: ISO 19005 requires an archival document to be readable without a password.");
+            }
         }
 
         return errors;

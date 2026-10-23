@@ -1012,7 +1012,7 @@ SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.PageNumber.init -> void
 SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.PdfResizePageOperation(int PageNumber, SharpCorePDF.Domain.ValueObjects.PdfPageSize Size, SharpCorePDF.Domain.ValueObjects.PdfPageResizeMode Mode) -> void
 SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.Size.get -> SharpCorePDF.Domain.ValueObjects.PdfPageSize
 SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.Size.init -> void
-SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageGeometryNormalized = 53 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PageGeometryNormalized = 55 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 static SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.operator !=(SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation? right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation.operator ==(SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfCropPageOperation? right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation.operator !=(SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation? left, SharpCorePDF.Domain.ValueObjects.PdfResizePageOperation? right) -> bool
@@ -1339,8 +1339,8 @@ SharpCorePDF.Domain.ValueObjects.PdfObjectViewKind.Real = 3 -> SharpCorePDF.Doma
 SharpCorePDF.Domain.ValueObjects.PdfObjectViewKind.Reference = 9 -> SharpCorePDF.Domain.ValueObjects.PdfObjectViewKind
 SharpCorePDF.Domain.ValueObjects.PdfObjectViewKind.Stream = 8 -> SharpCorePDF.Domain.ValueObjects.PdfObjectViewKind
 SharpCorePDF.Domain.ValueObjects.PdfObjectViewKind.String = 4 -> SharpCorePDF.Domain.ValueObjects.PdfObjectViewKind
-SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ContentNestingTooDeep = 55 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
-SharpCorePDF.Domain.ValueObjects.PdfWarningKind.DanglingReference = 54 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ContentNestingTooDeep = 57 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.DanglingReference = 56 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 static SharpCorePDF.Domain.ReadModels.PdfContentOperationView.operator !=(SharpCorePDF.Domain.ReadModels.PdfContentOperationView? left, SharpCorePDF.Domain.ReadModels.PdfContentOperationView? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfContentOperationView.operator ==(SharpCorePDF.Domain.ReadModels.PdfContentOperationView? left, SharpCorePDF.Domain.ReadModels.PdfContentOperationView? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfObjectReference.operator !=(SharpCorePDF.Domain.ReadModels.PdfObjectReference? left, SharpCorePDF.Domain.ReadModels.PdfObjectReference? right) -> bool
@@ -1540,3 +1540,55 @@ static SharpCorePDF.Domain.ValueObjects.PdfSignatureProblem.operator !=(SharpCor
 static SharpCorePDF.Domain.ValueObjects.PdfSignatureProblem.operator ==(SharpCorePDF.Domain.ValueObjects.PdfSignatureProblem? left, SharpCorePDF.Domain.ValueObjects.PdfSignatureProblem? right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfTrustOptions.operator !=(SharpCorePDF.Domain.ValueObjects.PdfTrustOptions? left, SharpCorePDF.Domain.ValueObjects.PdfTrustOptions? right) -> bool
 static SharpCorePDF.Domain.ValueObjects.PdfTrustOptions.operator ==(SharpCorePDF.Domain.ValueObjects.PdfTrustOptions? left, SharpCorePDF.Domain.ValueObjects.PdfTrustOptions? right) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfAConversionResult.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfAConversionResult.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfAConversionResult.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.ToString() -> string!
+SharpCorePDF.Domain.Ports.IPdfAWriter
+SharpCorePDF.Domain.Ports.IPdfAWriter.ConvertAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, System.IO.Stream! destination, SharpCorePDF.Domain.ValueObjects.PdfAProfile profile, SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions? options = null, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfAConversionResult!>!
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfAConversionResult!
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.BytesWritten.get -> long
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.BytesWritten.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.Equals(SharpCorePDF.Domain.ReadModels.PdfAConversionResult? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.IsWritten.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.IsWritten.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.PageCount.get -> int
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.PageCount.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.PdfAConversionResult() -> void
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.Profile.get -> SharpCorePDF.Domain.ValueObjects.PdfAProfile
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.Profile.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.UnsatisfiedRequirements.get -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.UnsatisfiedRequirements.init -> void
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.Warnings.get -> System.Collections.Generic.IReadOnlyList<SharpCorePDF.Domain.ValueObjects.PdfWarning!>!
+SharpCorePDF.Domain.ReadModels.PdfAConversionResult.Warnings.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions!
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.DocumentId.get -> string?
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.DocumentId.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.Equals(SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.Metadata.get -> SharpCorePDF.Domain.ValueObjects.PdfMetadata?
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.Metadata.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.ModificationDate.get -> System.DateTimeOffset?
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.ModificationDate.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.PdfAConversionOptions() -> void
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.Producer.get -> string!
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.Producer.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.Validate() -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Domain.ValueObjects.PdfAProfile
+SharpCorePDF.Domain.ValueObjects.PdfAProfile.PdfA1B = 1 -> SharpCorePDF.Domain.ValueObjects.PdfAProfile
+SharpCorePDF.Domain.ValueObjects.PdfAProfile.PdfA2B = 2 -> SharpCorePDF.Domain.ValueObjects.PdfAProfile
+SharpCorePDF.Domain.ValueObjects.PdfAProfile.PdfA3B = 3 -> SharpCorePDF.Domain.ValueObjects.PdfAProfile
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.Encryption.get -> SharpCorePDF.Domain.ValueObjects.PdfEncryptionOptions?
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.Encryption.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.PdfAProfile.get -> SharpCorePDF.Domain.ValueObjects.PdfAProfile?
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.PdfAProfile.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PdfAFeatureRemoved = 53 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PdfAProfileWritten = 54 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+static SharpCorePDF.Domain.ReadModels.PdfAConversionResult.operator !=(SharpCorePDF.Domain.ReadModels.PdfAConversionResult? left, SharpCorePDF.Domain.ReadModels.PdfAConversionResult? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfAConversionResult.operator ==(SharpCorePDF.Domain.ReadModels.PdfAConversionResult? left, SharpCorePDF.Domain.ReadModels.PdfAConversionResult? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.Default.get -> SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions!
+static SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.operator !=(SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions? left, SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.operator ==(SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions? left, SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions? right) -> bool

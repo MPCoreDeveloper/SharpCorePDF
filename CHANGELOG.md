@@ -51,8 +51,8 @@ against an empty feed.
   version, metadata overrides, producer, modification date and document identifier. The file
   identifier is derived from the version, date, page count, identifier and applied operations, so a
   fixed `ModificationDate` and `DocumentId` make repeated edits of the same source byte-identical.
-  The editing release reads encrypted sources through the existing standard security handler and
-  writes the result in the clear; output encryption is not part of this slice.
+  The editing release reads encrypted sources through the existing standard security handler; the
+  result is written in the clear unless `Encryption` is set (see below).
 - **A page written from nothing.** `PdfDocumentBuilder` creates an in-memory document — one or more
   pages of any `PdfPageSize` — whose pages are drawn through `PdfPageCanvas`: `DrawText` sets a line in a
   standard or an embedded font at a baseline, in a top-left coordinate system with `y` downwards, and
@@ -184,6 +184,29 @@ against an empty feed.
   library can decide on its own. No machine trust store is consulted, no certificate is fetched and no
   authority is asked whether one was revoked; a placeholder signature, an unreadable structure or a range
   that does not reach the end of the file is `Unknown`, never `Valid`.
+- **A document can be written for archival delivery.** `IPdfAWriter`, resolved by `AddSharpCorePDF()`
+  and constructible by hand, writes a complete PDF/A-1b, -2b or -3b document: the version the profile
+  names, an uncompressed UTF-8 XMP packet carrying `pdfaid:part` and `pdfaid:conformance` with the
+  document information mirrored into it, an `/N 3` output intent built from a generated sRGB colour
+  profile, and `/NeedAppearances false` on a form. `PdfEditOutputOptions.PdfAProfile` routes an ordinary
+  edit through the same writer. The analysis runs before a byte is written: a font that is not embedded,
+  a CID subset that states no `/CIDSet` for 1b, transparency, `JPXDecode`/`LZWDecode`, optional content or
+  an attachment the profile forbids, an annotation without an appearance stream, a JavaScript/`Launch`
+  and similar action, or an external file stream is refused with `IsWritten = false`, a named
+  requirement and an untouched destination — never written with a label it does not deserve. What can be
+  removed without changing a page is removed and reported as `PdfWarningKind.PdfAFeatureRemoved`.
+  `docs/tools/validate-pdfa.py` wraps veraPDF; the release is recorded in `docs/parity.md` on veraPDF
+  1.30.3 reporting `PASS` for all three profiles of both an authored page and a real
+  "Microsoft: Print To PDF" document.
+- **An edit can write an encrypted result.** `PdfEditOutputOptions.Encryption` applies the same standard
+  security handler a merge uses — AES-256 by default, AES-128 and RC4 available — and the identifier of
+  the result keys it. The engine refuses a plan that asks for a PDF/A profile and encryption together,
+  before the source is read, and with `VerifyOutput` on it reads its own encrypted output back with the
+  password it was written with.
+- **Embedded TrueType subsets now state a `/CIDSet`.** ISO 19005-1 requires the set of CIDs a subset
+  describes, and veraPDF failed a PDF/A-1b conversion without it. The writer emits one that names every
+  CID the preserved numbering makes present, which also satisfies the PDF/A-2 rule for subsets that carry
+  a set.
 
 ### Fixed
 
@@ -210,6 +233,15 @@ against an empty feed.
 
 ### Changed
 
+- **What 1.1 delivers, and what it defers to 1.2.** The capability described in this entry is what
+  `1.1.0` ships: page creation with standard and embedded fonts, PNG images, the path writer, every page
+  operation of the editor (rotate, delete, move, duplicate, reorder, crop, resize, extract, split, import,
+  insert, append and metadata overrides), reading with layout analysis and the four text exporters,
+  digital signatures and PDF/A-1b, -2b and -3b output. Text measurement and word wrap,
+  JPEG/BMP/GIF, overlays, annotation and form authoring, and incremental updates are **not** in `1.1.0`.
+  They stay in the parity matrix as `1.2` rows with a named task rather than disappearing, so a caller can
+  see the gap instead of discovering it: [`docs/parity.md`](docs/parity.md) names the release of every
+  row, and the specification carries the dated scope amendment behind that split.
 - **The product boundary now includes creation and editing.** Constitution 2.0.0 and
   [ADR-001](docs/adr/0001-pdf-platform-boundary.md) define SharpCorePDF as a dependency-free PDF
   creation, editing and reading library. The 1.1 target is capability parity with PDFsharp 6.5 for

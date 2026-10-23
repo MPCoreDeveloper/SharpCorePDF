@@ -70,8 +70,10 @@ An **embedded font** is a TrueType program you supply as bytes. `PdfTypeface.Fro
 parses it immediately, so a malformed program is reported where it is handed over rather than at the
 first page that draws with it. The font is embedded as a subset: the outlines of the glyphs the document
 draws are kept, the outlines of every other glyph are left out, and the glyph numbers of the source are
-preserved. A subset of DejaVu Sans used for a cover is a few kilobytes rather than the 740 KB of the
-whole face. A `/ToUnicode` map travels beside it, so `é`, `è`, `à`, `ç`, `ô` and `ï` can be extracted
+preserved. A cover that draws two lines of text with the full 738 KB DejaVu Sans is a 58 KB document:
+the outlines of every other glyph are gone, and what remains is the per-glyph bookkeeping — glyph
+locations, advance widths and the character map — which keeps its size because the numbering is
+preserved. A `/ToUnicode` map travels beside it, so `é`, `è`, `à`, `ç`, `ô` and `ï` can be extracted
 again by `pypdf`, `pdftotext` or `IPdfContentReader.ReadTextAsync`.
 
 Nothing is looked up in the operating system's font folder. The bytes you pass are the only source of

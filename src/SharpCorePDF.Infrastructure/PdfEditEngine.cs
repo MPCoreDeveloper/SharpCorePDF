@@ -1,9 +1,11 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 using SharpCorePDF.Application.Ports;
 using SharpCorePDF.Domain.Aggregates;
 using SharpCorePDF.Domain.Exceptions;
 using SharpCorePDF.Domain.ReadModels;
 using SharpCorePDF.Domain.ValueObjects;
+using SharpCorePDF.Infrastructure.Authoring;
 using SharpCorePDF.Infrastructure.Pdf;
 
 namespace SharpCorePDF.Infrastructure;
@@ -91,6 +93,31 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
         }
 
         var warnings = new List<PdfWarning>(reader.Warnings);
+        var profile = plan.Output.PdfAProfile;
+
+        if (profile is { } archival)
+        {
+            // The analysis is what keeps a refusal honest: a document that cannot be made conformant is
+            // stopped here, before the writer exists and before a byte reaches the destination.
+            var requirements = PdfARequirements.Analyze(reader, archival);
+
+            if (requirements.Unsatisfied.Count > 0)
+            {
+                throw new PdfEditPlanValidationException(
+                    [
+                        $"'{sourceName}' cannot be written for {PdfAProfileRules.Name(archival)}:",
+                        .. requirements.Unsatisfied,
+                    ]);
+            }
+
+            foreach (var removal in requirements.Removable)
+            {
+                warnings.Add(new(
+                    PdfWarningKind.PdfAFeatureRemoved,
+                    $"'{sourceName}': {removal} was removed because {PdfAProfileRules.Name(archival)} forbids it."));
+            }
+        }
+
         var sources = await OpenSourcesAsync(reader, plan, warnings, cancellationToken).ConfigureAwait(false);
         var layout = BuildLayout(sources, plan, warnings, out var layoutChanged);
 
@@ -101,12 +128,31 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
         }
 
         var modificationDate = plan.Output.ModificationDate ?? DateTimeOffset.UtcNow;
-        var identifier = BuildFileIdentifier(plan, layout.Count, modificationDate);
+        var version = profile is { } target ? PdfAProfileRules.Version(target) : plan.Output.TargetVersion;
+        var identifier = BuildFileIdentifier(plan, version, layout.Count, modificationDate);
+        var metadata = ResolveMetadata(reader, plan, modificationDate);
+
+        if (profile is not null && metadata.CustomProperties.Count > 0)
+        {
+            // A custom information entry has no XMP property of its own without an extension schema,
+            // and the profile requires the dictionary and the packet to agree.
+            warnings.Add(new(
+                PdfWarningKind.PdfAFeatureRemoved,
+                $"'{sourceName}': the custom document information entries ({string.Join(", ", metadata.CustomProperties.Keys.Order(StringComparer.Ordinal))}) were removed because {PdfAProfileRules.Name(profile.Value)} needs every entry of the dictionary in its XMP packet."));
+            metadata = metadata with { CustomProperties = ImmutableDictionary<string, string>.Empty };
+        }
 
         // The capture is disposed with the edit: it owns a pooled buffer, and the destination it
         // forwards to belongs to the caller and is left open.
         using var capture = options.VerifyOutput ? new PdfCaptureStream(destination) : null;
-        var writer = new PdfWriter(capture ?? destination, plan.Output.TargetVersion, options);
+
+        // An archival document is never encrypted; the plan validation refuses that combination, so a
+        // profile is only ever written in the clear.
+        var security = plan.Output.Encryption is { } encryption
+            ? PdfSecurityWriter.Create(encryption, identifier.Bytes)
+            : null;
+
+        var writer = new PdfWriter(capture ?? destination, version, options, security);
         var catalogNumber = writer.AllocateObject();
         var pagesNodeNumber = writer.AllocateObject();
 
@@ -136,7 +182,15 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
 
         WritePages(sources, writer, pagesNodeNumber, layout);
 
-        var catalog = BuildCatalog(reader, sources.CopierOf(reader), pagesNodeNumber, plan, layoutChanged, warnings);
+        var catalog = BuildCatalog(reader, sources.CopierOf(reader), writer, pagesNodeNumber, plan, profile, metadata, layoutChanged, warnings);
+
+        if (profile is { } written)
+        {
+            warnings.Add(new(
+                PdfWarningKind.PdfAProfileWritten,
+                $"'{sourceName}' was written for {PdfAProfileRules.Name(written)}; conformance is established by an external validator, not by this library."));
+        }
+
         writer.WriteObject(catalogNumber, catalog);
         WritePagesNode(writer, pagesNodeNumber, layout);
 
@@ -144,16 +198,16 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
         // their bodies are written.
         sources.Flush();
 
-        var infoNumber = WriteInformation(reader, plan, writer, modificationDate);
-        WriteTrailer(writer, catalogNumber, infoNumber, identifier);
+        var infoNumber = WriteInformation(writer, metadata);
+        WriteTrailer(writer, catalogNumber, infoNumber, identifier, security);
 
-        Verify(capture, layout, warnings);
+        Verify(capture, layout, plan.Output.Encryption?.UserPassword, warnings);
 
         return new PdfEditResult
         {
             PageCount = layout.Count,
             BytesWritten = writer.Length,
-            OutputVersion = plan.Output.TargetVersion,
+            OutputVersion = version,
             Elapsed = Stopwatch.GetElapsedTime(started),
             Operations = [.. plan.Operations.Select(operation => operation.ToString())],
             Warnings = warnings,
@@ -163,9 +217,10 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
     /// <summary>Reads the written document back and confirms its page count and rotations.</summary>
     /// <param name="capture">The capture of the output, when verification is enabled.</param>
     /// <param name="layout">The pages that were written, in order.</param>
+    /// <param name="password">The password the result was encrypted with, or <see langword="null"/>.</param>
     /// <param name="warnings">The list that receives the verification remark.</param>
     /// <exception cref="InvalidOperationException">The document that was written cannot be read back, or does not match the plan.</exception>
-    private void Verify(PdfCaptureStream? capture, List<EditedPage> layout, List<PdfWarning> warnings)
+    private void Verify(PdfCaptureStream? capture, List<EditedPage> layout, string? password, List<PdfWarning> warnings)
     {
         if (capture is not { } recorded)
         {
@@ -174,7 +229,13 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
 
         try
         {
-            var reader = new PdfFileReader(recorded.CapturedBytes, "edited document", options);
+            var reader = new PdfFileReader(recorded.CapturedBytes, "edited document", options, password);
+
+            if (reader.IsEncrypted && reader.Security is null)
+            {
+                throw new InvalidOperationException(
+                    "The edited document was written encrypted but cannot be opened with the password it was written with.");
+            }
 
             if (reader.Pages.Count != layout.Count)
             {

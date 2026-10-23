@@ -9,7 +9,10 @@ scenarios recorded). Phase 1 is unblocked.
 Release 1.1 grows the existing merge, inspection and fixed-position authoring engine into a
 general-purpose, dependency-free PDF platform. It reaches **capability parity** with PDFsharp 6.5 for
 creation and processing and with PdfPig 0.1.x for reading and layout analysis, while keeping every PDF
-byte inside this repository and keeping the four-layer architecture.
+byte inside this repository and keeping the four-layer architecture. The parity target is reached across
+two releases: `1.1.0` ships the capability implemented and evidenced on the branch, and the remaining
+**Must** rows are `1.2.0` commitments under the scope amendment of 2026-10-22 recorded in
+[`spec.md`](./spec.md).
 
 The work is delivered in six gated phases: the product-boundary amendment and parity matrix, creator
 parity, editing and incremental writing, annotations and forms, signatures and PDF/A, then reading and
@@ -392,8 +395,8 @@ Release 1.1 is tagged only when all of the following are true:
    new product and the remaining exclusions.
 2. **G2 — Surface**: every new public member is documented, in `PublicAPI.Unshipped.txt`, and covered by
    a contract test; no 1.0 signature is removed.
-3. **G3 — Evidence**: every “Must” parity row has a named test and an external validation command; the
-   commands have been run on the release commit.
+3. **G3 — Evidence**: every “Must” parity row whose Release cell names the version being tagged has a
+   named test and an external validation command; the commands have been run on the release commit.
 4. **G4 — Quality**: Release build has zero warnings on both legs; the full suite is green on both legs;
    new code meets the 90% coverage condition.
 5. **G5 — Determinism**: the fixed-date fixtures are byte-identical across repeated runs and in a Linux

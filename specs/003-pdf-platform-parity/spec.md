@@ -26,7 +26,8 @@ PDFsharp or PdfPig code, package or binary is used at runtime or in the test sui
 “Level” is defined as **Release 1.1 parity**: every capability marked **Must** in the parity matrix
 below is implemented, documented, measured and covered by a test that fails when the capability is
 removed. Capabilities marked **Later** are not part of Release 1.1 and must not be advertised as if
-they were.
+they were. On 2026-10-22 the owner narrowed what 1.1.0 itself delivers (see “Scope amendment” below):
+the **Must** requirement is unchanged, and each row now states the release that ships it.
 
 ## Parity Contract
 
@@ -37,26 +38,54 @@ release that delivers it, and the evidence that proves it. A row without evidenc
 | Capability area | PDFsharp 6.5 | PdfPig 0.1.x | SharpCorePDF target |
 | --- | --- | --- | --- |
 | Page creation, fixed-position text, standard and embedded fonts | Yes | Basic creation only | Must, 1.1 |
-| Vector drawing: lines, paths, curves, rectangles, ellipses, fill, stroke, clipping, transforms | GDI+-class `XGraphics` | Path operations in the builder | Must, 1.1 |
-| Text measurement, wrapping, alignment, leading, basic layout | Basic text layout | Not a layout engine | Must, 1.1 |
-| PNG, JPEG, BMP and GIF images | PNG, JPEG, BMP, GIF | Image extraction; basic creation | Must, 1.1 |
-| Page import, insert, delete, reorder, rotate, crop, resize, split, extract, append | Yes | Merge only | Must, 1.1 |
-| Overlay, underlay, watermark, stamp | Yes | No | Must, 1.1 |
-| Metadata, XMP, outlines, destinations, page labels, viewer preferences | Yes | Read metadata and bookmarks | Must, 1.1 |
-| AcroForm creation, filling, flattening and appearance generation | Yes | Read-only forms | Must, 1.1 |
-| Annotation creation, editing, removal and appearance streams | Broad annotation model | Read-only annotations | Must, 1.1 |
-| Incremental updates that preserve existing signatures | Yes | No | Must, 1.1 |
+| Vector drawing: lines, paths, curves, rectangles, ellipses, fill, stroke, clipping, transforms | GDI+-class `XGraphics` | Path operations in the builder | Must: paths in 1.1, dash/cap/join/transforms in 1.2 |
+| Text measurement, wrapping, alignment, leading, basic layout | Basic text layout | Not a layout engine | Must, 1.2 |
+| PNG, JPEG, BMP and GIF images | PNG, JPEG, BMP, GIF | Image extraction; basic creation | Must: PNG in 1.1, JPEG/BMP/GIF in 1.2 |
+| Page import, insert, delete, reorder, rotate, crop, resize, split, extract, append | Yes | Merge only | Must, 1.1 (external run in 1.2) |
+| Overlay, underlay, watermark, stamp | Yes | No | Must, 1.2 |
+| Metadata, XMP, outlines, destinations, page labels, viewer preferences | Yes | Read metadata and bookmarks | Must: metadata in 1.1, XMP/outlines/labels in 1.2 |
+| AcroForm creation, filling, flattening and appearance generation | Yes | Read-only forms | Must, 1.2 |
+| Annotation creation, editing, removal and appearance streams | Broad annotation model | Read-only annotations | Must, 1.2 |
+| Incremental updates that preserve existing signatures | Yes | No | Must, 1.2 |
 | Digital signatures: sign, validate, timestamp, report integrity and trust separately | Yes | No | Must, 1.1 |
 | PDF/A-1b, PDF/A-2b and PDF/A-3b output | PDF/A manager | No | Must, 1.1 |
 | Positioned letters, words and blocks; configurable segmentation and reading order | Not a reading API | Yes | Must, 1.1 |
-| Images, hyperlinks, form values, annotations, embedded files, metadata, bookmarks | Partial | Yes | Must, 1.1 |
-| Public read-only object graph and content-stream inspection | Partial | Yes | Must, 1.1 |
-| Export to ALTO, PAGE XML, hOCR and SVG text | No | Yes | Must, 1.1 |
+| Images, hyperlinks, form values, annotations, embedded files, metadata, bookmarks | Partial | Yes | Must: 1.1 partial, hyperlinks and pixels in 1.2 |
+| Public read-only object graph and content-stream inspection | Partial | Yes | Must: tests in 1.1, external run in 1.2 |
+| Export to ALTO, PAGE XML, hOCR and SVG text | No | Yes | Must: exporters in 1.1, schema runs in 1.2 |
 | Rendering pages to images or raster previews | No | No | Non-goal |
 | OCR, HTML-to-PDF, PDF-to-Word/HTML, reflow, tagged-PDF/PDF-UA authoring | No | No | Non-goal |
 | MigraDoc-style flow engine with automatic page breaks | Separate MigraDoc product | No | Non-goal |
 | JavaScript execution, 3D, multimedia, geospatial, public-key encryption | No or partial | No | Non-goal |
 | Drop-in source or binary compatibility with PDFsharp or PdfPig | N/A | N/A | Non-goal |
+
+## Scope amendment (2026-10-22)
+
+**Decision D3, recorded by the owner**: `1.1.0` ships the capability this branch already implements and
+evidences, and every **Must** row it does not complete moves to `1.2.0` with the task that completes it.
+The requirement is not withdrawn — only the release that delivers it. The full record, including the task
+numbers and the effort of both releases, is Gate 0 of
+[`tasks.md`](./tasks.md); [`docs/parity.md`](../../docs/parity.md) is the table a consumer reads.
+
+| Delivered by `1.1.0` | Delivered by `1.2.0` |
+| --- | --- |
+| Page creation, positioned text, standard and embedded fonts (row 1) | Text measurement, `MeasureString`, wrapping, leading and alignment (row 3) |
+| The path writer of row 2: `m l c v y h re f S B W n q Q cm gs`, ellipses, clipping, constant alpha | Dash, cap, join and `SetTransform` (row 2) |
+| PNG authoring with `/SMask`, colour key, palette, greyscale and the by-name refusals (row 4) | JPEG pass-through, BMP and first-frame GIF (row 4) |
+| Page rotate, delete, move, duplicate, reorder, crop, resize, extract, split, import, insert and append, with metadata overrides (row 5) | XMP, outlines, page labels and viewer preferences; overlay/underlay and incremental updates (rows 6, 7, 10) |
+| Digital signatures with integrity/trust separated, and PDF/A-1b/2b/3b output (rows 11, 12) | Overlay/underlay, incremental updates, annotations and forms (rows 6, 8, 9, 10) |
+| Reading: letters, words, blocks, order, hyperlinks, the export pipeline and the object graph (row 13 and the covered parts of rows 14–16) | Decoded pixels, segmentation strategies and the schema/external closure runs (rows 14, 15, 16) |
+
+The three conditions that keep this honest:
+
+1. **No row claims 1.1 evidence it does not have.** `docs/parity.md` names `1.2` in the Release cell of
+   every incomplete row, in the commit that tags `1.1.0`; SC-001 below is amended to match.
+2. **The question this repository exists to answer is met in full.** `002-page-authoring` — an A4 page with
+   six lines of text and a 152 × 87 PNG, merged from memory — is implemented and evidenced, and its
+   declared non-goals (word wrap, `MeasureString`, vector graphics, JPEG/GIF) are parity commitments, not
+   conditions of that question.
+3. **`1.2.0` cannot repeat the manoeuvre silently.** Every deferred row carries its task number, and a
+   second scope decision has to be written — dated, like this one — if 1.2 slips.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -280,7 +309,9 @@ validates, then convert the unsigned fixture to PDF/A-2b and pass an independent
 ### Measurable Outcomes
 
 - **SC-001**: Every capability marked “Must” in `docs/parity.md` resolves to at least one named test and
-  one external validation command; 100% of rows are evidenced before Release 1.1 is tagged.
+  one external validation command; 100% of the rows whose Release cell names the version being tagged are
+  evidenced before that version is tagged. The scope amendment of 2026-10-22 moves twelve rows to 1.2 and
+  changes nothing else: `1.1.0` is judged on the rows that name 1.1, and `1.2.0` on all sixteen.
 - **SC-002**: The ten-page creator scenario in User Story 1 builds, merges and reads back in under 2
   seconds on the recorded machine, with no existing authoring budget regressed by more than 10%.
 - **SC-003**: The 100-page editor scenario in User Story 2 applies 200 page, annotation and form edits
@@ -313,6 +344,9 @@ validates, then convert the unsigned fixture to PDF/A-2b and pass an independent
   public-key encryption, JPEG 2000 and tagged-PDF/PDF-UA authoring remain out of scope.
 - Release 1.1 is an additive minor release because the public surface grows without breaking the 1.0
   API; the 1.0 line remains supported for fixes during the transition.
+- Release 1.1.0 delivers the capability implemented on the 1.1 branch and evidenced in `docs/parity.md`;
+  the remaining “Must” rows are `1.2.0` commitments under the scope amendment of 2026-10-22. `1.1.0` is
+  therefore also the release that closes `002-page-authoring`, whose non-goals are not conditions of it.
 - The two target frameworks remain `net10.0` and `net11.0`; adding or dropping a framework is a
   separate architectural decision.
 - All external validation tools (`qpdf`/`pikepdf`, `pypdf`, PyMuPDF, veraPDF, pyHanko, fontTools) run

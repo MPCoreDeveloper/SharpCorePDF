@@ -88,6 +88,20 @@ change to the published 1.0.0 facts above.
 The 1.1 release still clears G1–G9. CA-001 only settles **what the product is**; it does not replace
 the quality, determinism, performance, documentation or publishing gates.
 
+## The 1.1 scope decision (D3, 2026-10-22)
+
+Recorded before `1.1.0` is tagged, and it changes what that tag has to contain, not what the product is.
+
+| Item | State | Evidence |
+| --- | --- | --- |
+| Scope | **D3** — `1.1.0` ships the capability implemented and evidenced on the branch; the remaining “Must” rows move to `1.2.0` with their task numbers | [`tasks.md`](../specs/003-pdf-platform-parity/tasks.md) Gate 0, [`spec.md`](../specs/003-pdf-platform-parity/spec.md) “Scope amendment” |
+| Scorecard | **Rewritten in the tag commit** — twelve rows name `1.2` in their Release cell; no row is left `Planned`, and no `1.1` row lacks a test and a command | `docs/parity.md` “1.1 scope decision” |
+| The `002-page-authoring` question | **Met** — page, text, 152 × 87 RGBA PNG, in-memory merge, byte-identical rebuild, qpdf/pypdf/PyMuPDF evidence | `docs/parity.md` rows 1 and 4, `docs/measurements.md` “Issue-closure re-run” |
+| Evidence | **One command** — `docs/tools/verify-cover.py` runs C1–C3, asserts the recorded values and prints the transcript for the pull request; the rehearsal on 2026-10-23 broke none of them | `docs/measurements.md` §8, `tasks.md` C5 |
+| Changelog | **G3 blocks the tag** until the 1.1 entry states both what ships and what is deferred | `CHANGELOG.md`, `docs/release-checklist.md` G3 |
+
+Two gates carry the decision into the release run: **T105** refuses a “Must” row without evidence for the
+release it names, and **G3** refuses a tag whose changelog does not say what the version does not do.
 
 ## G0 — the package id, decided before the first push, not after
 
