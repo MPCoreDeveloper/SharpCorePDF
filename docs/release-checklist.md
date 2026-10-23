@@ -347,12 +347,13 @@ in that report, and reports both the whole shipped surface and the new code.
 | Measurement | Result |
 | --- | --- |
 | Whole shipped assemblies (module totals) | Infrastructure 87.07%, Application 88.47%, Domain 79.44%, DependencyInjection 93.65% |
-| **New code, the gate** | **6,841 of 8,798 added executable lines, 77.76% — below 90%** |
+| **New code, the gate** | **6,842 of 8,799 added executable lines, 77.76% — below 90%** |
 | Tests on the leg measured | 748 passed, 0 failed, 0 skipped |
 
-It has been measured three times on this tree, and every move came from a test rather than from a change of
+It has been measured four times on this tree, and every move came from a test rather than from a change of
 definition: 6,718 of 8,798 (76.36%) at 743 tests, 6,817 (77.48%) after three inline-image tests, 6,841
-(77.76%) at 748 tests after two container-level signing tests. The 1,957 uncovered lines are concentrated in
+(77.76%) at 748 tests after two container-level signing tests, and 6,842 of 8,799 (77.76%) once the
+quality-gate fix added a line and covered it. The 1,957 uncovered lines are concentrated in
 eight files — `TrueTypeFont` (94), `PdfTextScanner` (93), `SignatureValidator` (85), `PdfARequirements` (84),
 `PdfContentScanner` (74), `PdfPageContentReader.Images` (71), `PdfImageFilters` (68) and `PdfTextCollector`
 (67) — and they are the refusal and malformed-input branch of each parser and validator, not the behaviour a
