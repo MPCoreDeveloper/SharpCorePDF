@@ -250,4 +250,3 @@ problems still appear as `PdfException` subclasses.
 To test the layer above, replace `IPdfMerger` or `IPdfInspector` with a fake after the registration.
 Because the concrete services are registered separately, replacing only the interface leaves the
 engine available for tests that need it.
-

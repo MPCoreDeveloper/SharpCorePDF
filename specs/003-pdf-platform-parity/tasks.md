@@ -19,8 +19,12 @@ and US4 trust. Phase 6 hardens and releases.
 trust (17). **Gate/foundation**: 21 tasks. **Polish**: 10 tasks. **MVP of the parity target**: T001–T038.
 **What `1.1.0` needs**: T097–T106 — see the release lanes in Gate 0.
 
-**Status (2026-10-23)**: 59 of 106 tasks done, 47 open — and **only T097–T106 are on the 1.1.0 path**;
-the Gate 0 items `C1`–`C6` are all closed.
+**Status (2026-10-23)**: 67 of 106 tasks done, 39 open — and **only T101–T106 are on the 1.1.0 path**;
+lanes A and B (T097–T100) are closed, every Gate 0 item `C1`–`C6` is closed, and lanes C and D are at the
+gate: T101, T102 and T105 are done and recorded, T103's build and both legs pass while its coverage gate
+measured 77.76% against 90% and the decision to ship with that number recorded is written as ADR-002 and
+await the release owner's signature, T104 has been run with its transcript waiting on the pull request, and
+T106 is clean — the whitespace pass and the release commit are done, with the tag waiting on those two.
 **D3 is decided** (Gate 0): 1.1.0 ships what this tree already implements, so the 37 open story tasks —
 US1's 13, US2's 17, US3's 5 and US4's 2 — are the 1.2 backlog and keep their unchecked boxes here.
 
@@ -238,9 +242,12 @@ read and a PyMuPDF render accept it.
     waits for T030/T034.
 - [ ] T037 [US1] Write manual chapters `15-drawing.md`, `16-text-layout.md` and `17-image-formats.md`, and update `docs/README.md` and `docs/manual/build-manual.py`.
   - Half done: `docs/manual/src/12-authoring.md` documents the surface that exists — coordinates, standard
-    and embedded faces, the PNG policy, determinism and the subset size. The three chapters split out of it
+    and embedded faces, the PNG policy, fixed-position vector drawing (lines, rectangles, ellipses, paths,
+    clipping, alpha, dash, saved state), determinism and the subset size. The three chapters split out of it
     when layout (T028/T029) and the extra image formats (T030/T031) land, because a chapter that describes
-    wrapping before the code wraps would be a lie.
+    wrapping before the code wraps would be a lie. `15`–`19` are reserved by the preface of the 1.1.0
+    edition (T099):
+    the numbers exist, the chapters do not, and the manual says so.
 - [ ] T038 [US1] Run T022–T025 plus `validate-pdf.py --check-syntax --text --render --images`; record the results and close the creator rows in `docs/parity.md`.
   - Half done, 2026-10-22: `validate-pdf.py` (pikepdf 10.17.0 / qpdf) reports `qpdf check: no problems` for
     `cover.pdf` (1 page, 14 objects) and `cover-and-summary.pdf` (3 pages, 19 objects); `pypdf` 6.19.0
@@ -341,7 +348,8 @@ agreement and 95% reading-order agreement on the labelled corpus; every export v
 - [x] T075 [P] [US3] Add `docs/tools/score-layout.py` for character recall, box agreement and reading-order scoring, and a `docs/parity/README.md` section naming the scoring command.
 - [x] T076 [US3] Add `tests/SharpCorePDF.Tests/PdfLayoutCorpusTests.cs` to enforce the SC-004 thresholds over `tests/SharpCorePDF.Tests/Assets/parity/`. The `table` page is a recorded limitation (a table is symmetric under the XY cut, so it reads column by column) and `Table_page_is_still_read_column_by_column` fails if it ever stops being one.
 - [x] T077 [US3] Add the `extract-layout` and `inspect-objects` scenarios to `examples/SharpCorePDF.Examples/Scenarios.cs`.
-- [ ] T078 [US3] Write manual chapters `20-extraction.md`, `21-layout-analysis.md` and `22-object-graph.md`, including export limits and the strategy result field.
+- [x] T078 [US3] Write manual chapters `20-extraction.md`, `21-layout-analysis.md` and `22-object-graph.md`, including export limits and the strategy result field.
+  - Done 2026-10-23: `20-extraction.md` (the `PdfReadResult<T>` shape, letters/words/blocks, the four formats, the coordinate flip and reproducible bytes), `21-layout-analysis.md` (the four segmentations, two reading orders, the em-based word rules, decorations versus prose, how to compare two readings, where the analysis stops) and `22-object-graph.md` (one node per listed object, references reported and never followed, `DanglingReference`, streams without bytes, operators, `MaxNestingDepth`). All three are in the 1.1.0 PDF built by T099 (pages 69, 73 and 76).
 - [ ] T079 [US3] Run T059–T063, `score-layout.py` and the export validators; close the US3 rows in `docs/parity.md`.
 
 **Checkpoint**: US3 is independently shippable and can run in parallel with US2 after Phase 1.
@@ -382,7 +390,7 @@ and veraPDF reports conformance for all three profiles.
   - Both scripts are in the tree and take `--help`. `validate-pdfa.py` finds veraPDF on `PATH`, through `VERAPDF_HOME` or with `--verapdf`, states the flavour with `--profile`, and exits 0/1/2 for pass/fail/cannot-run.
 - [ ] T094 [US4] Add the `sign-and-archive` scenario to `examples/SharpCorePDF.Examples/Scenarios.cs`, using local certificates and a caller-supplied timestamp token; ship no key.
 - [x] T095 [US4] Write manual chapters `23-signatures.md` and `24-pdf-a.md`; state the integrity/trust split, the no-network rule and the external-validator evidence requirement.
-  - Done: `docs/manual/src/23-signatures.md` and `docs/manual/src/24-pdf-a.md` are written — the appended revision and the integrity/trust split, the profile table, what is removed versus refused, archival edits, and the pyHanko/qpdf/veraPDF evidence. Both carry the unreleased banner until the release boundary (T099).
+  - Done: `docs/manual/src/23-signatures.md` and `docs/manual/src/24-pdf-a.md` are written — the appended revision and the integrity/trust split, the profile table, what is removed versus refused, archival edits, and the pyHanko/qpdf/veraPDF evidence. Both carried the unreleased banner until the release boundary; T099 removed it, because 1.1.0 ships both surfaces.
 - [ ] T096 [US4] Run T080–T082, pyHanko, veraPDF and the incremental-signature scenario; close the US4 rows in `docs/parity.md`.
   - Half done: T080–T082 pass on both frameworks, pyHanko and qpdf are recorded under "Phase 4 progress — signatures", veraPDF 1.30.3 reports `PASS` for 1b/2b/3b of an authored page and of `SafeWebCore.pdf` under "Phase 4 progress — archival output", and parity rows 11 and 12 are closed as Met. The `sign-and-archive` scenario (T094) is still missing.
 
@@ -392,22 +400,94 @@ and veraPDF reports conformance for all three profiles.
 
 ## Phase 6: Polish and Release
 
-- [ ] T097 [P] Update every `PublicAPI.Unshipped.txt` for the four layers and add a public-surface contract test that fails on an undocumented addition.
-- [ ] T098 [P] Write `docs/migration/pdfsharp.md` and `docs/migration/pdfpig.md`, mapping every parity row to an example or an explicit out-of-scope statement.
-- [ ] T099 [P] Complete the manual index, rebuild `docs/SharpCorePDF-Manual-1.1.0.pdf` from 25 chapters, and verify the contents, bookmarks and page count.
-- [ ] T100 [P] Update `examples/README.md` and run every example scenario; each must print its success marker and exit 0.
-- [ ] T101 Re-run the creator, editor, extraction and merge measurements; record them in `docs/measurements.md` and block any regression above 10%.
-- [ ] T102 Run the determinism, empty-font, no-network and no-new-package checks from `quickstart.md` step 8.
+- [x] T097 [P] Update every `PublicAPI.Unshipped.txt` for the four layers and add a public-surface contract test that fails on an undocumented addition.
+  - Done 2026-10-23: `tests/SharpCorePDF.Tests/PublicApiSurfaceTests.cs` — the shipped snapshot and the live assembly are compared as a bijection in both directions, duplicates are refused, and every snapshot starts with `#nullable enable`. The test is deliberately name-based (`Type.Member` for every public and protected member) rather than signature-based, so it does not duplicate the analyzer. Negative control: an entry added to a snapshot without a member (and a member without an entry) fails the test.
+- [x] T098 [P] Write `docs/migration/pdfsharp.md` and `docs/migration/pdfpig.md`, mapping every parity row to an example or an explicit out-of-scope statement.
+  - Done 2026-10-23: both guides carry a substitution table, a "differences that don't survive" section, the full 21-row parity table with a *Where to look* column (Ships / 1.2 / Out of scope), a note that the *Must* rows 3, 6, 8, 9 and 10 are owed in 1.2 with their task numbers, and a "what to read next" list. Row order matches `docs/parity.md`, which both name as the authority.
+- [x] T099 [P] Complete the manual index, rebuild `docs/SharpCorePDF-Manual-1.1.0.pdf` from 25 chapters, and verify the contents, bookmarks and page count.
+  - Done 2026-10-23, with the chapter count settled by D3: the edition is built from the **20 chapters that describe what 1.1.0 ships** (00–14 and 20–24), not 25. Chapters `15`–`19` document the standalone drawing surface, text layout, the remaining image formats and writing annotations and form fields — all `1.2` work owned by T037, T057 and the US2 backlog — so their numbers are reserved and the preface says so in a paragraph of its own. The index additions are `20-extraction.md`, `21-layout-analysis.md`, `22-object-graph.md` (T078) plus the removal of the "unreleased" banners from chapters 14, 23 and 24, which now ship.
+  - Build: `python docs/manual/build-manual.py` → 20 chapters, 154 headings (contents lists 154, every number resolved), 86 pages, footer ok, `docs/SharpCorePDF-Manual-1.1.0.pdf`. Verified with `pypdf`: 86 pages, 154 outline entries with chapters 1–14 and 20–24 at the top level, contents rows read `Preface 6` … `24. Archival PDF (PDF/A) 83`, and the footer reads `SharpCorePDF 1.1.0 | The Manual Page 2 of 86`. `docs/README.md`, the root `README.md` link and the cover/metadata in `build-manual.py` now name the 1.1.0 edition.
+  - Chapters 2 and 12 were corrected in the same pass, because the boundary they state had fallen behind the code: chapter 2 now records fixed-position vector drawing, cropping, signing, PDF/A writing and the read-only object graph as shipped, and chapter 12 documents `DrawLine`/`DrawRectangle`/`DrawEllipse`/`DrawPath`/`SetClip`/`SaveState` plus `PdfPaint`/`PdfStroke` in its surface table instead of claiming there is no vector drawing.
+- [x] T100 [P] Update `examples/README.md` and run every example scenario; each must print its success marker and exit 0.
+  - Done 2026-10-23: `examples/README.md` lists fifteen examples, including `edit-pages` (authoring a page with a stroked frame, a translucent band, a dashed rule and an ellipse, then insert/rotate/delete/crop in one pass). `dotnet run --project examples/SharpCorePDF.Examples -c Release` ran all 15 scenarios, printed 15 `ok (...)` markers and `All 15 example(s) ran.`, and exited 0. The `edit-pages` crop was corrected to an upright `new PdfRectangle(36, 36, 806, 559)`: page 3 crops with no warning, the result reads back as 3 pages with page 2 `Clockwise90`, and the only warning is the `OutputVerified` success signal.
+- [x] T101 Re-run the creator, editor, extraction and merge measurements; record them in `docs/measurements.md` and block any regression above 10%.
+  - Done 2026-10-23: all five harness modes re-run on the release tree and recorded in `docs/measurements.md` §10, each row beside the figure it was first recorded at. No allocation row moved by more than 10% (worst: +2.0% on the 150 × 6.7 KB merges), and every merge wrote the same number of bytes as before, including the 139,645,394 B corpus row.
+  - The budgets, as measured: 150 × 1.0 MB merges in 0.26 s at 544.3 MB/s (budget 10 s / 15 MB/s), fixed cost 0.36 ms per extra source (budget 1 ms), creator 13.32 ms against SC-002's 2 s, editor 3.92–4.53 ms against SC-003's 3 s. The scaling ratio is 1.43x at 75 MB and 0.90x at 150 MB — the coin flip §2 already records as not reliably met; this run neither fixes nor hides it.
+  - Two readings are recorded rather than smoothed: the 50 MB copy route allocated 116,837 KB on the first run of the day, after the 300 MB merge rows, and 51,301 KB on every run after it (§10 keeps the reproducible value and the outlier beside it); the creator writes about 4.7 KB more than when §9 was recorded, on a document whose budget is time and not size.
+- [x] T102 Run the determinism, empty-font, no-network and no-new-package checks from `quickstart.md` step 8.
+  - Done 2026-10-23, all four:
+    - **Determinism.** `author-page` twice, in two processes, wrote byte-identical `cover.pdf`: SHA-256 `499520B9B79F5476A9C45160134DDBF5783391AD3CF72FCD8A74937D340D7A3D`. A default merge is *not* reproducible — `/ModDate` is the current time and the file identifier is derived from the file, so `cover-and-summary.pdf` differed between the two runs (`7AF7A3B7…` then `BB82DBB9…`). That is the documented behaviour (manual chapter 6): with `ModificationDate` pinned, `options` prints `identical True` for its two in-process merges and writes the same `report.pdf` in a second process (`D32E1E6E7A99EA57C74E89F0B47BBC932A22D4C7AC083DB99EB444A6D8B65EB3`). Step 8 now states exactly this instead of implying that any merge is byte-stable.
+    - **Empty font.** `PdfTypeface.FromTrueType` refuses an empty program, a 12-byte zero program and a 4-byte program with `ArgumentException`, and the empty case names `fontProgram`. This was the one documented refusal with no test, so `Refuses_an_empty_font_program` was added to `PdfDocumentBuilderTests`; both legs are now 743 tests.
+    - **No network.** A code-only search of `src/` for `HttpClient`, `WebRequest`, `WebClient`, `Socket`, `TcpClient`, `UdpClient` and `Dns` returns nothing. The unfiltered search returns two hits, both of them doc comments saying the library never opens a socket (`IPdfTimestampProvider.cs:9`, `PdfSignatureOptions.cs:17`) — step 8 now carries the `Where-Object` that drops comment lines, and says why, so a green result is not an artifact of the filter being dropped by accident.
+    - **No new package.** `dotnet list … package --include-transitive` lists 108 package lines and none of PDFsharp, PdfPig, SkiaSharp or System.Drawing; `git diff v1.0.0 -- 'src/**/*.csproj'` adds no `PackageReference`. The four shipped assemblies still reference no runtime package at all — only the two analyzers — and `SharpCorePDF.DependencyInjection` still references the same three `Microsoft.Extensions.*` 10.0.12 assemblies `1.0` carried.
+
 - [ ] T103 Run the full Release build and both test legs; require 0 warnings, 0 errors, all 1.0 tests unchanged and at least 90% coverage on new code.
+  - **Build and both legs: met, 2026-10-23.** `dotnet build .\SharpCorePDF.slnx -c Release -t:Rebuild` → `0 Warning(s)`, `0 Error(s)`, 11 s. `dotnet test … -p:TargetFramework=net11.0` → 743 passed, 0 failed, 0 skipped, 3.5 s; `dotnet test … -p:TargetFramework=net10.0 -r win-x64` → 743 passed, 0 failed, 0 skipped, 3.5 s. The 1.0 baseline was 561 and has grown to 743; `git diff v1.0.0 -- tests` removes no `[Fact]`/`[Theory]` (0 removed, 1 deletion in 134 files), so no 1.0 test was dropped or renamed to make the number.
+  - **Coverage on new code: not met.** One instrumented run, the CI command: `./.tools/dotnet-coverage collect -f coverage -o artifacts/coverage/net11.0.coverage "dotnet test … -p:TargetFramework=net11.0"`, then `merge -f xml`. Measured with the new `python docs/tools/coverage-on-new-code.py artifacts/coverage/net11.0.xml`, which takes "new code" from `git diff --unified=0 v1.0.0 -- src` and counts only the added lines the report instruments: **6,718 of 8,798 (76.36%)** against the required 90%.
+  - The shipped surface in the same report: Domain 997/1,255 (79.44%), Application 306/375 (81.60%), Infrastructure 8,255/9,579 (86.18%), DependencyInjection 55/63 (87.30%). The same report split at the same diff — the 162 files the diff touches hold 7,363/9,550 executable lines (77.10%), the files it does not touch hold 2,235/2,542 (87.92%) — so the miss is the 1.1 surface and not the measurement. Of the 2,080 added lines the suite never executes, 1,243 sit in twenty files, led by `PdfContentScanner` (166 of its 330 added lines; file at 49.70%), `TrueTypeFont` (94; 59.66%), `PdfTextScanner` (93; 65.04%), `SignatureValidator` (85; 62.39%) and `PdfARequirements` (84; 57.36%).
+  - The measurement was taken twice: the first run above, and a second instrumented run of the same tree (743/743) that reproduced 6,718 of 8,798 exactly — the number does not move between runs. `artifacts/coverage/` now holds the later runs as well: `net11.0-t103b.xml` is the intermediate 77.48% and `net11.0-final.xml` the 748-test 77.76%.
+  - **The decision was taken on 2026-10-23: record it, do not fake it.** Two further runs measured the same tree after the tests below, so the progression is a test count and not a definition: 6,718 of 8,798 (76.36%) at 743 tests → 6,817 (77.48%) after three inline-image tests → **6,841 of 8,798 (77.76%) at 748 tests** after two container-level signing tests. Shipped surface in the final report: Domain 997/1,255 (79.44%), Application 330/373 (88.47%), Infrastructure 8,344/9,583 (87.07%), DependencyInjection 59/63 (93.65%).
+  - The five tests are behaviour, not line-filler: the inline-image abbreviations a producer actually writes (computed sample count, indexed colour space as an array, image mask with a decode array, an `AHx` payload whose length the header does not state, a header with a comment and a literal string) plus an image with no `EI`; and the signing pair resolved from `AddSharpCorePDF()` — sign, validate as `Valid`/`Trusted`, and the three arguments `PdfSignerService` refuses before opening the source. They took `PdfContentScanner` from 166 uncovered added lines to 74.
+  - `docs/adr/0002-new-code-coverage-1.1.0.md` records the decision: `1.1.0` ships with 77.76% named in the ADR, in G9 and in the release notes; the 90% floor is unchanged and is re-measured on 1.2's new code; no test is written whose only effect is to execute a line; and the eight parser/validator files that hold the rest become a 1.2 task. The ADR is **Proposed** and carries a signature table for the release owner, because an unsigned waiver is the one outcome the gate exists to prevent.
+  - **What is left on T103 is that signature.** With the ADR signed, the box closes on a measured, named number; without it, the box stays open and T106 does not tag. Everything else the task asks for — 0/0 build, both legs at 748, no 1.0 test removed, a number measured three times — is done and recorded above.
 - [ ] T104 Run every `quickstart.md` phase command on the release commit and record the commands, versions and outputs in the pull request.
   - The gate's own transcript is not a phase command: run
     `uv run --with pikepdf --with pypdf --with pymupdf python docs/tools/verify-cover.py --output artifacts\c5-transcript.md`
     and attach that file — it is C5's evidence for the tagged commit.
-- [ ] T105 Confirm `docs/parity.md` has no unevidenced “Must” row, then update the 1.1 entry in `CHANGELOG.md`, bump `<Version>`, and complete `docs/release-checklist.md` G1–G9.
+  - **Run 2026-10-23**, Windows 11 x64, .NET SDK 11.0.100-rc.2.26504.105, Python 3.12.10, pikepdf 10.17.0 (qpdf inside), pypdf 6.19.0, PyMuPDF 2.0. Transcript: `artifacts/t104-release-transcript.md`; C5's own run: `artifacts/c5-transcript.md` → `pass — 0 expectation(s) broken`, 8,835-byte `cover.pdf`, `ok (246 ms)`.
+    - **Step 1 and step 8** — build 0/0; both legs 743/743; all 15 examples `ok (…)`; the four T102 checks (determinism, empty font, no network, no new package) as recorded there.
+    - **Phase 1** — 34 builder tests pass; `author-page` `ok (228 ms)`; `verify-cover.py` breaks 0 expectations; `validate-pdf.py`: qpdf clean on `cover.pdf` (1 page, 14 objects, 6 streams decoded, 0 failed) and on `cover-and-summary.pdf` (3 pages, 19 objects, 8 streams).
+    - **Phase 2** — 37 editor tests pass; `edit-pages` `ok (151 ms)` → 3 pages, page 2 `Clockwise90`, page 3 cropped, the only warning its `OutputVerified` signal; `validate-pdf.py` qpdf clean, 3 streams decoded; `pypdf` reads page 3's `cropbox` as `[36, 36, 806, 559]`.
+    - **Phase 4** — 12 signer, validator and PDF/A tests pass; `archive-pdfa` `ok (188 ms)` → 1b, 2b, 3b each with 0 unsatisfied requirements and the unembedded-Helvetica page refused with 0 bytes written; `validate-pdf.py` qpdf clean on all three, 6 streams each; `validate-pdfa.py` exits 2, *cannot run* — veraPDF is not installed here, so the conformance claim rests on the recorded veraPDF 1.30.3 `PASS` under “Phase 4 progress”, not on this run.
+    - **Phase 5** — 78 layout, export, corpus and object-graph tests pass; `extract-layout inspect-objects` `ok (24 ms)` → 8 objects, 0 dangling references, 5 operations in paint order. `score-layout.py` is T079 (open) and needs a folder of ALTO exports of the five labelled documents.
+  - **Commands corrected while running them.** Phases 3 and 4 named test classes and scenarios that do not exist: `PdfAnnotationTests`/`PdfFormTests`/`annotate-and-fill` are 1.2 work (chapters 15–19 are reserved and the tree has no annotation or form API), `PdfSignatureTests` is `PdfDocumentSignerTests`/`PdfDocumentSignatureValidatorTests`, and `sign-and-archive` is T094. `creator-parity` (T036) does not exist either, so step 8 hashes `author-page`. The `validate-pdf.py`/`validate-signatures.py` calls carried flags the tools never had (`--check-syntax`, `--pages`, `--geometry`, `--annotations`, `--form-values`); both tools print everything they check for the files named on the command line. `quickstart.md` now runs the 1.1 path with the commands that exist and marks the 1.2 ones as 1.2, which is what makes this the release's reproducible run book.
+  - Still open: the pull request this record belongs to. Everything above is in the release commit on
+    `003-pdf-platform-parity`, not in a review yet. The durable summary is
+    `docs/release-checklist.md` §“The 1.1.0 run of quickstart.md (T104)”; the transcript itself is under
+    `artifacts/`, which Git ignores, so it is attached to the pull request by hand.
+
+- [x] T105 Confirm `docs/parity.md` has no unevidenced “Must” row, then update the 1.1 entry in `CHANGELOG.md`, bump `<Version>`, and complete `docs/release-checklist.md` G1–G9.
   - The first half starts at Gate 0: `C5`/`C6` prove the question's rows, and `C6` is decided — D3. A “Must”
     row that 1.1 does not deliver is either implemented or moved with the recorded decision; it is never
     left Planned in a tagged release, and `docs/parity.md` is edited in the same commit as the tag.
+  - **Done 2026-10-23.** `docs/parity.md` was audited row by row — all 21 of them, with the outcome written
+    into the D3 section of that file: eleven name `1.1` (1, 2, 4, 5, 7, 11, 12, 13, 14, 15, 16), five are
+    excluded non-goals (17–21), five name `1.2` only (3, 6, 8, 9, 10). No row claims `Evidenced` or `Met`
+    without both a named test and an external command: the four that do (1, 11, 12, 13) name tests that are in
+    the suite and a command that was run, and say which run. Rows 3, 6 and 10 still read `Planned` after D3 —
+    the one label D3 item 3 rules out in a tagged release — so they now read `Deferred` and keep their 1.2
+    task (T028, T040, T042); rows 8 and 9 stay `Partial`, because the reading half is evidenced and the
+    writing half *is* the 1.2 task. No row moved from 1.2 to 1.1 and none was relabelled out of scope.
+  - `CHANGELOG.md`: `## [Unreleased]` became `## [1.1.0] - 2026-10-23`, and a *Known limits at 1.1.0* section
+    was added — the 77.76% new-code figure with a link to ADR-002, and the two limits 1.0.0 already carried
+    (no symbol package, no code signing). `<Version>` is `1.1.0` and `AssemblyVersion`/`FileVersion` are
+    `1.1.0.0` in `src/Directory.Build.props`, whose `PackageReleaseNotes` now describe 1.1 rather than 1.0.
+  - `docs/release-checklist.md` gained **G1–G9 at `1.1.0`**: each gate restated with its state and where the
+    evidence is (G0 closed, G1 true for the 1.1 surface, G2 unchanged, G3 met, G4 still partly, G5 outside the
+    tree, G6 to be re-run, G7 to be cut, G8 after the push, G9 recorded at 77.76%), and the three things
+    between that table and a tag: the ADR-002 signature, the pull request, and the tag naming the commit whose
+    analysis is newest on `main`.
+  - `dotnet build SharpCorePDF.slnx -c Release` after the bump: **0 warnings, 0 errors**; both legs 748/748.
 - [ ] T106 Run `git diff --check`, confirm the tree is clean apart from the release commit, and tag only the commit whose SonarCloud analysis is the newest on `main`.
+  - **`git diff --check` was not clean; it is now, 2026-10-23.** The working-tree check passed — 33 changed
+    paths before the release commit, none after it — but the check this gate is really about is against the
+    last tag, and `git diff --check v1.0.0 -- .` found 31 blank lines before end-of-file in files 1.1 touched
+    (nine manual chapters, five contracts, six spec files, four test files, `PdfFontDecoder`,
+    `PdfAConversionOptions`, `make_parity_fixtures.py`, `PdfEditExamples`) and two trailing spaces inside the
+    DejaVu licence copies.
+  - The fix is whitespace only, and checkable as such: every one of those diffs is deletions and nothing else,
+    and each file still ends on the line it ended on. The blank lines are gone. The two licence lines lost the
+    trailing space a hard-wrapped upstream file carries — that is the one edit worth reading closely, because
+    it is the only place 1.1's text differs from the distributed DejaVu licence by a byte, and it changes no
+    word of the licence.
+  - **Verified after the fix:** `dotnet build SharpCorePDF.slnx -c Release` **0 warnings, 0 errors**; both legs
+    **748/748**; `git diff --check` and `git diff --check v1.0.0` both exit 0.
+  - **The release commit** — *Close the 1.1.0 release gates and record the coverage it ships with* — sits on
+    `003-pdf-platform-parity` holding lanes A, B, C and D, with a clean tree behind it.
+  - **Not done, and deliberately: the tag.** It waits on the ADR-002 signature (T103) and on the pull request
+    (T104), because this gate tags the commit whose SonarCloud analysis is the newest on `main`, and that commit
+    does not exist until both are true. `v1.1.0` must also equal `<Version>` 1.1.0 — G7 — which `publish.yml`
+    checks for itself.
 
 ---
 
@@ -468,7 +548,7 @@ A test must fail before its implementation task starts.
 | --- | --- | --- | --- |
 | **1.1.0 — Gate 0** | C5, C6 | **closed 2026-10-23**: `verify-cover.py` is C1–C3 in one command, and its rehearsal broke 0 recorded values | spent |
 | **1.1.0 — lane A** | T097, T098 | public-surface snapshot and contract test, two migration guides | 2–3 days |
-| **1.1.0 — lane B** | T099, T100 | manual index and the 1.1.0 PDF from 25 chapters, every example run | 2–3 days |
+| **1.1.0 — lane B** | T099, T100 | manual index and the 1.1.0 PDF from the chapters that describe what ships (D3: 20, not 25), every example run | 2–3 days |
 | **1.1.0 — lane C** | T101–T104 | measurements, determinism/no-network/no-package, both legs, quickstart and C1–C3 transcripts | 2 days |
 | **1.1.0 — lane D** | T105, T106 | parity rewrite, changelog, `<Version>`, checklist G1–G9, tag | 1–2 days |
 | **1.1.0 total** | 10 tasks | | **7.5–10.5 days serial, 2–3 days on four lanes** |
@@ -507,7 +587,3 @@ must be finished by the whole team first; no story may add a fixture outside the
 - No new package, native binary, `System.Drawing`, `SkiaSharp` or `PdfSharp`/`PdfPig` reference.
 - No network in the library; timestamps are caller-supplied callbacks.
 - Commit after each logical group; stop at every checkpoint and run the phase command.
-
-
-
-

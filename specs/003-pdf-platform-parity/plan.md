@@ -440,11 +440,3 @@ Release 1.1 is tagged only when all of the following are true:
    the API review and the measurement scenarios; run `/speckit-tasks` again only if the design changes.
 3. Re-run the 1.0 measurements and record the baseline for the creator and editor scenarios.
 4. Start Phase 1 only after the gate in `spec.md` is satisfied.
-
-
-
-
-
-
-
-

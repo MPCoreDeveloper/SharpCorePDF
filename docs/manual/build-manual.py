@@ -66,9 +66,9 @@ BUILD = ROOT / "build"
 CSS = ROOT / "manual.css"
 LOGO = DOCS.parent / "Logo-256.png"
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 PRODUCT = "SharpCorePDF"
-MANUAL_TITLE = "SharpCorePDF 1.0.0 — The Manual"
+MANUAL_TITLE = "SharpCorePDF 1.1.0 — The Manual"
 
 LANGUAGE_LABELS = {
     "csharp": "C#",
@@ -203,13 +203,14 @@ def cover_html() -> str:
   <h1 class="title">The SharpCorePDF<br />Manual</h1>
   <div class="rule"></div>
   <div class="version">Version {VERSION} &middot; .NET 10 and .NET 11</div>
-  <p class="subtitle">Merge PDFs in .NET without a third-party engine: page selection,
-  bookmarks, metadata, encryption and inspection &mdash; behind a domain you can reason about.</p>
+  <p class="subtitle">Create, edit and read PDFs in .NET without a third-party engine: merge plans,
+  page editing, authoring, text and layout extraction, signatures and PDF/A &mdash; behind a domain you
+  can reason about.</p>
   <ul class="promise">
     <li>The whole public API, from <strong>MergePlan</strong> to <strong>MergeResult</strong></li>
     <li>Page selections, output policies, encryption and document inspection</li>
-    <li>Errors, warnings and dependency injection in practice</li>
-    <li>A cookbook of recipes for services that merge documents for a living</li>
+    <li>Editing, authoring a page, extraction in four formats and the object graph</li>
+    <li>Digital signatures, archival output, and a cookbook of recipes for services that ship documents</li>
   </ul>
   <div class="imprint">
     {PRODUCT} is published as the <strong>SharpCorePDF</strong> meta-package, with separate
@@ -248,7 +249,7 @@ def assemble(headings, bodies: list[str], pages=None) -> str:
 <meta charset="utf-8" />
 <title>{html.escape(MANUAL_TITLE)}</title>
 <meta name="author" content="MPCoreDeveloper" />
-<meta name="description" content="The complete SharpCorePDF manual: merging PDFs in .NET, page selections, output policies, encryption, inspection, errors and dependency injection." />
+<meta name="description" content="The complete SharpCorePDF manual: creating, editing and reading PDFs in .NET — merge plans, page selections, output policies, encryption, inspection, authoring, extraction, the object graph, signatures and PDF/A." />
 <link rel="stylesheet" href="{CSS.as_uri()}" />
 </head>
 <body>

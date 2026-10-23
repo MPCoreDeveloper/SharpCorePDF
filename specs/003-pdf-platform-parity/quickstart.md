@@ -54,14 +54,19 @@ If CA-001 is not merged, **stop here**. Phase 1 is blocked by design.
 ```powershell
 dotnet test .\tests\SharpCorePDF.Tests\SharpCorePDF.Tests.csproj -p:TargetFramework=net10.0 `
   --filter "FullyQualifiedName~PdfDocumentBuilderTests"
-dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- creator-parity
-python docs\tools\validate-pdf.py --check-syntax --text --render --images <output>\creator-parity.pdf
+dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- author-page
+uv run --with pikepdf --with pypdf --with pymupdf python docs\tools\verify-cover.py <output>\cover.pdf <output>\cover-and-summary.pdf
+uv run --with pikepdf python docs\tools\validate-pdf.py <output>\cover.pdf <output>\cover-and-summary.pdf
 ```
 
-**Expected**: the path, text, image and layout tests pass; the creator example writes a ten-page
-document with vector paths, wrapped text, a JPEG and a PNG; `pikepdf`/`qpdf` report no syntax problems;
-`pypdf` extracts the accented text; PyMuPDF renders the paths and images at the expected positions; the
-same inputs produce identical bytes on a second run.
+**Expected**: the page, text and image tests pass; `author-page` writes the A4 cover — six lines and a
+152 × 87 RGBA PNG — and merges it in front of a real document in memory; `verify-cover.py` asks qpdf,
+`pypdf` and PyMuPDF the three questions (syntax, accented text and image XObject with its soft mask,
+72 dpi pixels inside and outside the logo) and exits non-zero if any recorded value moves;
+`validate-pdf.py` reports no qpdf problem and decodes every stream. The `creator-parity` scenario this
+phase is planned around is T036's ten-page document with vector paths, wrapped text, a JPEG and a PNG,
+which ships in 1.2 — on `1.1.0` this phase runs `author-page`, which is the same cover the question asks
+for.
 
 ## 4. Phase 2: editing parity
 
@@ -69,20 +74,27 @@ same inputs produce identical bytes on a second run.
 dotnet test .\tests\SharpCorePDF.Tests\SharpCorePDF.Tests.csproj -p:TargetFramework=net10.0 `
   --filter "FullyQualifiedName~PdfDocumentEditorTests"
 dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- edit-pages
-python docs\tools\validate-pdf.py --check-syntax --pages --geometry <output>\edited.pdf
+python docs\tools\validate-pdf.py <output>\edited.pdf
 ```
 
-**Expected**: page order, rotation, crop and size read back exactly; the watermark is present in the
-requested layer; `qpdf --check` is clean; a second reader reports the same page count and geometry; an
-incremental update leaves the original byte range unchanged.
+**Expected**: page order, rotation, crop and size read back exactly (`edit-pages` prints 3 pages, page 2
+`Clockwise90`, page 3 cropped to `[36 36 806 559]`, and the one warning is its own `OutputVerified`
+success signal); `qpdf --check` is clean; a second reader reports the same page count and geometry —
+`pypdf` reads the third page's `cropbox` as `[36, 36, 806, 559]`; an incremental update leaves the
+original byte range unchanged.
 
 ## 5. Phase 3: annotations and forms
+
+**Nothing to run on `1.1.0`.** Annotations and form fields are 1.2 work — the manual's chapters 15–19 are
+reserved for them and the tree carries no annotation or form API — so `PdfAnnotationTests`,
+`PdfFormTests` and the `annotate-and-fill` scenario are the names 1.2 will create. The block below is that
+phase's acceptance run and T104 records it as not runnable on the release commit.
 
 ```powershell
 dotnet test .\tests\SharpCorePDF.Tests\SharpCorePDF.Tests.csproj -p:TargetFramework=net10.0 `
   --filter "FullyQualifiedName~PdfAnnotationTests|FullyQualifiedName~PdfFormTests"
 dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- annotate-and-fill
-python docs\tools\validate-pdf.py --annotations --form-values <output>\annotated.pdf
+python docs\tools\validate-pdf.py <output>\annotated.pdf
 ```
 
 **Expected**: every annotation has a readable rectangle and appearance; `pypdf` reads the field values;
@@ -93,16 +105,20 @@ byte-identical to the source.
 
 ```powershell
 dotnet test .\tests\SharpCorePDF.Tests\SharpCorePDF.Tests.csproj -p:TargetFramework=net10.0 `
-  --filter "FullyQualifiedName~PdfSignatureTests|FullyQualifiedName~PdfATests"
-dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- sign-and-archive
-
-python docs\tools\validate-signatures.py <output>\signed.pdf
+  --filter "FullyQualifiedName~PdfDocumentSignerTests|FullyQualifiedName~PdfDocumentSignatureValidatorTests|FullyQualifiedName~PdfATests"
+dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- archive-pdfa
+python docs\tools\validate-pdf.py <output>\archive-1b.pdf <output>\archive-2b.pdf <output>\archive-3b.pdf
 python docs\tools\validate-pdfa.py <output>\archive-2b.pdf --profile 2b
 ```
 
-**Expected**: pyHanko reports a valid signature and a trusted chain for the local test root; a
-one-byte mutation is rejected; an annotation added afterwards leaves the first signature valid; veraPDF
-reports PDF/A-2b conformance, and the same for 1b and 3b fixtures.
+**Expected**: the twelve signature and PDF/A tests pass; `archive-pdfa` writes 1b, 2b and 3b with zero
+unsatisfied requirements and refuses a page whose Helvetica is not embedded, writing 0 bytes;
+`validate-pdf.py` finds no qpdf problem in any of the three and decodes every stream; `validate-pdfa.py`
+reports `PASS` for a profile where veraPDF is installed and exits 2 (“cannot run”) where it is not — the
+check needs veraPDF and a Java runtime, and no report is invented in their absence. veraPDF 1.30.3's
+`PASS` for all three profiles is recorded under “Phase 4 progress — archival output”. The `sign-and-archive`
+scenario (T094) and `validate-signatures.py` against its `signed.pdf` are 1.2 work; pyHanko's evidence for
+the signature surface `1.1.0` ships is recorded under “Phase 4 progress — signatures”.
 
 ## 7. Phase 5: reading and analysis
 
@@ -133,21 +149,33 @@ the object graph cannot be mutated and a dangling reference is reported, not hid
 ## 8. Determinism and independence
 
 ```powershell
-# Same inputs, fixed dates, twice.
-dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- creator-parity
-Get-FileHash <output>\creator-parity.pdf -Algorithm SHA256
-dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- creator-parity
-Get-FileHash <output>\creator-parity.pdf -Algorithm SHA256
+# The authored page, twice, in two processes: the same bytes.
+dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- author-page
+Get-FileHash <output>\cover.pdf -Algorithm SHA256
+dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- author-page
+Get-FileHash <output>\cover.pdf -Algorithm SHA256
+
+# A merge is reproducible once its date is: `options` pins ModificationDate, merges twice and compares.
+dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- options
+Get-FileHash <output>\report.pdf -Algorithm SHA256
 
 # No new package dependency.
 dotnet list .\SharpCorePDF.slnx package --include-transitive | Select-String 'PdfSharp|PdfPig|SkiaSharp|System.Drawing'
 
 # No network path in the library.
-Select-String -Path (Get-ChildItem src -Recurse -Filter '*.cs').FullName -Pattern 'HttpClient|WebRequest|Socket'
+Select-String -Path (Get-ChildItem src -Recurse -Filter '*.cs').FullName -Pattern '\b(HttpClient|WebRequest|WebClient|Socket|TcpClient|UdpClient|Dns)\b' |
+  Where-Object { $_.Line -notmatch '^\s*(//|///|\*)' }
 ```
 
-**Expected**: both hashes are identical; the package search returns no PDFsharp/PdfPig/SkiaSharp/
-System.Drawing package; the source search returns no network API in `src/`.
+**Expected**: the two `cover.pdf` hashes are identical (`499520B9…`); `options` prints
+`identical True` for its two in-process merges and writes a `report.pdf` whose hash is the same on a second
+process (`D32E1E6E…`), because a merge stamps `ModDate` with the current time unless
+`MergeOutputOptions.ModificationDate` pins it — and the file identifier is derived from the file, so a
+pinned date pins the bytes. The `creator-parity` scenario this step is planned around is 1.2 work (T036);
+`author-page` is the 1.1 document. The package search returns no PDFsharp/PdfPig/SkiaSharp/System.Drawing
+package, and no `/PackageReference` was added to `src/` since `v1.0.0`; the source search returns nothing —
+`Socket` and `WebRequest` appear only in doc comments, which the `Where-Object` drops, and it returns hits
+if the filter is removed, which is what an unfiltered search reporting a network path is.
 
 ## 9. Evidence to Record
 
@@ -173,5 +201,3 @@ the release commit.
 | pyHanko rejects a signature | Check the byte range, the detached CMS, and whether the timestamp token matches the digest. |
 | veraPDF fails a profile | Read `UnsatisfiedRequirements`; a font, colour space or action is usually the cause. |
 | Reading order differs on a two-column page | The selected strategy is in the result; raw order is the baseline, not the expected answer. |
-
-

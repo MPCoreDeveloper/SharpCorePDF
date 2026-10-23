@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SharpCorePDF.Application.Extensions;
@@ -5,6 +6,7 @@ using SharpCorePDF.Application.Ports;
 using SharpCorePDF.DependencyInjection;
 using SharpCorePDF.Domain.Aggregates;
 using SharpCorePDF.Domain.Ports;
+using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure;
 using SharpCorePDF.Infrastructure.Extensions;
 using SharpCorePDF.Infrastructure.Sources;
@@ -116,5 +118,80 @@ public sealed class AddSharpCorePDFTests
             .BuildServiceProvider();
 
         Assert.Equal(7, provider.GetRequiredService<PdfEngineOptions>().MaxPagesPerSource);
+    }
+
+    /// <summary>
+    /// The signing pair a caller resolves from the container works end to end: the signer opens the source,
+    /// writes a revision and leaves the destination open, and the validator reads that revision back as
+    /// intact and, against the signer's own certificate, trusted.
+    /// </summary>
+    [Fact]
+    public async Task Signs_through_the_container_and_validates_the_result()
+    {
+        using var provider = new ServiceCollection().AddSharpCorePDF().BuildServiceProvider();
+        using var destination = new MemoryStream();
+
+        var signed = await provider.GetRequiredService<IPdfSigner>().SignAsync(
+            new PdfByteArraySource(SigningFixtures.BuildDocument(), "sign.pdf"),
+            destination,
+            SigningFixtures.Options(SigningFixtures.Certificate),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal("Signature1", signed.FieldName);
+        Assert.True(signed.CoversWholeDocument);
+
+        // The source is revision 1 and the signature is written into the appended revision, so the
+        // revision it covers is the second one.
+        Assert.Equal(2, signed.CoveredRevision);
+        Assert.True(destination.Length > 0);
+        Assert.True(destination.CanWrite);
+
+        var validation = Assert.Single(await provider.GetRequiredService<IPdfSignatureValidator>().ValidateAsync(
+            new PdfByteArraySource(destination.ToArray(), "signed.pdf"),
+            new PdfTrustOptions { ExtraRoots = [SigningFixtures.Certificate] },
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Equal(PdfSignatureIntegrity.Valid, validation.Integrity);
+        Assert.Equal(PdfTrustResult.Trusted, validation.Trust);
+        Assert.Empty(validation.Problems);
+    }
+
+    /// <summary>
+    /// The arguments a caller can get wrong are refused before the source is opened, so a call that cannot
+    /// produce a signature never reads a document or writes to the destination.
+    /// </summary>
+    [Fact]
+    public async Task Refuses_a_signature_it_cannot_produce()
+    {
+        using var provider = new ServiceCollection().AddSharpCorePDF().BuildServiceProvider();
+        var signer = provider.GetRequiredService<IPdfSigner>();
+        using var destination = new MemoryStream();
+        using var readOnly = new MemoryStream([], writable: false);
+        using var publicOnly = X509CertificateLoader.LoadCertificate(
+            SigningFixtures.Certificate.Export(X509ContentType.Cert));
+        var source = new PdfByteArraySource(SigningFixtures.BuildDocument(), "sign.pdf");
+
+        var noCertificate = await Assert.ThrowsAsync<ArgumentException>(() => signer.SignAsync(
+            source,
+            destination,
+            SigningFixtures.Options(SigningFixtures.Certificate) with { Certificate = null! },
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        var noKey = await Assert.ThrowsAsync<ArgumentException>(() => signer.SignAsync(
+            source,
+            destination,
+            SigningFixtures.Options(publicOnly),
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        var noWrite = await Assert.ThrowsAsync<ArgumentException>(() => signer.SignAsync(
+            source,
+            readOnly,
+            SigningFixtures.Options(SigningFixtures.Certificate),
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Equal("options", noCertificate.ParamName);
+        Assert.Contains("no private key", noKey.Message, StringComparison.Ordinal);
+        Assert.Equal("destination", noWrite.ParamName);
+        Assert.Equal(0, destination.Length);
     }
 }

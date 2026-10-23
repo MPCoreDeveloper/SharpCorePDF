@@ -188,4 +188,3 @@ var options = MergeOutputOptions.Default with
     Producer = "Contoso Report Pipeline",
 };
 ```
-

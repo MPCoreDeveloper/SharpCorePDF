@@ -328,4 +328,98 @@ A few consequences worth stating before a release:
    conclusion — it asks for the newest analysis of `main`, checks that its revision is the commit the tag
    names, checks that its conditions include `new_coverage`, and only then reads the verdict.
 
+### What T103 measured, before SonarCloud is asked
+
+The gate above is enforced by a service. T103 asks the same question of the tree, locally, from the same
+report `ci.yml` uploads, so the answer is known before a run is read:
+
+```text
+./.tools/dotnet-coverage collect -f coverage -o artifacts/coverage/net11.0-final.coverage `
+  "dotnet test tests/SharpCorePDF.Tests/SharpCorePDF.Tests.csproj -c Release -p:TargetFramework=net11.0"
+./.tools/dotnet-coverage merge -f xml -o artifacts/coverage/net11.0-final.xml artifacts/coverage/net11.0-final.coverage
+python docs/tools/coverage-on-new-code.py artifacts/coverage/net11.0-final.xml
+```
+
+The tool takes the lines `git diff --unified=0 v1.0.0 -- src` adds, intersects them with the executable lines
+in that report, and reports both the whole shipped surface and the new code.
+
+| Measurement | Result |
+| --- | --- |
+| Whole shipped assemblies (module totals) | Infrastructure 87.07%, Application 88.47%, Domain 79.44%, DependencyInjection 93.65% |
+| **New code, the gate** | **6,841 of 8,798 added executable lines, 77.76% — below 90%** |
+| Tests on the leg measured | 748 passed, 0 failed, 0 skipped |
+
+It has been measured three times on this tree, and every move came from a test rather than from a change of
+definition: 6,718 of 8,798 (76.36%) at 743 tests, 6,817 (77.48%) after three inline-image tests, 6,841
+(77.76%) at 748 tests after two container-level signing tests. The 1,957 uncovered lines are concentrated in
+eight files — `TrueTypeFont` (94), `PdfTextScanner` (93), `SignatureValidator` (85), `PdfARequirements` (84),
+`PdfContentScanner` (74), `PdfPageContentReader.Images` (71), `PdfImageFilters` (68) and `PdfTextCollector`
+(67) — and they are the refusal and malformed-input branch of each parser and validator, not the behaviour a
+parity row names.
+
+The 92% quoted above is SonarCloud's own figure as it stood when this section was written, over a definition
+that excludes `examples/`, `docs/`, `tools/`, `bin/`, `obj/` and `artifacts/` and counts the four shipped
+assemblies; it is not the same numerator, and on this tree neither is 90%. The local measurement is the
+stricter of the two because it asks about the 8,798 lines 1.1.0 *added*, and it says they are 12 points below
+the floor.
+
+**The decision that figure carried is [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md)**: `1.1.0` ships with
+77.76% recorded in this section, in that record and in the release notes; the floor stays at 90% and is
+re-measured on 1.2's new code; no test is written whose only effect is to execute a line; and the parsers'
+refusal branches become a named 1.2 task. The record is **Proposed** until the release owner signs it, and the
+tag waits for that signature — an unsigned waiver is the one outcome this section is written to prevent.
+
+## The 1.1.0 run of `quickstart.md` (T104)
+
+The run book is `specs/003-pdf-platform-parity/quickstart.md`; running it end to end is the release's own
+rehearsal, and its transcript is `artifacts/t104-release-transcript.md` — ignored by Git, like every other
+build output, so it travels with the pull request rather than the tree. What it establishes:
+
+| Item | Result | Where the evidence is |
+| --- | --- | --- |
+| Release build | 0 warnings, 0 errors | transcript, step 1 |
+| Test legs, net10.0 and net11.0 | 748 passed, 0 failed, 0 skipped on each — 743 when the run was made, plus the five tests T103 added afterwards; no 1.0 test removed | transcript, step 1; `git diff v1.0.0 -- tests` |
+| Examples | 15 of 15 `ok (…)`, exit 0 | transcript, step 1 |
+| Creator phase | 34 tests, `author-page`, qpdf / pypdf / PyMuPDF, 0 expectations broken | transcript, phase 1; `artifacts/c5-transcript.md` |
+| Editing phase | 37 tests; insert, rotate, delete and crop read back by pypdf | transcript, phase 2 |
+| Annotations and forms | not runnable — 1.2 work, marked as such in the run book | transcript, phase 3 |
+| Signatures and PDF/A | 12 tests, `archive-pdfa`, qpdf clean; **veraPDF absent**, so conformance rests on the recorded 1.30.3 `PASS`; `sign-and-archive` is 1.2 | transcript, phase 4 |
+| Extraction, layout, object graph | 78 tests, `inspect-objects`; the scored corpus run is T079 | transcript, phase 5 |
+| Determinism | `cover.pdf` byte-identical across processes; the merged file only with `ModificationDate` pinned | transcript, step 8 |
+| Independence | no new package; no PDFsharp, PdfPig, SkiaSharp or System.Drawing; no network API in `src/` | transcript, step 8 |
+
+Two of its findings changed the documents rather than the code: `quickstart.md` now runs only commands that
+exist (phases 3 and 4 had named test classes, a scenario and tool flags that were never there), and step 8 hashes
+`author-page` because the merge it used to hash is not byte-stable without a pinned `/ModDate`. The run itself
+is not a pass on the coverage floor — that is the table above, and it is T103's measured decision
+([`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md)), not T104's.
+
+## G1–G9 at `1.1.0` (T105, 2026-10-23)
+
+The gate table above is the 1.0.0 state of each gate. This is the same nine, asked again of the tree that
+`1.1.0` is cut from, with where the evidence lives. `<Version>` is now `1.1.0` in `src/Directory.Build.props`
+(`AssemblyVersion` and `FileVersion` `1.1.0.0`), and the release notes on every package page are the 1.1 text
+from the same file.
+
+| Gate | State at `1.1.0` | Evidence |
+| --- | --- | --- |
+| G0 — the id | **Closed** | `SharpCorePDF` plus the four layers are published and immutable at `1.0.0`; `1.1.0` reuses the ids rather than claiming new ones |
+| G1 — the surface has stopped moving | **Yes, for the 1.1 surface** | every addition is snapshotted in `PublicAPI.Unshipped.txt`, `RS0016`/`RS0017` are build errors, and `PublicApiSurfaceTests` pins the shape; the 1.2 rows will add members, which is why this is a per-release statement and not a permanent one |
+| G2 — the shipped leg | **Unchanged: both legs ship** | `lib/net10.0` and `lib/net11.0` in every package; narrowing stays on the 1.2 backlog |
+| G3 — notes a consumer can read | **Yes** | `CHANGELOG.md` holds `## [1.1.0] - 2026-10-23`, written in the same commit as the bump, with a *Known limits at 1.1.0* section that names the coverage figure and the two 1.0 limits that remain |
+| G4 — symbols and reproducible binaries | **Still partly** | no `.snupkg` is packed and nothing is code-signed; `<Deterministic>true</Deterministic>` is set, and T102 proves the *output* is stable run to run, which is not the two-build comparison this gate asks for |
+| G5 — trusted publishing and `NUGET_USERNAME` | **Unchanged, outside the tree** | the policy and the secret live on nuget.org and in the repository settings; the 1.0.0 push proved both, and `1.1.0` needs no new subject |
+| G6 — a dry run on the commit to be tagged | **To be re-run** | `Actions → publish → publish: false` against the release commit; the 1.0.0 dispatch proved the handshake, not this commit |
+| G7 — the tag equals `<Version>` | **To be cut** | the tag must read `v1.1.0`; `publish.yml` refuses any other value |
+| G8 — the packages install and open a document | **After the push** | the same three checks as at 1.0.0, on `1.1.0` |
+| G9 — the quality gate on the tagged commit | **Local number recorded, 77.76%** | T103's measurement and [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md); SonarCloud must still be green on the commit the tag names, which is what `publish.yml` reads |
+
+Three things stand between this table and a tag, and none of them is code:
+
+1. **ADR-002 must be signed** by the release owner. It is `Proposed`; T103's checkbox closes on the signature,
+   and T106 does not run without it.
+2. **The pull request must exist**, with `artifacts/t104-release-transcript.md` attached by hand, because
+   `artifacts/` is ignored by Git.
+3. **The tag must name the commit whose SonarCloud analysis is the newest on `main`** (G9, T106), which is why
+   the analysis is read after the merge rather than before it.
 

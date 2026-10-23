@@ -364,10 +364,3 @@ validates, then convert the unsigned fixture to PDF/A-2b and pass an independent
 - Network access, logging, secret storage or a hosted service.
 - Editing content that cannot be represented in the current object model without a documented loss
   warning.
-
-
-
-
-
-
-

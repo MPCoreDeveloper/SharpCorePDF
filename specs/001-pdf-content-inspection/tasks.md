@@ -312,4 +312,3 @@ tree before the change is signed off; the table above is the input to that re-ru
   the manual says so, because a 50 MB attachment still means a 50 MB document.
 - **`[ ]` means outstanding.** Only T051 remains: a second reader accepting the `spec.md` wording is the one
   gate this list cannot close by rerunning a command.
-

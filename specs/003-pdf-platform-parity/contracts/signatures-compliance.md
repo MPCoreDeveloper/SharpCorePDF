@@ -192,4 +192,3 @@ public sealed record PdfAConversionResult
 - A PDF/UA or PDF/X writer.
 - A PDF/A *validator*; veraPDF remains the external authority.
 - Certifying signatures, document locking and field-lock semantics beyond copying the field dictionary.
-

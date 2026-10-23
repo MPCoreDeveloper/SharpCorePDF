@@ -158,4 +158,3 @@ public PdfEditPlan FlattenForm();
 - Digital signatures through a form field in this contract; signing is the separate signature contract.
 - Redaction; a redaction annotation is not offered because the underlying content would remain.
 - Annotation types not listed above (3D, movie, sound, screen, rich media, file attachment) in 1.1.
-

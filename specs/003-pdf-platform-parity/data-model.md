@@ -376,7 +376,3 @@ An unsatisfied hard requirement ends in `Refused`, not `Validated`.
 - `PdfWarningKind` may grow; existing members keep their meaning.
 - `PdfWord` and `PdfTextBlock` may gain properties but may not lose or rename existing ones in 1.x.
 - The new public object graph is read-only and separate from the internal mutable model.
-
-
-
-

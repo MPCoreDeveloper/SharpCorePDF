@@ -182,4 +182,3 @@ public interface IPdfObjectInspector
 - A mutable object graph or a general PDF editing API through the inspector.
 - Converting a page to an image, Office document, HTML or reflowed text.
 - Font shaping or reconstructing text that the source does not encode.
-

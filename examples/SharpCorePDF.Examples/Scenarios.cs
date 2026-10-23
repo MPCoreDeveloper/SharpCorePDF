@@ -16,6 +16,7 @@ internal static class Scenarios
         new("select-pages", "take selected pages, in a selected order", MergeExamples.SelectPagesAsync),
         new("merge-streams", "merge documents that are already in memory", SourceExamples.MergeStreamsAsync),
         new("author-page", "write a cover page with a logo and text, and put it in front of a document", AuthoringExamples.WriteCoverAsync),
+        new("edit-pages", "edit a document that exists: insert, rotate, delete and crop in one pass", PdfEditExamples.EditPagesAsync),
         new("no-container", "use the packages without a dependency injection container", SourceExamples.WithoutContainerAsync),
         new("inspect-first", "describe documents before merging them", InspectionExamples.InspectFirstAsync),
         new("read-content", "read the images, text, comments, form, bookmarks, attachments and metadata a document carries", ContentInspectionExamples.ReadContentAsync),
