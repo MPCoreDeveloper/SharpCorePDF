@@ -414,12 +414,16 @@ from the same file.
 | G8 — the packages install and open a document | **After the push** | the same three checks as at 1.0.0, on `1.1.0` |
 | G9 — the quality gate on the tagged commit | **Local number recorded, 77.76%** | T103's measurement and [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md); SonarCloud must still be green on the commit the tag names, which is what `publish.yml` reads |
 
-Three things stand between this table and a tag, and none of them is code:
+Two things stand between this table and a tag, and neither of them is code:
 
 1. **ADR-002 must be signed** by the release owner. It is `Proposed`; T103's checkbox closes on the signature,
    and T106 does not run without it.
-2. **The pull request must exist**, with `artifacts/t104-release-transcript.md` attached by hand, because
-   `artifacts/` is ignored by Git.
-3. **The tag must name the commit whose SonarCloud analysis is the newest on `main`** (G9, T106), which is why
+2. **The tag must name the commit whose SonarCloud analysis is the newest on `main`** (G9, T106), which is why
    the analysis is read after the merge rather than before it.
+
+The pull request that used to be on that list exists:
+[#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4), `003-pdf-platform-parity` → `main`, twelve commits.
+`artifacts/t104-release-transcript.md` is ignored by Git, so the transcript is in the body under a collapsed block
+rather than attached as a file, and the body says why. It also says that the summary row reading 76.36% is the
+run's own figure before the five tests the release commit adds — 77.76% is what the release ships with.
 

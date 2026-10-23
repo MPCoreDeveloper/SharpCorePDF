@@ -19,12 +19,12 @@ and US4 trust. Phase 6 hardens and releases.
 trust (17). **Gate/foundation**: 21 tasks. **Polish**: 10 tasks. **MVP of the parity target**: T001–T038.
 **What `1.1.0` needs**: T097–T106 — see the release lanes in Gate 0.
 
-**Status (2026-10-23)**: 67 of 106 tasks done, 39 open — and **only T101–T106 are on the 1.1.0 path**;
-lanes A and B (T097–T100) are closed, every Gate 0 item `C1`–`C6` is closed, and lanes C and D are at the
-gate: T101, T102 and T105 are done and recorded, T103's build and both legs pass while its coverage gate
-measured 77.76% against 90% and the decision to ship with that number recorded is written as ADR-002 and
-await the release owner's signature, T104 has been run with its transcript waiting on the pull request, and
-T106 is clean — the whitespace pass and the release commit are done, with the tag waiting on those two.
+**Status (2026-10-23)**: 68 of 106 tasks done, 38 open — and **only T103 and T106 are on the 1.1.0 path**;
+lanes A and B (T097–T100) are closed, every Gate 0 item `C1`–`C6` is closed, and lanes C and D are through
+their gate: T101, T102, T104 and T105 are done and recorded, T103's build and both legs pass while its coverage
+gate measured 77.76% against 90% and the decision to ship with that number recorded is written as ADR-002 and
+awaits the release owner's signature, and T106 is clean — the whitespace pass and the release commit are done,
+the branch is pushed as pull request #4, and only the signature and the merge stand between it and the tag.
 **D3 is decided** (Gate 0): 1.1.0 ships what this tree already implements, so the 37 open story tasks —
 US1's 13, US2's 17, US3's 5 and US4's 2 — are the 1.2 backlog and keep their unchecked boxes here.
 
@@ -430,7 +430,7 @@ and veraPDF reports conformance for all three profiles.
   - The five tests are behaviour, not line-filler: the inline-image abbreviations a producer actually writes (computed sample count, indexed colour space as an array, image mask with a decode array, an `AHx` payload whose length the header does not state, a header with a comment and a literal string) plus an image with no `EI`; and the signing pair resolved from `AddSharpCorePDF()` — sign, validate as `Valid`/`Trusted`, and the three arguments `PdfSignerService` refuses before opening the source. They took `PdfContentScanner` from 166 uncovered added lines to 74.
   - `docs/adr/0002-new-code-coverage-1.1.0.md` records the decision: `1.1.0` ships with 77.76% named in the ADR, in G9 and in the release notes; the 90% floor is unchanged and is re-measured on 1.2's new code; no test is written whose only effect is to execute a line; and the eight parser/validator files that hold the rest become a 1.2 task. The ADR is **Proposed** and carries a signature table for the release owner, because an unsigned waiver is the one outcome the gate exists to prevent.
   - **What is left on T103 is that signature.** With the ADR signed, the box closes on a measured, named number; without it, the box stays open and T106 does not tag. Everything else the task asks for — 0/0 build, both legs at 748, no 1.0 test removed, a number measured three times — is done and recorded above.
-- [ ] T104 Run every `quickstart.md` phase command on the release commit and record the commands, versions and outputs in the pull request.
+- [x] T104 Run every `quickstart.md` phase command on the release commit and record the commands, versions and outputs in the pull request.
   - The gate's own transcript is not a phase command: run
     `uv run --with pikepdf --with pypdf --with pymupdf python docs/tools/verify-cover.py --output artifacts\c5-transcript.md`
     and attach that file — it is C5's evidence for the tagged commit.
@@ -441,10 +441,13 @@ and veraPDF reports conformance for all three profiles.
     - **Phase 4** — 12 signer, validator and PDF/A tests pass; `archive-pdfa` `ok (188 ms)` → 1b, 2b, 3b each with 0 unsatisfied requirements and the unembedded-Helvetica page refused with 0 bytes written; `validate-pdf.py` qpdf clean on all three, 6 streams each; `validate-pdfa.py` exits 2, *cannot run* — veraPDF is not installed here, so the conformance claim rests on the recorded veraPDF 1.30.3 `PASS` under “Phase 4 progress”, not on this run.
     - **Phase 5** — 78 layout, export, corpus and object-graph tests pass; `extract-layout inspect-objects` `ok (24 ms)` → 8 objects, 0 dangling references, 5 operations in paint order. `score-layout.py` is T079 (open) and needs a folder of ALTO exports of the five labelled documents.
   - **Commands corrected while running them.** Phases 3 and 4 named test classes and scenarios that do not exist: `PdfAnnotationTests`/`PdfFormTests`/`annotate-and-fill` are 1.2 work (chapters 15–19 are reserved and the tree has no annotation or form API), `PdfSignatureTests` is `PdfDocumentSignerTests`/`PdfDocumentSignatureValidatorTests`, and `sign-and-archive` is T094. `creator-parity` (T036) does not exist either, so step 8 hashes `author-page`. The `validate-pdf.py`/`validate-signatures.py` calls carried flags the tools never had (`--check-syntax`, `--pages`, `--geometry`, `--annotations`, `--form-values`); both tools print everything they check for the files named on the command line. `quickstart.md` now runs the 1.1 path with the commands that exist and marks the 1.2 ones as 1.2, which is what makes this the release's reproducible run book.
-  - Still open: the pull request this record belongs to. Everything above is in the release commit on
-    `003-pdf-platform-parity`, not in a review yet. The durable summary is
-    `docs/release-checklist.md` §“The 1.1.0 run of quickstart.md (T104)”; the transcript itself is under
-    `artifacts/`, which Git ignores, so it is attached to the pull request by hand.
+  - **Opened 2026-10-23: [#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4)** —
+    `003-pdf-platform-parity` → `main`, twelve commits, not a draft. `artifacts/t104-release-transcript.md` is
+    Git-ignored, so it is in the body under a collapsed block rather than attached to the conversation, and the
+    body says so. It also says that the transcript's own summary row reading 76.36% predates the five tests in
+    the release commit — 77.76% is the figure the release ships with. The body's headline is the gate that is
+    not met and the signature it waits on, not the parts that passed; the durable summary is still
+    `docs/release-checklist.md` §“The 1.1.0 run of quickstart.md (T104)”.
 
 - [x] T105 Confirm `docs/parity.md` has no unevidenced “Must” row, then update the 1.1 entry in `CHANGELOG.md`, bump `<Version>`, and complete `docs/release-checklist.md` G1–G9.
   - The first half starts at Gate 0: `C5`/`C6` prove the question's rows, and `C6` is decided — D3. A “Must”
@@ -484,10 +487,10 @@ and veraPDF reports conformance for all three profiles.
     **748/748**; `git diff --check` and `git diff --check v1.0.0` both exit 0.
   - **The release commit** — *Close the 1.1.0 release gates and record the coverage it ships with* — sits on
     `003-pdf-platform-parity` holding lanes A, B, C and D, with a clean tree behind it.
-  - **Not done, and deliberately: the tag.** It waits on the ADR-002 signature (T103) and on the pull request
-    (T104), because this gate tags the commit whose SonarCloud analysis is the newest on `main`, and that commit
-    does not exist until both are true. `v1.1.0` must also equal `<Version>` 1.1.0 — G7 — which `publish.yml`
-    checks for itself.
+  - **Not done, and deliberately: the tag.** It waits on the ADR-002 signature (T103) and on the merge of
+    [#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4) (T104), because this gate tags the commit whose
+    SonarCloud analysis is the newest on `main`, and that commit does not exist until both are true. `v1.1.0`
+    must also equal `<Version>` 1.1.0 — G7 — which `publish.yml` checks for itself.
 
 ---
 
