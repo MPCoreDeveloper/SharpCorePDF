@@ -171,4 +171,3 @@ public sealed class PdfTextLayout
 - HTML/CSS layout, tables, automatic page breaks, footnotes, columns and text shaping.
 - SVG input, JPEG 2000, TIFF, WebP and animated GIF output.
 - System fonts, font fallback and font licensing.
-

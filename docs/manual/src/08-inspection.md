@@ -344,4 +344,3 @@ gives you a place to interject a message, a prompt or a policy decision. It does
 safer in the sense of catching every error: a file can change between inspection and merge, and the
 merger validates again. The gain is a better conversation with the user, not a substitute for handling
 `PdfException` (Chapter 9).
-

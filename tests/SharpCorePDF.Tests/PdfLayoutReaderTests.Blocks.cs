@@ -274,4 +274,3 @@ public sealed partial class PdfLayoutReaderTests
         Assert.Throws<ArgumentOutOfRangeException>(
             () => new PdfLayoutOptions { ReadingOrder = (PdfReadingOrderStrategy)42 });
 }
-

@@ -429,6 +429,86 @@ public sealed partial class PdfContentReaderTests
         Assert.Equal(new PdfRectangle(0d, 0d, 10d, 10d), image.Position);
         Assert.DoesNotContain(result.Warnings, warning => warning.Kind == PdfWarningKind.XObjectResourceMissing);
     }
+
+    /// <summary>
+    /// The entries of an inline image are read in the abbreviated form producers actually write: a
+    /// computed sample count, an indexed colour space stated as an array, an image mask with a decode
+    /// array, a filter whose payload length the header does not state, and a header carrying a comment
+    /// and a literal string.
+    /// </summary>
+    [Fact]
+    public async Task Reads_inline_images_that_state_their_entries_in_the_abbreviated_form()
+    {
+        var source = Source(PdfContentFixtures.InlineAbbreviations(), "inline.pdf");
+
+        var result = await Reader().ReadImagesAsync(source, PageRange.All, cancellationToken: Token);
+
+        Assert.Equal(6, result.Count);
+        Assert.All(result.Items, image => Assert.True(image.IsInline));
+        Assert.All(result.Items, image => Assert.Equal([1], image.Pages));
+
+        var gray = result.Items[0];
+        Assert.Null(gray.Filter);
+        Assert.Equal("G", gray.ColorSpace);
+        Assert.Equal(2, gray.Width);
+        Assert.Equal(2, gray.Height);
+        Assert.Equal(8, gray.BitsPerComponent);
+        Assert.Equal(new byte[] { 0x10, 0x20, 0x30, 0x40 }, gray.Data!.Value.ToArray());
+
+        var indexed = result.Items[1];
+        Assert.StartsWith("Indexed DeviceRGB 1", indexed.ColorSpace, StringComparison.Ordinal);
+        Assert.Equal(new byte[] { 0x00, 0x10, 0x20, 0x30 }, indexed.Data!.Value.ToArray());
+
+        var mask = result.Items[2];
+        Assert.Null(mask.ColorSpace);
+        Assert.Equal(1, mask.BitsPerComponent);
+        Assert.Equal(new byte[] { 0x80 }, mask.Data!.Value.ToArray());
+
+        // The entry names of an inline image are normalised; a value keeps the form the document used,
+        // so the declared filter is reported as "AHx" and still decoded by what the name stands for.
+        var hex = result.Items[3];
+        Assert.Equal("AHx", hex.Filter);
+        Assert.True(hex.IsDecodable);
+        Assert.Equal(
+            new byte[] { 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15 },
+            hex.Data!.Value.ToArray());
+
+        var cmyk = result.Items[4];
+        Assert.Equal("CMYK", cmyk.ColorSpace);
+        Assert.Equal(1, cmyk.Width);
+        Assert.Equal(new byte[] { 0x01, 0x02, 0x03, 0x04 }, cmyk.Data!.Value.ToArray());
+
+        var commented = result.Items[5];
+        Assert.Null(commented.Filter);
+        Assert.Equal("RGB", commented.ColorSpace);
+        Assert.Equal(PdfContentFixtures.InlineSamples, commented.Data!.Value.ToArray());
+    }
+
+    /// <summary>Every inline image of the fixture is read whole, so nothing about them is reported.</summary>
+    [Fact]
+    public async Task Reports_nothing_about_inline_images_it_reads_whole()
+    {
+        var source = Source(PdfContentFixtures.InlineAbbreviations(), "inline.pdf");
+
+        var result = await Reader().ReadImagesAsync(source, PageRange.All, cancellationToken: Token);
+
+        Assert.Empty(result.Warnings);
+    }
+
+    /// <summary>
+    /// An inline image whose bytes run to the end of the content stream has no <c>EI</c>, so what the
+    /// page draws is reported rather than dropped, and the remark names the reason.
+    /// </summary>
+    [Fact]
+    public async Task Reads_an_inline_image_that_is_not_terminated_by_ei()
+    {
+        var source = Source(PdfContentFixtures.UnterminatedInlineImage(), "open.pdf");
+
+        var result = await Reader().ReadImagesAsync(source, PageRange.All, cancellationToken: Token);
+        var image = Assert.Single(result.Items);
+
+        Assert.True(image.IsInline);
+        Assert.Equal(new byte[] { 0x01, 0x02 }, image.Data!.Value.ToArray());
+        AssertWarning(result.Warnings, PdfWarningKind.ImageDataUnreadable);
+    }
 }
-
-

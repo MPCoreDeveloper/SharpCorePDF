@@ -65,6 +65,9 @@ internal sealed class ExampleContext : IDisposable
     /// <summary>Gets the layout reader, exactly as an application would resolve it.</summary>
     public IPdfLayoutReader LayoutReader => services.GetRequiredService<IPdfLayoutReader>();
 
+    /// <summary>Gets the editor, exactly as an application would resolve it.</summary>
+    public IPdfDocumentEditor Editor => services.GetRequiredService<IPdfDocumentEditor>();
+
     /// <summary>Gets the object inspector, exactly as an application would resolve it.</summary>
     public IPdfObjectInspector ObjectInspector => services.GetRequiredService<IPdfObjectInspector>();
 

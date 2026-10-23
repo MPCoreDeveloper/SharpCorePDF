@@ -18,7 +18,7 @@ feed ever served.
 contents of the layers, and the entry below is written against the published `preview.1` rather than
 against an empty feed.
 
-## [Unreleased]
+## [1.1.0] - 2026-10-23
 
 ### Added
 
@@ -253,6 +253,20 @@ against an empty feed.
   stops when the gate is red, when the snapshot it judged carried no coverage report, or when the newest
   analysis of `main` is of a different commit than the tag. It changes when a version appears on the feed,
   not what is in it; the rule it adds is that a tag goes on the commit whose analysis is the newest on `main`.
+
+### Known limits at 1.1.0
+
+One shortfall is stated rather than left for a reader to find: **77.76% of the executable lines this version
+adds are covered by the suite, against the 90% new-code floor** in `docs/release-checklist.md` G9 —
+[ADR-002](docs/adr/0002-new-code-coverage-1.1.0.md) records the measurement, the eight parser and validator
+files the uncovered lines sit in, and the decision to ship with the number stated rather than to move it with
+tests that only execute lines. The floor itself is unchanged and is re-measured on 1.2's new code. What the
+suite does instead is evidence behaviour: 748 tests on both legs, 21 parity rows each naming a test and an
+external command, and pyHanko, qpdf, veraPDF 1.30.3, pypdf and PyMuPDF run against the output.
+
+Two things are as they were at 1.0.0: there is no symbol package yet, so a debugger shows no source for a
+stack trace, and nothing is code-signed. Both remain gates in the release checklist rather than intentions, and
+neither changes what the packages contain.
 
 ## [1.0.0] - 2026-10-17
 

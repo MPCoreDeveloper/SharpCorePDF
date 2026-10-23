@@ -406,3 +406,101 @@ Not covered by this section: the merge and read-back legs of the creator scenari
 edits, `qpdf --check` on the editor output, server GC, and a 1000-page source. Those are the T038/T058
 acceptance runs, not omissions from the baseline.
 
+## 10. The 1.1.0 release re-run (T101)
+
+Recorded: 2026-10-23, .NET 11.0.0-rc.2.26504.105, x64, 12 logical cores, workstation GC, `Release`.
+
+```powershell
+dotnet run -c Release --project .\tools\SharpCorePDF.Measure                  # the twelve merge rows
+dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --content     # page details, text, copy route
+dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --author      # one page, RGB/RGBA, 200 pages
+dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --creator     # the SC-002 creator shape
+dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --editor      # the SC-003 editor shape
+```
+
+This is the release-gate re-run of everything above: the same harness, the same machine, the same rows,
+against the tree `1.1.0` is cut from. `Allocated` is the gate — a row that moves by more than 10% is a
+regression — because wall time on this machine moves by more than that between runs on its own. Wall time
+is quoted as it came out.
+
+### Merges (§1)
+
+| Scenario | Allocated | Recorded | Change | Wall | Output bytes |
+| --- | --- | --- | --- | --- | --- |
+| 1 × 1.0 MB (file) | 2,238 KB | 2,236 KB | +0.1% | 1.89 ms | 931,273 |
+| 10 × 100 KB (files) | 2,546 KB | 2,533 KB | +0.5% | 4.36 ms | 6,059 |
+| 150 × 6.7 KB (files) | 9,811 KB | 9,619 KB | +2.0% | 55.64 ms | 85,331 |
+| 1 × 1.0 MB (verification on) | 3,202 KB | 3,199 KB | +0.1% | 2.29 ms | 931,273 |
+| 150 × 6.7 KB (verification on) | 11,043 KB | 10,846 KB | +1.8% | 74.59 ms | 85,331 |
+| 1 × 1.0 MB (caller stream) | 3,213 KB | 3,211 KB | +0.1% | 2.09 ms | 931,273 |
+| 150 × 6.7 KB (caller streams) | 10,669 KB | 10,478 KB | +1.8% | 42.99 ms | 85,331 |
+| 150 × 1.0 MB (corpus document) | 324,731 KB | 324,342 KB | +0.1% | 262.80 ms | 139,645,394 |
+| 300 × 0.5 MB (Modern, padded) | 308,661 KB | 308,270 KB | +0.1% | 168.43 ms | 170,792 |
+| 75 × 1.0 MB (Modern, padded) | 150,463 KB | 150,365 KB | +0.1% | 81.67 ms | 42,806 |
+| 150 × 0.5 MB (Modern, padded) | 154,357 KB | 154,159 KB | +0.1% | 116.92 ms | 85,331 |
+| 150 × 1.0 MB (Modern, padded) | 300,864 KB | 300,676 KB | +0.1% | 187.64 ms | 85,331 |
+
+Every output byte count is identical to the recorded one, including the 139,645,394 B corpus row: the
+merge writes the document it wrote before the feature. The harness's own gate line reads **0.26 s /
+544.3 MB/s** for 150 × 1.0 MB (budget 10 s / 15 MB/s), **0.36 ms** fixed cost per extra source over 150 and
+**0.27 ms** over ten (budget 1 ms), and the scaling ratio **1.43x at 75 MB and 0.90x at 150 MB** — the
+coin flip §2 already records as not reliably met. Peak working set over the run was 207.5 MB and 13.37 MB
+was retained after it.
+
+### Reads, extraction and the copy route (§7)
+
+| Row | Allocated | Recorded | Change | Wall | Live after GC |
+| --- | --- | --- | --- | --- | --- |
+| 200 pages, every page enumerated | 2,174 KB | 2,174 KB | 0.0% | 7.79 ms | 0.81 MB |
+| 200 pages, abandoned after 10 | 1,100 KB | 1,100 KB | 0.0% | 5.29 ms | 0.81 MB |
+| 200 pages of text, every block read | 26,982 KB | 26,854 KB | +0.5% | 119.45 ms | 0.96 MB |
+| 200 pages of text, ten pages read | 2,308 KB | 2,302 KB | +0.3% | 9.41 ms | 0.96 MB |
+| 1 MB payload through the copy route | 3,087 KB | 3,087 KB | 0.0% | 0.72 ms | 7.98 MB |
+| 10 MB payload through the copy route | 10,271 KB | 10,271 KB | 0.0% | 4.25 ms | 48.98 MB |
+| 50 MB payload through the copy route | 51,301 KB | 51,301 KB | 0.0% | 19.84 ms | 216.98 MB |
+
+The 50 MB row needs a note because it lied once: the first run of the day allocated 116,837 KB and retained
+280.98 MB for the same payload, and every run after it reproduced 51,301 KB and 216.98 MB exactly. This
+route is a pooled 64 KiB buffer plus the document the caller hands over, so the figure is either one
+document or it is not; a single 116 MB reading on a machine that had just written the 300 MB merge rows is
+a collection artefact, not a second copy, and the row is recorded at its reproducible value.
+
+### Authoring (§8)
+
+| Row | Allocated | Recorded | Change | Wall | Output |
+| --- | --- | --- | --- | --- | --- |
+| 1 page, RGB logo, 6 text lines | 671 KB | 672 KB | −0.1% | 0.71 ms | 74,662 B |
+| 1 page, RGBA logo, 6 text lines | 418 KB | 419 KB | −0.2% | 1.44 ms | 7,928 B |
+| 200 pages, 2 text lines each | 1,771 KB | 1,830 KB | −3.2% | 7.39 ms | 144,125 B |
+
+### The creator and the editor (§9)
+
+| Row | Allocated | Recorded | Change | Wall | Output |
+| --- | --- | --- | --- | --- | --- |
+| Creator, 10 pages, 200 lines, RGBA logo | 3,434 KB | 3,484 KB | −1.4% | 13.32 ms | 78,839 B |
+| Creator, 10 pages, 200 lines, no image | 781 KB | 829 KB | −5.8% | 4.24 ms | 77,136 B |
+| Editor, 200 operations, 100 to 125 pages | 1,796 KB | 1,733 KB | +3.6% | 3.92–4.53 ms | 80,004 B |
+
+The editor's output is byte-identical to the recorded run (80,004 B) and its allocation moved 63 KB; the
+wall time reads 3.92, 4.06 and 4.53 ms over three runs on an otherwise idle machine, against 3.64 ms
+recorded. Both creator rows allocate less than the baseline and write about 4.7 KB more: the writer's
+output changed between the recording and the release (the same plan still writes the same bytes), a 6%
+size change on a document whose budget is time, not size.
+
+### Verdict
+
+| Gate | Requirement | Measured | Verdict |
+| --- | --- | --- | --- |
+| §1 merge allocations, every row | no regression > 10% | worst row +2.0% (150 × 6.7 KB) | **met** |
+| §7 read allocations, every row | no regression > 10% | worst row +0.5% | **met** |
+| §8 authoring allocations | no regression > 10% | −0.1% / −0.2% / −3.2% | **met** |
+| §9 creator allocations | no regression > 10% | −1.4% / −5.8% | **met** |
+| §9 editor allocations | no regression > 10% | +3.6% | **met** |
+| §1 merge wall time, 150 × 1.0 MB | ≤ 10 s, ≥ 15 MB/s | 0.26 s, 544 MB/s | **met** |
+| §1 fixed cost per source | ≤ 1 ms | 0.36 ms | **met** |
+| §1 scaling at constant bytes | < 1.20x | 1.43x at 75 MB, 0.90x at 150 MB | **not met**, as recorded in §2 |
+| SC-002 creator build | < 2 s | 13.32 ms | **met**, >150× headroom |
+| SC-003 editor | < 3 s | 3.92–4.53 ms | **met**, >600× headroom |
+
+No row regressed by more than 10%, so T101 blocks nothing. The one budget not met is the scaling ratio §2
+already records as a coin flip on this machine; it is neither new nor hidden by this run.

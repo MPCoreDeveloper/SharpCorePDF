@@ -216,7 +216,3 @@ capability gap).
   plan uses `IPdfTimestampProvider` and keeps the socket out of the library.
 - **Does “parity” require API compatibility?** No. The spec and plan define capability parity and
   explicitly exclude source/binary compatibility.
-
-
-
-

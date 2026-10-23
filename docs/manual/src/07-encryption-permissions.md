@@ -171,4 +171,3 @@ This is the expected behaviour, not a defect: reusing an initialization vector o
 documents would weaken the encryption. If you need reproducible bytes for caching or auditing, produce
 the unencrypted document reproducibly and encrypt it in a separate step whose output you do not
 compare byte for byte.
-

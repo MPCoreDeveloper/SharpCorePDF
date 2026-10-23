@@ -144,10 +144,18 @@ that compares files needs. `DocumentId` must be 32 hexadecimal digits.
 ## What it deliberately does not do
 
 This is an authoring API for a page of fixed-position content, not a layout engine. There is no word
-wrap, no paragraph flow, no table, no list, no vector drawing, no text shaping (kerning and ligatures
-come from the font program, not from this library), no form authoring, no signing, no redaction and no
-encryption of the authored page. JPEG and other image formats are not embedded. A document that needs
-any of those is better produced by a reporting library; SharpCorePDF can still merge the result.
+wrap, no paragraph flow, no table, no list, no text shaping (kerning and ligatures
+come from the font program, not from this library), no form authoring, no redaction and no
+encryption of the authored page. JPEG, GIF, BMP and SVG are not embedded: only PNG goes in, and a caller
+that has another format re-saves it. A document that needs any of those is better produced by a reporting
+library; SharpCorePDF can still merge the result.
+
+Fixed-position **vector drawing** is part of this surface: lines, rectangles, ellipses, arbitrary paths of
+move/line/curve/close segments, filled or stroked with a colour and an alpha, dashed strokes, clipping and
+a saved graphics state. What it is not is a shape model with a scene graph: you place shapes at
+coordinates, and the next chapter that could be called "drawing" is not part of this edition (Chapter 15 is
+reserved for the `1.2` additions). Every shape is written into the page's content stream in the order you
+call it, so later shapes paint over earlier ones.
 
 The authored page is written as PDF 1.7 with a classic cross-reference table, uncompressed content
 streams and Flate-compressed image and font streams. It is not validated against PDF/A or PDF/UA.
@@ -162,7 +170,14 @@ streams and Flate-compressed image and font streams. It is not validated against
 | `PdfPageCanvas.DrawText(text, x, y, typeface, size, color?)` | Draws one line at a baseline, in points, top-left origin. |
 | `PdfPageCanvas.DrawImage(png, x, y, width, height)` | Draws a PNG at an explicit size. |
 | `PdfPageCanvas.DrawImage(png, x, y)` | Draws a PNG at the size its `pHYs` chunk implies. |
+| `PdfPageCanvas.DrawLine(from, to, stroke)` | Draws one stroked segment. |
+| `PdfPageCanvas.DrawRectangle(rect, fill?, stroke?)` | Fills and/or strokes a rectangle. |
+| `PdfPageCanvas.DrawEllipse(bounds, fill?, stroke?)` | Fills and/or strokes an ellipse inside a box. |
+| `PdfPageCanvas.DrawPath(path, fill?, stroke?)` | Fills and/or strokes a path of `PdfPathSegment` moves, lines, curves and closes. |
+| `PdfPageCanvas.SetClip(path, fillRule?)` | Restricts everything drawn afterwards to a path. |
+| `PdfPageCanvas.SaveState()` / `RestoreState()` | Brackets a change of fill, stroke, clip or transform. |
 | `PdfTypeface.Standard(font)` | Selects one of the twelve standard fonts. |
 | `PdfTypeface.FromTrueType(bytes)` | Embeds and subsets a TrueType program. |
 | `PdfColor.FromRgb(...)` / `FromHex(...)` | Selects a text colour. |
+| `PdfPaint(color, alpha?, fillRule?)` / `PdfStroke(paint, width, …)` | States a fill, a stroke, their transparency and their dash pattern. |
 | `ToArray()` / `SaveAsync(stream)` / `Build(name)` | Writes the document to bytes, to a stream, or as a merge source. |

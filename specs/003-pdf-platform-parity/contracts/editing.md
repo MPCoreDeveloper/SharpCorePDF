@@ -160,4 +160,3 @@ public sealed record PdfEditOutputOptions
 - Redaction that removes content from the underlying stream; a redaction annotation is a visual mark,
   not a guarantee of data removal, and is not offered as redaction in 1.1.
 - Repairing every malformed document; the reader’s existing recovery and warnings still apply.
-

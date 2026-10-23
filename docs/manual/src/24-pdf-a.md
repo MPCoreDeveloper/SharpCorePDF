@@ -1,9 +1,5 @@
 # 24. Archival PDF (PDF/A)
 
-> **Status: unreleased.** This chapter documents the archival writer queued for the next release. It is
-> in the manual source so the API and its boundary are reviewed together; it is not part of the
-> published 1.0.0 manual PDF.
-
 PDF/A is a set of structural rules for documents that must still open in decades. Writing for a profile
 means writing the structures those rules name — a stated version, an XMP identification of the profile, an
 output intent, the program of every font, no encryption — and removing or refusing what the profile
@@ -176,4 +172,3 @@ annotation carries no appearance stream was refused rather than written, which i
   refused rather than silently filled in.
 - It does not claim PDF/A-3 associated-file semantics: attachments are carried, but `/AF` relationships
   are not written.
-

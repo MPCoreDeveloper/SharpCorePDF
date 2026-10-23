@@ -411,6 +411,26 @@ public sealed partial class PdfDocumentBuilderTests
         Assert.Throws<ArgumentOutOfRangeException>(() => PdfTypeface.Standard((StandardFont)99));
     }
 
+    /// <summary>
+    /// An empty or malformed font program is refused where it is handed over, not at the first page that
+    /// would use it: the typeface parses its bytes as soon as it is created.
+    /// </summary>
+    [Fact]
+    public void Refuses_an_empty_font_program()
+    {
+        var empty = Assert.Throws<ArgumentException>(() => PdfTypeface.FromTrueType(ReadOnlyMemory<byte>.Empty));
+
+        Assert.Equal("fontProgram", empty.ParamName);
+        Assert.Contains("font program is needed", empty.Message, StringComparison.Ordinal);
+
+        // Twelve zero bytes are long enough for a table directory and carry no sfnt version, so the
+        // parse fails on the version rather than on the length.
+        Assert.Throws<ArgumentException>(() => PdfTypeface.FromTrueType(new byte[12]));
+
+        // A program shorter than a table directory is the other end of the same check.
+        Assert.Throws<ArgumentException>(() => PdfTypeface.FromTrueType(new byte[4]));
+    }
+
     /// <summary>A document without a page is refused before anything is written.</summary>
     [Fact]
     public void Refuses_a_document_without_a_page()

@@ -7,12 +7,14 @@ configuration will change that.
 ## It is not a page layout or reporting library
 
 SharpCorePDF can start a document from a blank page: `PdfDocumentBuilder` adds pages of a chosen size,
-draws lines of text in a standard or an embedded TrueType font, and places PNG images at fixed positions
-(Chapter 12). That is enough for a cover page, an address block or a fixed marker, and it is where
-authorship stops. There is no word wrap, paragraph flow, table, list or vector drawing; text is not
-shaped beyond what the font program itself does; JPEG and other image formats are not embedded; and no
-font is ever read from the machine the code runs on. The merge side still receives documents as a file,
-a byte array, a stream or a custom `IPdfContentSource`, copies the pages you select and combines them.
+draws lines of text in a standard or an embedded TrueType font, places PNG images at fixed positions and
+draws fixed-position vector graphics — lines, rectangles, ellipses, arbitrary paths, dashed strokes,
+transparency and clipping (Chapter 12). That is enough for a cover page, an address block, a form-shaped
+frame or a fixed marker, and it is where authorship stops. There is no word wrap, paragraph flow, table or
+list layout; text is not shaped beyond what the font program itself does; JPEG, GIF, BMP and SVG are not
+embedded; and no font is ever read from the machine the code runs on. The merge side still receives
+documents as a file, a byte array, a stream or a custom `IPdfContentSource`, copies the pages you select
+and combines them.
 
 **Use instead:** a reporting or layout library that produces PDF when a page has to flow, wrap or lay
 out a table. SharpCorePDF can merge those reports afterwards and can add its own fixed-position cover.
@@ -20,10 +22,14 @@ out a table. SharpCorePDF can merge those reports afterwards and can add its own
 ## It does not rewrite page content yet
 
 SharpCorePDF can change the **assembly** of an existing document: rotate a page, delete it, move it,
-duplicate it, and override the document information (Chapter 14). What it cannot do *in this release*
-is change what a page draws. There is no API to replace text or an image, remove an annotation, fill a
-form, add a digital signature, add a redaction, or change a page's media box, crop box or size. Page
-content and page geometry that survive an edit are copied verbatim.
+duplicate it, insert an authored page, crop the area a page shows, and override the document information
+(Chapter 14). What it cannot do *in this release* is change what a page draws. There is no API to replace
+text or an image, remove an annotation, fill a form, add a redaction, or change a page's media box or its
+size. Page content and page geometry that survive an edit are copied verbatim.
+
+Signing and archival output are separate surfaces that change the file rather than its assembly: a
+signature appends one revision to the bytes it is given (Chapter 23), and the archival writer states the
+structures a PDF/A profile requires (Chapter 24). Neither rewrites what a page paints.
 
 The 1.1 parity plan extends editing to page content, annotations, forms and page geometry. Page geometry
 and the page-level operations ship in `1.1.0`; page content, annotation and form authoring are `1.2.0`
@@ -33,8 +39,9 @@ outside the product at every release —
 rendering, conversion, OCR, conformance validation, services and CLIs — are the sections below.
 
 **Use instead:** a viewer/editor SDK for interactive editing, a form-filling library when field values
-have to change, and a redaction product when content has to be removed. If the change is which pages
-the document contains, in what order and with what rotation, that is what an edit plan does.
+have to change, and a redaction product when content has to be removed. If the change is which pages the
+document contains, in what order, with what rotation and within what visible area, that is what an edit
+plan does.
 
 ## It is not a renderer, converter or OCR engine
 
@@ -51,21 +58,34 @@ coordinates.
 ## It is not a PDF/A or PDF/UA validator
 
 The output is a well-formed PDF in the version you ask for. It is not validated against PDF/A, PDF/X,
-PDF/UA or any accessibility profile, and the library does not claim conformance. The primary source's
-catalog entries for language, marked content (`MarkInfo`) and output intents are copied, and colour
-profiles that belong to copied page resources travel with them, but no tagged structure tree is copied
-or rebuilt, and no profile is added, repaired or certified.
+PDF/UA or any accessibility profile, and the library does not claim conformance. Writing *for* a profile is
+a different thing from validating one: `IPdfAWriter` states the structures PDF/A-1b, -2b or -3b requires —
+a stated version, an XMP identification, an output intent, embedded font programs, no encryption — and
+removes or refuses what the profile forbids, reporting each decision as a warning or a refusal
+(Chapter 24). What it does not do is certify the result, and a tagged structure tree for PDF/UA is not
+copied or rebuilt.
 
-**Use instead:** a dedicated validator when a compliance profile is a contractual requirement.
+**Use instead:** a dedicated validator when a compliance profile is a contractual requirement — veraPDF for
+PDF/A, for example. Use the archival writer to make the document as close as the API allows, then validate.
 
-## It is not a general-purpose PDF parser
+## It is not a general-purpose PDF parser, but it does show you the file
 
-Inspection reports what a merge needs and what an operator wants to know before merging: the page
-count, page geometry, document information, outline size, embedded files, form presence, encryption
-state and warnings. It does not expose the object graph, does not enumerate fonts, does not report
-image resolutions and does not let you walk the content streams.
+Inspection reports what a merge needs and what an operator wants to know before merging: the page count,
+page geometry, document information, outline size, embedded files, form presence, encryption state and
+warnings. Above that, the reading surface publishes the file's own structures as read-only projections:
 
-**Use instead:** a low-level PDF object model when you need to inspect arbitrary structures.
+* `IPdfContentReader` hands back the images, text, annotations, forms, bookmarks, attachments and XMP a
+  document carries (Chapter 8), and `IPdfLayoutReader` the letters, words and blocks it draws, exportable
+  as ALTO, PAGE XML, hOCR or SVG (Chapters 20 and 21).
+* `IPdfObjectInspector` walks the object graph — one node per listed object, references reported rather
+  than followed — and lists the operators a page's content stream states (Chapter 22).
+
+What it is not is a mutable object model: there is no way to edit an object and write the document back,
+nothing here is a round-trip parser, and fonts are not enumerated as a first-class API — image metadata is
+reported per image, not as a document-level index.
+
+**Use instead:** a general-purpose PDF object model for mutation and round-tripping. SharpCorePDF reads
+what it can describe and writes documents it assembled itself.
 
 ## What is deliberately bounded inside a merge
 
@@ -84,8 +104,8 @@ records a warning.
 | Embedded files | Carried over from the primary source only |
 | Named destinations | Carried over from the primary source; destinations in other sources are dropped with a warning |
 | Encryption | Read: standard security handler revisions 2–6. Written: RC4-40, RC4-128, AES-128, AES-256. Public-key encryption is not supported |
-| Output file structure | Classic cross-reference table, complete rewrite, PDF 1.4–2.0. No incremental update, no linearisation, no object streams in the output |
-| Digital signatures | Signature fields and their widget annotations may be copied with the primary form or the pages, but a copied signature is not a valid signature of the merged document. The library does not sign and does not claim a copied signature remains trustworthy |
+| Output file structure | Classic cross-reference table, complete rewrite, PDF 1.4–2.0, no linearisation and no object streams in the output. A signature is the one exception: it appends a single incremental revision (Chapter 23) |
+| Digital signatures | Signature fields and their widget annotations may be copied with the primary form or the pages, but a copied signature is not a valid signature of the merged document. The library signs a document it is given as a separate, explicit step (Chapter 23); a merge does not |
 
 > **The signature point deserves its own sentence.** If you merge a signed document, the result is a
 > new document that no signer signed. Do not present the output as signed. Validate signatures before
@@ -113,15 +133,19 @@ cookbook shows one.
 | --- | --- |
 | Combine existing PDFs, all pages or a selection | Yes |
 | Reorder or repeat pages from a source | Yes |
-| Rotate, delete, move or duplicate pages in an existing document | Yes |
+| Rotate, delete, move, duplicate, insert or crop pages in an existing document | Yes |
 | Override the title, author or other document information | Yes |
 | Preserve bookmarks, annotations and metadata | Yes |
 | Encrypt the merged result | Yes |
 | Learn page counts, sizes, outline size or encryption state before merging | Yes |
 | Read the images, text, comments, form fields and bookmarks a document carries | Yes |
-| Create a fixed-position page from scratch: text, PNG images, standard or embedded fonts | Yes |
-| Lay out a report: flow, wrapping, tables, vector graphics, JPEG images | No |
-| Change page size, crop box, text, images or annotations | No |
+| Create a fixed-position page from scratch: text, PNG images, vector graphics, standard or embedded fonts | Yes |
+| Sign a document, or validate a signature's integrity and trust | Yes |
+| Write for PDF/A-1b, -2b or -3b | Yes |
+| Read letters, words, blocks and reading order; export ALTO, PAGE XML, hOCR or SVG | Yes |
+| Walk the object graph and the operators of a page, read-only | Yes |
+| Lay out a report: flow, wrapping, tables, line breaking, JPEG images | No |
+| Change a page's size or media box, replace text or images, add or edit annotations and form fields | No |
+| Fill forms, redact, or rebuild tagged structure | No |
 | Render, convert, OCR or reflow text | No |
-| Fill forms, sign or redact | No |
-| Validate PDF/A or accessibility profiles | No |
+| Certify PDF/A or accessibility conformance | No |

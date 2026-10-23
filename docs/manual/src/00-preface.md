@@ -6,11 +6,9 @@ pages from nothing, and changes the assembly of an existing document — which p
 order and with what rotation. It does all of that without calling a native library, a command line
 tool or a third-party PDF engine.
 
-This manual describes version **1.0.0** of the library and the page-editing additions queued for the
-next release. Chapter 14 is marked **unreleased** because it is not part of the published 1.0.0
-manual PDF. It is written for the developer who has to ship a feature, not only for the developer who
-wants to read source code: every chapter explains the behaviour you can rely on, the behaviour you
-should not rely on, and the code that exercises it.
+This manual describes version **1.1.0** of the library. It is written for the developer who has to ship a
+feature, not only for the developer who wants to read source code: every chapter explains the behaviour you
+can rely on, the behaviour you should not rely on, and the code that exercises it.
 
 ## Who this manual is for
 
@@ -32,6 +30,17 @@ Chapters 5 to 10 cover one part of the API each: page selection, output options,
 inspection, errors and warnings, and dependency injection. Chapters 11 to 14 are for readers who want
 to understand the design, write a page that did not exist, need a recipe they can adapt, or change the
 assembly of an existing document: the architecture, authoring, a cookbook, then editing.
+
+Chapters 20 to 22 cover the reading surface that turns a page into data a program can use: extraction and
+its four export formats, the layout analysis that decides what a block is and which block is read first,
+and the object graph and content operators that describe the file itself. Chapters 23 and 24 cover the
+trust surface: digital signatures and archival (PDF/A) output.
+
+**Chapters 15 to 19 are reserved and not part of this edition.** They document the additions queued for
+`1.2`: a dedicated drawing chapter (the surface it describes is documented inside Chapter 12 today), text
+layout, the remaining image formats, and writing annotations and form fields. The numbers are reserved
+rather than reassigned so that a cross-reference in this edition keeps pointing at the same chapter in the
+next one.
 
 You do not have to read the chapters in order. Each one starts from a complete example and refers to
 earlier chapters only for background.
@@ -55,11 +64,10 @@ as the contract, never the wording of its message.
 GitHub documentation and the PDF. If you find a discrepancy between this text and the code, the code
 is the source of truth; please open an issue so the text can be corrected.
 
-> **Version note.** This manual is written against 1.0.0 plus the editing additions in Chapter 14.
-> The public API is covered by an approved snapshot in each project, so a change to a public member
-> is a deliberate, reviewed event rather than an accident of a refactoring. Code that compiles
-> against 1.0.0 keeps compiling across a patch release, and the changelog records every addition and
-> every change of behaviour.
+> **Version note.** This manual is written against 1.1.0. The public API is covered by an approved snapshot
+> in each project, so a change to a public member is a deliberate, reviewed event rather than an accident of
+> a refactoring. Code that compiles against 1.0.0 keeps compiling across a minor release — every addition is
+> additive — and the changelog records every addition and every change of behaviour.
 
 ## What you need
 

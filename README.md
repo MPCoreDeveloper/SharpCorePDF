@@ -283,11 +283,11 @@ walks through each one.
 ## Documentation
 
 The [manual](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md) is the long-form
-guide to the API: fourteen chapters, from the first merge to encryption, inspection, dependency
-injection, the architecture, authoring a page, a cookbook of complete recipes and editing an existing
-document. Read it as
-[a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.0.0.pdf)
-(the 1.0.0 edition) or chapter by chapter as Markdown, starting with
+guide to the API: twenty chapters, from the first merge to encryption, inspection, dependency injection,
+the architecture, authoring a page, a cookbook of complete recipes, editing an existing document,
+extraction, layout analysis, the object graph, digital signatures and archival output. Read it as
+[a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.1.0.pdf)
+(the 1.1.0 edition) or chapter by chapter as Markdown, starting with
 [Installation and First Merge](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/manual/src/03-installation.md).
 The [documentation index](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md)
 links every chapter and the supporting measurement, release and governance documents.

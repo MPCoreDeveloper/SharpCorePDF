@@ -1118,8 +1118,3 @@ def make_parity(root: Path) -> None:
 
     write_manifest(root, files)
     print(f"wrote {root / 'manifest.json'} ({len(files)} files)")
-
-
-
-
-

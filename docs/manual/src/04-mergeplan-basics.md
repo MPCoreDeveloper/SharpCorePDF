@@ -197,4 +197,3 @@ source, and therefore a new plan, per execution.
 
 The merger itself is thread safe. The container registers it as a singleton, and the engine keeps no
 per-merge state on the instance.
-

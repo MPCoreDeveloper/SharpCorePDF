@@ -8,7 +8,7 @@
 
 # SharpCorePDF examples
 
-Fourteen runnable examples that show how the library is used, and the console app that runs them. Everything
+Fifteen runnable examples that show how the library is used, and the console app that runs them. Everything
 here is code that compiles and executes against the package, so nothing in the documentation is a
 snippet that was never run.
 
@@ -36,6 +36,7 @@ when every example ran, `1` when one failed, and `2` when a name on the command 
 | `select-pages` | The page selection notation (`3,1`, `2-`, `-2`, `2,2,1`), that it is an order and not a set, and how to build a selection in code. |
 | `merge-streams` | A source that is an upload stream and a source that is already a `byte[]`, with the merged document handed back as bytes. |
 | `author-page` | A cover page written from nothing — a PNG logo with transparency, a standard font for the address and an embedded TrueType subset for accented text — merged in front of a document and read back through the inspector and the text reader. |
+| `edit-pages` | A document that already exists, edited in one pass: an authored page put in front of it — a stroked frame, a dashed rule, a translucent band and an ellipse, all drawn by the library — then a rotation, a deletion and a crop, with the operations and the warnings the edit reports, and the result read back to prove page 2 really is rotated. |
 | `no-container` | The same merge without a dependency injection container, and the proof that the result is the same. |
 | `inspect-first` | Describing a folder of documents before merging, which is how a file that is unusable, or encrypted and waiting for its password, is found without an exception. |
 | `read-content` | Reading what a document already contains: the image a page paints, the text both pages draw as blocks of words, the comment and the link with its resolved target, the form field, the bookmark, the attachment extracted to disk, and the XMP packet with the values parsed beside it, then the same pages one at a time. |
@@ -144,6 +145,7 @@ services.AddSharpCorePDF(config);    // or from the "SharpCorePDF" configuration
 | `MergeExamples.cs` | `merge-files`, `select-pages`. |
 | `SourceExamples.cs` | `merge-streams`, `no-container`. |
 | `AuthoringExamples.cs` | `author-page`. |
+| `PdfEditExamples.cs` | `edit-pages`. |
 | `Assets/DejaVuSans-subset.ttf` | The embedded font of `author-page`, with its licence beside it, so the example runs without a system font. |
 | `InspectionExamples.cs` | `inspect-first`. |
 | `ContentInspectionExamples.cs` | `read-content`. |

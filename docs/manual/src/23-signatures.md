@@ -1,9 +1,5 @@
 # 23. Digital Signatures
 
-> **Status: unreleased.** This chapter documents the signing and validation surface queued for the next
-> release. It is in the manual source so the API and its boundary are reviewed together; it is not part
-> of the published 1.0.0 manual PDF.
-
 Signing a document adds a signature to it. It does not rebuild the document. The signer appends one
 revision to the bytes it was given, covering everything that was there before it and its own signature
 dictionary, and leaves every earlier byte exactly where it was. That is the only shape in which a second

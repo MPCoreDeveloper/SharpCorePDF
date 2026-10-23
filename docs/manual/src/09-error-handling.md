@@ -207,5 +207,3 @@ page selection only.
 Do not log the plan *object* with structured logging, though. The properties are public, and
 `MergeOutputOptions` is a record whose generated `ToString()` would include the encryption options and
 their passwords. Log `plan.ToString()` or the individual non-secret fields.
-
-

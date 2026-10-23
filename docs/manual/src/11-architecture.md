@@ -183,5 +183,3 @@ data: each call has its own request, context, readers and writer. Two rules foll
 The content source is the only collaborator a caller supplies, and the contract requires
 `OpenReadAsync` to be safe to call more than once. A source backed by a non-seekable one-shot network
 stream cannot honour that contract; buffer it first, as the upload example in Chapter 10 does.
-
-

@@ -162,6 +162,102 @@ internal static class PdfContentFixtures
     }
 
     /// <summary>
+    /// One page whose inline images use the two-letter entries a producer writes in practice: a
+    /// computed sample count, an indexed colour space stated as an array, an image mask with its
+    /// decode array, an ASCIIHex payload whose length the header does not state, a CMYK image, and a
+    /// header carrying a comment and a literal string.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] InlineAbbreviations()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.Reserve();
+
+        builder.Set(content, InlineVariantsContent());
+        builder.Set(page, Page(pages, string.Empty, content));
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>One page whose only inline image runs to the end of the content stream with no <c>EI</c>.</summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] UnterminatedInlineImage()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.Reserve();
+
+        var body = new List<byte>(Encoding.Latin1.GetBytes("q 10 0 0 10 0 0 cm BI /W 2 /H 2 /BPC 8 /CS /G ID "));
+        body.AddRange([0x01, 0x02]);
+
+        builder.Set(content, PdfBuilder.StreamBody(string.Empty, [.. body]));
+        builder.Set(page, Page(pages, string.Empty, content));
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    private static byte[] InlineVariantsContent()
+    {
+        using var body = new MemoryStream();
+
+        // Marked content with a property list, and a TJ array holding a nested array: two shapes the
+        // scanner has to step over to reach the operators after them.
+        WriteText(body, "/Span << /ActualText (label) >> BDC [ (Text) 40 [ 1 2 ] ] TJ EMC\n");
+
+        Inline(
+            body,
+            "/W 2 /H 2 /BPC 8 /CS /G",
+            [0x10, 0x20, 0x30, 0x40]);
+
+        Inline(
+            body,
+            "/W 2 /H 2 /BPC 8 /CS [/Indexed /DeviceRGB 1] /DL <00FF>",
+            [0x00, 0x10, 0x20, 0x30]);
+
+        Inline(
+            body,
+            "/W 2 /H 2 /BPC 1 /IM true /D [1 0] /I false",
+            [0x80]);
+
+        Inline(
+            body,
+            "/W 2 /H 2 /BPC 8 /CS /RGB /F /AHx",
+            Encoding.Latin1.GetBytes("0A0B0C0D0E0F101112131415>"));
+
+        Inline(
+            body,
+            "/W 1 /H 1 /BPC 8 /CS /CMYK",
+            [0x01, 0x02, 0x03, 0x04]);
+
+        Inline(
+            body,
+            "% abbreviated header\n/W 2 /H 2 /CS /RGB /BPC 8 /NM (inline note)",
+            InlineSamples);
+
+        return PdfBuilder.StreamBody(string.Empty, body.ToArray());
+    }
+
+    private static void Inline(Stream body, string header, byte[] data)
+    {
+        WriteText(body, "q 10 0 0 10 0 0 cm BI " + header + " ID ");
+        body.Write(data);
+        WriteText(body, " EI Q\n");
+    }
+
+    private static void WriteText(Stream body, string text) => body.Write(Encoding.Latin1.GetBytes(text));
+
+    /// <summary>
     /// One page carrying a text annotation, a highlight, a stamp, an annotation of a subtype this
     /// library does not model, three links — an external one, a direct destination, a named one that
     /// resolves — and a named destination that does not.
@@ -1340,4 +1436,3 @@ internal static class PdfContentFixtures
         $"<< /Type /Pages /Kids [{string.Join(' ', kids.Select(kid => $"{kid} 0 R"))}] "
         + $"/Count {kids.Length} /MediaBox [0 0 612 792] >>";
 }
-

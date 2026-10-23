@@ -6,11 +6,11 @@ long-form reference for the API.
 
 ## The manual
 
-- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.0.0.pdf)** — 62 pages, A4, with a
+- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.1.0.pdf)** — 86 pages, A4, with a
   linked contents page and PDF bookmarks.
 - **Read the chapters as Markdown** in [`manual/src`](manual/src). Each file is one chapter, and the
-  file-name order is the chapter order. Chapter 14 documents the editing slice that is currently
-  unreleased; it is not part of the 1.0.0 PDF yet.
+  file-name order is the chapter order. Chapters 15 to 19 are reserved for the `1.2` additions and are not
+  part of this edition; the preface says so, and the numbers are kept so that cross-references stay stable.
 
 | Chapter | What it covers |
 | --- | --- |
@@ -29,9 +29,15 @@ long-form reference for the API.
 | [12. Authoring a Page](manual/src/12-authoring.md) | Writing a page from nothing: coordinates, standard and embedded fonts, PNG images, determinism, and the boundary of the feature. |
 | [13. Cookbook](manual/src/13-cookbook.md) | Complete recipes for folder merges, password prompts, extraction, encryption, uploads, logging, batching, preflight gates and cover pages. |
 | [14. Editing an Existing Document](manual/src/14-editing.md) | Rotating, deleting, moving and duplicating pages, ordering rules, metadata overrides, warnings, reproducible output and what an edit cannot change. |
+| [20. Extraction](manual/src/20-extraction.md) | `PdfReadResult<T>`, letters, words, blocks, the four export formats, the coordinate flip, reproducible export bytes, and what extraction is not. |
+| [21. Layout Analysis](manual/src/21-layout-analysis.md) | Segmentation and reading-order strategies, the em-based word rules, decorations versus prose, comparing two readings, and where the analysis stops. |
+| [22. The Object Graph](manual/src/22-object-graph.md) | One node per listed object, references reported rather than followed, dangling references, streams without bytes, and the operators of a page. |
+| [23. Digital Signatures](manual/src/23-signatures.md) | Appending a revision, detached CMS, the integrity/trust split, multiple signatures, and what a signature does not promise. |
+| [24. Archival PDF (PDF/A)](manual/src/24-pdf-a.md) | The profiles, what is removed versus refused, archival edits, output intents, and the veraPDF evidence. |
 
 The first four chapters are the shortest path to a working merge. Chapters 5 to 10 cover one part of the
-API each, and chapters 11 to 14 are for design context, authoring, ready-to-adapt recipes and editing.
+API each, chapters 11 to 14 are for design context, authoring, ready-to-adapt recipes and editing, chapters
+20 to 22 cover the reading surface, and chapters 23 and 24 cover signatures and archival output.
 `Chapter 3` is the place to start if you only want to see a document merged.
 
 ### Building the PDF
@@ -39,7 +45,7 @@ API each, and chapters 11 to 14 are for design context, authoring, ready-to-adap
 The PDF is generated from the Markdown chapters; do not edit it by hand.
 
 ```powershell
-python .\docs\manual\build-manual.py                 # write docs/SharpCorePDF-Manual-1.0.0.pdf
+python .\docs\manual\build-manual.py                 # write docs/SharpCorePDF-Manual-1.1.0.pdf
 python .\docs\manual\build-manual.py --keep-html     # also keep docs/manual/build/manual.html
 python .\docs\manual\build-manual.py --no-stamp      # skip the footer, bookmarks and document metadata
 ```
@@ -57,12 +63,14 @@ page, running footer and bookmarks stay in step.
 
 | Document | What it records |
 | --- | --- |
+| [`migration/pdfsharp.md`](migration/pdfsharp.md) | Moving from PDFsharp/PdfSharpCore: the substitution table, what does not survive the move, and the parity rows that are not covered yet. |
+| [`migration/pdfpig.md`](migration/pdfpig.md) | Moving from PdfPig/UglyToad: pages are selected rather than enumerated, `password:` on every call, and a refused resource is a warning rather than a throw. |
 | [`parity.md`](parity.md) | The 1.1 capability scorecard: reference behaviour, SharpCorePDF outcome, owner, named test and external validation command for every “Must” row. |
 | [`parity/README.md`](parity/README.md) | The fixture corpus: manifest, provenance, licence, regeneration command and the integrity test. |
 | [`api/1.1-api-review.md`](api/1.1-api-review.md) | The Phase 0 API review: placement, immutability, naming, dependency and platform rules for the 1.1 surface. |
 | [`measurements.md`](measurements.md) | The recorded cost of a merge, of a content read and of writing a page — allocations, wall time, throughput, retained heap and output bytes — and the performance and memory budgets they are read against. |
 | [`release-checklist.md`](release-checklist.md) | The gates a version has to clear before it reaches nuget.org: version, packages, tests, coverage, changelog, symbols and the dry run. |
-| [`adr/`](adr/) | Architecture decision records. ADR-001 records the creation, editing and reading product boundary and the PDFsharp/PdfPig parity target. |
+| [`adr/`](adr/) | Architecture decision records. ADR-001 records the creation, editing and reading product boundary and the PDFsharp/PdfPig parity target; ADR-002 records the new-code coverage figure `1.1.0` ships with and the `1.2` task that closes it. |
 | [`foundation-readiness.md`](foundation-readiness.md) | Every .NET Foundation eligibility criterion mapped to a repository artifact, with the remaining gaps named. |
 | [`foundation-application.md`](foundation-application.md) | The eight conditions that decide when the Foundation application is filed, and the answers it will contain. |
 
