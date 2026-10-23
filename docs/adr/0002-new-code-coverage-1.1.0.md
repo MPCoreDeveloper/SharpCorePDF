@@ -12,10 +12,11 @@ entered on the SonarCloud quality gate). T103 asks the tree that question locall
 consulted: one instrumented Release run on `net11.0`, merged to a Visual Studio coverage XML, intersected
 with the lines `git diff --unified=0 v1.0.0 -- src` adds, by `docs/tools/coverage-on-new-code.py`.
 
-The answer is **6,841 of 8,798 executable added lines covered — 77.76%**, against a floor of 90%. It is not a
+The answer is **6,842 of 8,799 executable added lines covered — 77.76%**, against a floor of 90%. It is not a
 measurement artefact: two independent runs of the same tree agreed byte for byte on the earlier figure, and
-the number moved only when tests were added (6,718 → 6,817 → 6,841 as 743 → 748 tests, 76.36% → 77.76%).
-The 1,957 uncovered lines are not spread thin; they sit in the parsers and validators 1.1 introduced:
+the number moved only when tests were added (6,718 → 6,817 → 6,841 as 743 → 748 tests, 76.36% → 77.76%). The
+final line is the one the quality-gate fix in this release added, and it is covered, so the percentage does not
+move. The 1,957 uncovered lines are not spread thin; they sit in the parsers and validators 1.1 introduced:
 
 | File | Covered | Added lines | Uncovered |
 | --- | ---: | ---: | ---: |
