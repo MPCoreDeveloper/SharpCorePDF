@@ -450,7 +450,7 @@ and veraPDF reports conformance for all three profiles.
     the labelled exports), `.gitattributes` marks `tests/SharpCorePDF.Tests/Assets/parity/**` as `-text` so no
     checkout converts a fixture again, and the five labelled hashes and byte counts in `manifest.json` were
     recomputed from the LF bytes. Verified against the index blobs — which is what every platform checks out —
-    95 entries, 0 mismatched, and 748/748 locally. The fix is pushed for CI to re-run.
+    95 entries, 0 mismatched, and 748/748 locally.
   - **The gate then failed for a reason that was not coverage.** With the tests green, SonarCloud's quality
     gate still went red: `new_coverage` was **83.5%** against its own floor of 80, and the failing condition
     was `new_reliability_rating` = 3 — one new bug, `csharpsquid:S2583` at `PdfImageFilters.cs:287`,
@@ -461,6 +461,8 @@ and veraPDF reports conformance for all three profiles.
     on that return value. `Memory<byte>` rather than `Span<byte>` because a span cannot be captured by the
     callback inside the overload — the compiler said so (CS9108) on the first attempt. The four lines it adds
     are covered, so the release figure is unchanged at two decimals: 6,842 of 8,799 (77.76%).
+  - **CI is green on `ea95c78`**: both test legs, the coverage report, and `QUALITY GATE STATUS: PASSED` from
+    SonarCloud — the first run of this branch that passed it.
   - **Opened 2026-10-23: [#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4)** —
     `003-pdf-platform-parity` → `main`, twelve commits, not a draft. `artifacts/t104-release-transcript.md` is
     Git-ignored, so it is in the body under a collapsed block rather than attached to the conversation, and the
