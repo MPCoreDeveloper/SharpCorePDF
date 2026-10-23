@@ -25,8 +25,8 @@ their gate: T101, T102, T104 and T105 are done and recorded, T103's build and bo
 gate measured 77.76% against 90% and the decision to ship with that number recorded is written as ADR-002 and
 awaits the release owner's signature, and T106 is clean — the whitespace pass and the release commit are done,
 the branch is pushed as pull request #4, and only the signature and the merge stand between it and the tag.
-**D3 is decided** (Gate 0): 1.1.0 ships what this tree already implements, so the 37 open story tasks —
-US1's 13, US2's 17, US3's 5 and US4's 2 — are the 1.2 backlog and keep their unchecked boxes here.
+**D3 is decided** (Gate 0): 1.1.0 ships what this tree already implements, so the 36 open story tasks —
+US1's 13, US2's 17, US3's 4 and US4's 2 — are the 1.2 backlog and keep their unchecked boxes here.
 
 ---
 
@@ -83,7 +83,7 @@ are not conditions of the question. Everything the question does ask for was ver
 
 `1.1.0` delivers the surface the branch already implements and evidences, and every row it does not
 complete is rewritten in `docs/parity.md` as a `1.2` promise **in the same commit that tags it**. The
-alternative — 37 story tasks, 37–51 developer-days — was rejected as too slow for a release whose reason
+alternative — 36 story tasks, 36–51 developer-days — was rejected as too slow for a release whose reason
 to exist (the cover page of `002-page-authoring`) is already implemented and evidenced.
 
 **Ships in 1.1.0**
@@ -101,16 +101,17 @@ to exist (the cover page of `002-page-authoring`) is already implemented and evi
   14–16 the suite already covers.
 - Signatures with pyHanko evidence and PDF/A-1b/2b/3b with veraPDF evidence — rows 11 and 12 complete.
 
-**Moves to 1.2** — the 37 open story tasks, unchanged and unchecked:
+**Moves to 1.2** — the 36 open story tasks, unchanged and unchecked:
 
 | 1.2 work | Tasks | Rows |
 | --- | --- | --- |
 | Font metrics, `MeasureString`, greedy wrapping, leading, alignment | T023, T028, T029 | 3 |
 | Dash/cap/join/`SetTransform` tests, `PdfImage` factories, PNG ICC and 16-bit policy | T022, T032, T033 | 2, 4 |
 | JPEG pass-through, BMP and GIF | T024, T030, T031 | 4 |
-| XMP, outlines, page labels and viewer preferences; overlay/underlay operations | T045, T049 | 6, 7 |
-| Incremental writer, annotations, forms and their scenarios | the rest of US2 | 8, 9, 10 |
-| Hyperlink and pixel-decode tests, segmentation strategies, chapters, closure runs | T061, T064, T072, T078, T079 | 14, 15, 16 |
+| Metadata, XMP, outline and page import; the `creator-parity` scenario, chapters 15–17 and the creator closure run | T034, T036, T037, T038 | 2, 3, 4, 6 |
+| Page-operation plan, overlay and underlay; XMP, outline, page-label and viewer-preference edits | T045, T048, T049 | 5, 6, 7 |
+| Incremental writer, annotations and forms, and the tests that cover them | T040–T044, T050–T058 | 8, 9, 10 |
+| Hyperlink and pixel-decode tests, segmentation strategies, closure runs | T061, T064, T072, T079 | 14, 15, 16 |
 | `sign-and-archive` and the US4 closure run | T094, T096 | 11, 12 |
 
 **What it costs, said plainly**: `1.1.0` is not the parity release the Product Outcome of `spec.md`
@@ -564,7 +565,7 @@ A test must fail before its implementation task starts.
 2. Lanes A and B in parallel (T097–T100).
 3. Lane C (T101–T104) once A and B are green.
 4. Lane D (T105–T106): parity rows, changelog entry, `<Version>`, checklist G1–G9, tag.
-5. `1.2.0` opens with the 37 story tasks in the order US1 → US2 → US3 → US4; its first commit restores
+5. `1.2.0` opens with the 36 story tasks in the order US1 → US2 → US3 → US4; its first commit restores
    rows 2–16 to their full `1.2` target and a second scope decision is written if that slips again.
 
 ### Remaining effort, 2026-10-23 (D3)
@@ -579,9 +580,9 @@ A test must fail before its implementation task starts.
 | **1.1.0 total** | 10 tasks | | **7.5–10.5 days serial, 2–3 days on four lanes** |
 | 1.2 — US1 creator | 13 | metrics, wrap, JPEG/BMP/GIF, `PdfImage`, import/outline, chapters | 12–16 days |
 | 1.2 — US2 editing | 17 | overlay, XMP/outlines, incremental writer, annotations, forms | 20–28 days |
-| 1.2 — US3 reading | 5 | links, pixels, chapters, closure run | 4–6 days |
+| 1.2 — US3 reading | 4 | links, pixels, closure run | 4–6 days |
 | 1.2 — US4 trust | 2 | `sign-and-archive`, closure run | 1 day |
-| **1.2 total** | **37** | | **37–51 days (7–10 weeks solo)** |
+| **1.2 total** | **36** | | **36–51 days (7–10 weeks solo)** |
 
 The 1.1.0 rows are the release. The 1.2 rows are the parity promise the specification still describes:
 nothing there is cut, it is moved, with a date and a task number, and `1.2.0` cannot be tagged without
