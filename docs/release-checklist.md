@@ -287,14 +287,15 @@ One service holds a number about this repository, and that number is a red-run g
 
 | Gate | Target | Rules live in | Measured by |
 | --- | --- | --- | --- |
-| SonarCloud | the project's quality gate on new code — the coverage floor this repository wants there is 90%, above Sonar's 80% default — plus the Sonar way profile over `src/` and `tests/` | the quality gate on sonarcloud.io; the exclusions in `sonar.exclusions` in `ci.yml`; local silences in `src/.editorconfig` | `dotnet-sonarscanner begin` before the build, `end` after the tests, reading `artifacts/coverage/net11.0.xml` |
+| SonarCloud | the project's quality gate on new code as `Sonar way` configures it — `new_coverage` ≥ 80, no new bug, duplication ≤ 3% — plus the Sonar way profile over `src/` and `tests/` | the quality gate on sonarcloud.io; the exclusions in `sonar.exclusions` in `ci.yml`; local silences in `src/.editorconfig` | `dotnet-sonarscanner begin` before the build, `end` after the tests, reading `artifacts/coverage/net11.0.xml` |
 
-The 90% is deliberately *not* the whole tree. The scan excludes the Spec Kit tooling, `docs/`, `tools/`,
-`examples/`, `bin/`, `obj/` and `artifacts/`, and test code contributes no lines to a coverage metric, so
-the number describes the four assemblies the packages ship plus the entry point. At the time of writing
-that is 92% (`SharpCorePDF.Infrastructure` 91%, `SharpCorePDF.Domain` 96%,
-`SharpCorePDF.Application` 100%, `SharpCorePDF.DependencyInjection` 100%), while the suite that measures
-them sits at 99%. Counting the tests would raise the number and tell a reader nothing.
+The 90% floor is this repository's, not the service's: it is measured locally by
+`docs/tools/coverage-on-new-code.py` and is not entered on the quality gate, which runs Sonar way's own 80.
+The scan excludes the Spec Kit tooling, `docs/`, `tools/`, `examples/`, `bin/`, `obj/` and `artifacts/`, and
+test code contributes no lines to a coverage metric, so the service's number describes the four assemblies the
+packages ship plus the entry point. At 1.0.0 that was 92% (`SharpCorePDF.Infrastructure` 91%,
+`SharpCorePDF.Domain` 96%, `SharpCorePDF.Application` 100%, `SharpCorePDF.DependencyInjection` 100%), while the
+suite that measures them sat at 99%. Counting the tests would raise the number and tell a reader nothing.
 
 A few consequences worth stating before a release:
 
@@ -357,11 +358,12 @@ eight files — `TrueTypeFont` (94), `PdfTextScanner` (93), `SignatureValidator`
 (67) — and they are the refusal and malformed-input branch of each parser and validator, not the behaviour a
 parity row names.
 
-The 92% quoted above is SonarCloud's own figure as it stood when this section was written, over a definition
-that excludes `examples/`, `docs/`, `tools/`, `bin/`, `obj/` and `artifacts/` and counts the four shipped
-assemblies; it is not the same numerator, and on this tree neither is 90%. The local measurement is the
-stricter of the two because it asks about the 8,798 lines 1.1.0 *added*, and it says they are 12 points below
-the floor.
+The 92% quoted above is SonarCloud's own figure for the shipped assemblies at 1.0.0. For this release the
+service reports `new_coverage` **83.5%** on the pull request's new code, against its own floor of 80 — so its
+coverage condition is green while the local measurement of the same added lines says 77.76%. The two disagree
+because the service builds its own period and line mapping from the SCM data and its own exclusions, and the
+local script asks about every executable line `git diff v1.0.0 -- src` adds. Neither number is wrong; the local
+one is the stricter, and it is the one this repository's 90% floor is applied to.
 
 **The decision that figure carried is [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md)**: `1.1.0` ships with
 77.76% recorded in this section, in that record and in the release notes; the floor stays at 90% and is
@@ -412,7 +414,7 @@ from the same file.
 | G6 — a dry run on the commit to be tagged | **To be re-run** | `Actions → publish → publish: false` against the release commit; the 1.0.0 dispatch proved the handshake, not this commit |
 | G7 — the tag equals `<Version>` | **To be cut** | the tag must read `v1.1.0`; `publish.yml` refuses any other value |
 | G8 — the packages install and open a document | **After the push** | the same three checks as at 1.0.0, on `1.1.0` |
-| G9 — the quality gate on the tagged commit | **Local number recorded, 77.76%** | T103's measurement and [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md); SonarCloud must still be green on the commit the tag names, which is what `publish.yml` reads |
+| G9 — the quality gate on the tagged commit | **Local number recorded, 77.76%** | T103's measurement and [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md). SonarCloud's own `new_coverage` is 83.5% against its floor of 80, so coverage was never the failing condition; `new_reliability_rating` = 3 was, from one new bug in `PdfImageFilters`, and the fix is in the release commit — the run that follows it is what `publish.yml` will read on the tagged commit too |
 
 Two things stand between this table and a tag, and neither of them is code:
 

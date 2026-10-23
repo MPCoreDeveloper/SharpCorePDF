@@ -276,13 +276,7 @@ internal static class PdfImageFilters
                     break;
                 }
 
-                var written = 0;
-
-                predictor.Push(compressed.AsSpan(0, read), row =>
-                {
-                    row.CopyTo(rows.AsSpan(written));
-                    written += row.Length;
-                });
+                var written = predictor.Push(compressed.AsSpan(0, read), rows);
 
                 if (written > 0)
                 {
