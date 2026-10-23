@@ -441,6 +441,16 @@ and veraPDF reports conformance for all three profiles.
     - **Phase 4** — 12 signer, validator and PDF/A tests pass; `archive-pdfa` `ok (188 ms)` → 1b, 2b, 3b each with 0 unsatisfied requirements and the unembedded-Helvetica page refused with 0 bytes written; `validate-pdf.py` qpdf clean on all three, 6 streams each; `validate-pdfa.py` exits 2, *cannot run* — veraPDF is not installed here, so the conformance claim rests on the recorded veraPDF 1.30.3 `PASS` under “Phase 4 progress”, not on this run.
     - **Phase 5** — 78 layout, export, corpus and object-graph tests pass; `extract-layout inspect-objects` `ok (24 ms)` → 8 objects, 0 dangling references, 5 operations in paint order. `score-layout.py` is T079 (open) and needs a folder of ALTO exports of the five labelled documents.
   - **Commands corrected while running them.** Phases 3 and 4 named test classes and scenarios that do not exist: `PdfAnnotationTests`/`PdfFormTests`/`annotate-and-fill` are 1.2 work (chapters 15–19 are reserved and the tree has no annotation or form API), `PdfSignatureTests` is `PdfDocumentSignerTests`/`PdfDocumentSignatureValidatorTests`, and `sign-and-archive` is T094. `creator-parity` (T036) does not exist either, so step 8 hashes `author-page`. The `validate-pdf.py`/`validate-signatures.py` calls carried flags the tools never had (`--check-syntax`, `--pages`, `--geometry`, `--annotations`, `--form-values`); both tools print everything they check for the files named on the command line. `quickstart.md` now runs the 1.1 path with the commands that exist and marks the 1.2 ones as 1.2, which is what makes this the release's reproducible run book.
+  - **CI found one thing three local runs could not.** On the Linux leg,
+    `ParityCorpusTests.Every_manifest_entry_exists_and_matches_its_hash` failed on
+    `labelled/header-body.json`: the manifest records the bytes the generator wrote, the generator used the
+    platform's newline, and Git committed the LF form of a CRLF file — so the corpus matched its own manifest
+    on the machine that made it and nowhere else, and the only place that shows is a Linux checkout. Three
+    fixes, one per level: `make_parity_fixtures.py` writes LF explicitly (`newline="\n"` for the manifest and
+    the labelled exports), `.gitattributes` marks `tests/SharpCorePDF.Tests/Assets/parity/**` as `-text` so no
+    checkout converts a fixture again, and the five labelled hashes and byte counts in `manifest.json` were
+    recomputed from the LF bytes. Verified against the index blobs — which is what every platform checks out —
+    95 entries, 0 mismatched, and 748/748 locally. The fix is pushed for CI to re-run.
   - **Opened 2026-10-23: [#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4)** —
     `003-pdf-platform-parity` → `main`, twelve commits, not a draft. `artifacts/t104-release-transcript.md` is
     Git-ignored, so it is in the body under a collapsed block rather than attached to the conversation, and the

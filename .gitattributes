@@ -4,3 +4,10 @@
 # treated them as text and rewrote them on checkout (1119 -> 1155 bytes). Declaring PDFs binary also
 # keeps their diffs out of the text viewer, where they only ever read as mojibake.
 *.pdf binary
+
+# The same reason, for every file the parity manifest hashes. `manifest.json` records each fixture's
+# SHA-256 and byte count, and Git's line-ending normalisation silently broke it: the labelled exports
+# were generated with CRLF on Windows, committed as LF blobs, matched their manifest on the machine
+# that made them and failed `ParityCorpusTests` on the Linux CI leg. The generator now writes LF
+# explicitly; this keeps the checkout from converting anything back.
+tests/SharpCorePDF.Tests/Assets/parity/** -text
