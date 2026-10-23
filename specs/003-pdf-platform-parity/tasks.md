@@ -451,6 +451,16 @@ and veraPDF reports conformance for all three profiles.
     checkout converts a fixture again, and the five labelled hashes and byte counts in `manifest.json` were
     recomputed from the LF bytes. Verified against the index blobs — which is what every platform checks out —
     95 entries, 0 mismatched, and 748/748 locally. The fix is pushed for CI to re-run.
+  - **The gate then failed for a reason that was not coverage.** With the tests green, SonarCloud's quality
+    gate still went red: `new_coverage` was **83.5%** against its own floor of 80, and the failing condition
+    was `new_reliability_rating` = 3 — one new bug, `csharpsquid:S2583` at `PdfImageFilters.cs:287`,
+    "condition so that it does not always evaluate to `False`". It is not a real bug: `written` is assigned
+    inside the row callback `Push` invokes synchronously, and the analyser does not follow the delegate. But a
+    gate is read, not argued with, so the code says what it means instead: `PredictorRowDecoder` gained a
+    `Push(ReadOnlySpan<byte>, Memory<byte>)` overload that returns the bytes it wrote, and the caller branches
+    on that return value. `Memory<byte>` rather than `Span<byte>` because a span cannot be captured by the
+    callback inside the overload — the compiler said so (CS9108) on the first attempt. The four lines it adds
+    are covered, so the release figure is unchanged at two decimals: 6,842 of 8,799 (77.76%).
   - **Opened 2026-10-23: [#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4)** —
     `003-pdf-platform-parity` → `main`, twelve commits, not a draft. `artifacts/t104-release-transcript.md` is
     Git-ignored, so it is in the body under a collapsed block rather than attached to the conversation, and the

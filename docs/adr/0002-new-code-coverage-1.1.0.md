@@ -59,9 +59,10 @@ the header does not state, and an image with no `EI`), and the signing pair reac
 
 - The release states a number a consumer can read, instead of a number a reader would have to reproduce to
   discover. Nothing in the shipped behaviour changes.
-- SonarCloud's own `new_coverage` is a *different* measurement over a different denominator: it reported 92%
-  when G9 was written, and `publish.yml` reads that verdict rather than this figure. The two can disagree
-  without either being wrong; G9 explains why, and this record does not claim the service will report 78%.
+- SonarCloud's own `new_coverage` is a *different* measurement over a different denominator: its floor is 80, it
+  reported **83.5%** for this release's new code, and `publish.yml` reads that verdict rather than this figure.
+  The two can disagree without either being wrong; G9 explains why, and this record does not claim the service
+  will report 78%.
 - 1.2 starts with a debt that is named, ordered and testable rather than an unexplained dip in a dashboard.
 
 ## Alternatives considered

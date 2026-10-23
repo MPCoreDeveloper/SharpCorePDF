@@ -401,6 +401,30 @@ internal static partial class PdfFilters
             }
         }
 
+        /// <summary>Undoes every row the given bytes complete, into one destination.</summary>
+        /// <param name="data">The inflated bytes, in the order the stream produced them.</param>
+        /// <param name="destination">Receives the undone rows back to back, starting at index zero; it
+        /// must be large enough for every row the bytes complete.</param>
+        /// <returns>The bytes written to <paramref name="destination"/>, zero when no row completed.</returns>
+        /// <remarks>
+        /// The count is returned rather than accumulated by a caller's callback on purpose: a caller that
+        /// assigns a captured local inside the row handler and then branches on it reads to a static
+        /// analyser as a condition that is never true, because the assignment happens in a delegate it does
+        /// not follow. Returning the number keeps that fact inside this method.
+        /// </remarks>
+        public int Push(ReadOnlySpan<byte> data, Memory<byte> destination)
+        {
+            var written = 0;
+
+            Push(data, row =>
+            {
+                row.CopyTo(destination.Span[written..]);
+                written += row.Length;
+            });
+
+            return written;
+        }
+
         /// <summary>Returns the rented rows to the pool.</summary>
         public void Dispose()
         {
