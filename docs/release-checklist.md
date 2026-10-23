@@ -414,7 +414,7 @@ from the same file.
 | G6 — a dry run on the commit to be tagged | **To be re-run** | `Actions → publish → publish: false` against the release commit; the 1.0.0 dispatch proved the handshake, not this commit |
 | G7 — the tag equals `<Version>` | **To be cut** | the tag must read `v1.1.0`; `publish.yml` refuses any other value |
 | G8 — the packages install and open a document | **After the push** | the same three checks as at 1.0.0, on `1.1.0` |
-| G9 — the quality gate on the tagged commit | **Local number recorded, 77.76%** | T103's measurement and [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md). SonarCloud's own `new_coverage` is 83.5% against its floor of 80, so coverage was never the failing condition; `new_reliability_rating` = 3 was, from one new bug in `PdfImageFilters`, and the fix is in the release commit — the run that follows it is what `publish.yml` will read on the tagged commit too |
+| G9 — the quality gate on the tagged commit | **Local number recorded, 77.76%; the gate passed on the release commit** | T103's measurement and [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md). SonarCloud's own `new_coverage` is 83.5% against its floor of 80, so coverage was never the failing condition; `new_reliability_rating` = 3 was, from one new bug in `PdfImageFilters`, fixed in the release commit — after which the run on `ea95c78` reported `QUALITY GATE STATUS: PASSED`. `publish.yml` still reads the gate on the commit the tag names |
 
 Two things stand between this table and a tag, and neither of them is code:
 
