@@ -20,7 +20,7 @@ public sealed partial class PdfPageContentReader
     /// byte between them, exactly as a reader concatenates them before running them. A stream that
     /// cannot be decoded is skipped and reported: the rest of the page still paints.
     /// </remarks>
-    private static byte[]? ReadPageContent(
+    internal static byte[]? ReadPageContent(
         PdfFileReader reader,
         SourcePage page,
         List<PdfWarning> warnings,

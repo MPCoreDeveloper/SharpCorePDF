@@ -33,17 +33,62 @@ public sealed record PdfWord
     /// <summary>Gets the glyphs the word is made of, in drawing order. Never empty.</summary>
     public IReadOnlyList<PdfGlyph> Glyphs { get; init; } = [];
 
-    /// <summary>Gets the name of the font resource the word is drawn with, or <see langword="null"/>.</summary>
-    public string? FontName => Glyphs.Count == 0 ? null : Glyphs[0].FontName;
+    /// <summary>
+    /// Gets the letters the word is made of, in the order the word reads. Empty for a word the text read
+    /// grouped, which keeps its glyphs; a word a layout read grouped carries the letters it was grouped
+    /// from, so a caller keeps the font, the baseline and the direction of every character.
+    /// </summary>
+    public IReadOnlyList<PdfLetter> Letters { get; init; } = [];
+
+    /// <summary>
+    /// Gets the name of the font the word is drawn with, or <see langword="null"/>. A word a layout read
+    /// grouped names the font the document declares — <c>Helvetica</c> — and a word the text read grouped
+    /// names the resource the content stream selects — <c>F1</c> — because that read keeps glyphs rather
+    /// than letters.
+    /// </summary>
+    public string? FontName
+    {
+        get
+        {
+            if (Letters.Count > 0)
+            {
+                return Letters[0].FontName;
+            }
+
+            return Glyphs.Count > 0 ? Glyphs[0].FontName : null;
+        }
+    }
 
     /// <summary>Gets the size of the em box of the font the word is drawn with, in points.</summary>
-    public double FontSize => Glyphs.Count == 0 ? 0d : Glyphs[0].FontSize;
+    public double FontSize
+    {
+        get
+        {
+            if (Glyphs.Count > 0)
+            {
+                return Glyphs[0].FontSize;
+            }
+
+            return Letters.Count > 0 ? Letters[0].FontSize : 0d;
+        }
+    }
 
     /// <summary>
     /// Gets the baseline the word sits on, in points. It is the baseline of the first glyph, because a
     /// word is a run that shares one baseline by definition.
     /// </summary>
-    public double BaselineY => Glyphs.Count == 0 ? BoundingBox.Bottom : Glyphs[0].Y;
+    public double BaselineY
+    {
+        get
+        {
+            if (Glyphs.Count > 0)
+            {
+                return Glyphs[0].Y;
+            }
+
+            return Letters.Count > 0 ? Letters[0].StartBaseLine.Y : BoundingBox.Bottom;
+        }
+    }
 
     /// <summary>Formats the word for diagnostics.</summary>
     /// <returns>The text and the baseline it sits on.</returns>

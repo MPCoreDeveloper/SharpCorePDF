@@ -108,14 +108,27 @@ reports PDF/A-2b conformance, and the same for 1b and 3b fixtures.
 
 ```powershell
 dotnet test .\tests\SharpCorePDF.Tests\SharpCorePDF.Tests.csproj -p:TargetFramework=net10.0 `
-  --filter "FullyQualifiedName~PdfLayoutReaderTests|FullyQualifiedName~PdfObjectInspectorTests"
-dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- extract-layout
-python docs\tools\score-layout.py <output>\extract-layout --corpus docs\parity\corpus
+  --filter "FullyQualifiedName~PdfLayoutReaderTests|FullyQualifiedName~PdfLayoutExportTests|FullyQualifiedName~PdfLayoutCorpusTests|FullyQualifiedName~PdfObjectInspectorTests"
+dotnet run --project .\examples\SharpCorePDF.Examples -c Release -- extract-layout inspect-objects
+
+# Score a reading externally. <exports> holds one <name>.alto.xml per labelled <name>.json in
+# tests\SharpCorePDF.Tests\Assets\parity\labelled; the example writes that format for its own sample,
+# in <output>, and the same call over the five labelled PDFs writes the folder this scores.
+python docs\tools\score-layout.py <exports> --known-order-mismatch table
 ```
 
-**Expected**: character recall is at least 99.5%, box agreement at least 95% within 0.5 pt, and column
-reading order at least 95% on the labelled subset; ALTO, PAGE XML, hOCR and SVG validate and preserve
-coordinates; the object graph cannot be mutated and a dangling reference is reported, not hidden.
+**Expected**: `PdfLayoutCorpusTests` scores the five labelled documents in process — character recall at
+least 99.5%, box agreement at least 95% within 0.5 pt, and reading-order agreement at least 95% — and
+`score-layout.py` measures the same three numbers from a folder of ALTO exports, one line per threshold.
+Both report 100% recall and 100% box agreement on all five documents, and 100% reading order on four of
+them: `table` is passed to `--known-order-mismatch` because a table is symmetric under the XY cut — the gap
+between its columns is as wide as the gap between its rows — so a cell becomes a block and the page is read
+column by column rather than row by row. That is a recorded limitation and not an agreement:
+`PdfLayoutCorpusTests.Table_page_is_still_read_column_by_column` fails if it ever stops holding, so the
+exception cannot outlive the behaviour. The four export formats validate and preserve coordinates — today
+`PdfLayoutExportTests` proves the four documents are well-formed, escape their text, place every box in page
+space with the origin at the top left and repeat byte for byte, and T079 adds the external schema run — and
+the object graph cannot be mutated and a dangling reference is reported, not hidden.
 
 ## 8. Determinism and independence
 

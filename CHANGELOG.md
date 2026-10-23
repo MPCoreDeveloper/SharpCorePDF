@@ -111,6 +111,79 @@ against an empty feed.
   `TextUnreadable` — so a filter the library does not decode, a damaged image, a name that does not
   resolve, a malformed XMP packet or a font it cannot read is reported as data instead of being skipped in
   silence.
+- **The layout comes out with the text.** `IPdfLayoutReader`, resolved by `AddSharpCorePDF()` and
+  constructible by hand, reads a page the way a search or an analytics pipeline needs it:
+  `ReadLettersAsync` returns one `PdfLetter` per glyph in content order, with its Unicode value, its font
+  size, the font the document declares, its box, its baseline start and end and the direction that
+  baseline runs in; `ReadWordsAsync` groups those letters into `PdfWord` records that keep the letters
+  they were grouped from, with the order of the page as the default and `PdfWordExtractionStrategy.Raw`
+  for a caller that needs the order of the producer; and `ReadHyperlinksAsync` returns the clickable area
+  of every link with either the URI it opens or the destination it jumps to. `PdfWordExtractionOptions`
+  states both rules in ems — a quarter em as a space, half an em as one line — and refuses a negative
+  distance or a strategy this release does not implement when it is created, before a document is
+  opened. Whitespace letters can be kept in the word they follow, so the words of a page concatenate back
+  to the text it draws, and a letter whose baseline runs towards the left is read in its own direction
+  with a box that covers the area between its two baseline points.
+- **A page's blocks, and the order a reader takes them in.** `IPdfLayoutReader.ReadBlocksAsync` groups the
+  words of a page into `PdfTextBlock` records — the text, the words it keeps, the area it covers and its
+  one-based position on the page — by the segmentation `PdfLayoutOptions` selects: `Raw`, which reproduces
+  the producer's drawing order and is the baseline a comparison starts from; `NearestNeighbour`, which
+  groups the lines of a paragraph; `RecursiveXYCut`, the default, which splits a region along the widest
+  vertical gutter and then the widest horizontal one, so two columns and a heading are found without
+  knowing what a column is; and `Docstrum`, which measures the page's own leading instead of assuming it.
+  The reading order is chosen separately, because a page can be segmented correctly and still be listed in
+  the wrong order: `ColumnAware`, the default, reports the columns of a page left to right and the blocks
+  of a column top to bottom, and `Raw` keeps the order the segmentation produced. The segmentation and the
+  order travel with the result, so a page that yielded no block is not the same answer as a page that was
+  never segmented; `PdfLayoutOptions.IncludeDecorations` decides whether a block that carries no letter and
+  no digit — a rule drawn as a run of hyphens, a lone bullet — is reported; and a strategy only groups the
+  letters and words a read produced, never changing what one of them says.
+- **The reading of a page written down for another tool.** `IPdfLayoutReader.ExportAsync` writes what a block
+  read produced as `PdfLayoutFormat.Alto`, `PageXml`, `Hocr` or `SvgText`, straight into a stream the caller
+  supplies: ALTO 4 with a `Page` per page, a `TextBlock`, a `TextLine` and a `String` per word; PAGE XML with
+  a `TextRegion` per block, a `TextLine` per line and the reading order that names them; hOCR as XHTML with
+  `ocr_page`, `ocr_carea`, `ocr_par`, `ocr_line` and `ocrx_word` elements, each carrying its `bbox`; and SVG
+  with one `text` element per word on the baseline it is drawn on. Coordinates are the page's own numbers
+  with the origin moved to the top left corner and the y axis turned down, which is the convention of every
+  one of the four formats; text is escaped for the document it lands in, and a character XML cannot carry
+  becomes the replacement character instead of aborting the write. A page that draws no text still produces
+  its page element, a range is written in ascending page order, and no document states a timestamp or a
+  random identifier, so the same read produces the same bytes on every run. The call returns the blocks it
+  wrote, with the segmentation and the order that produced them and the warnings the read made, so an export
+  of a page whose font could not be mapped is not silent. A destination that cannot be written and a format
+  this release does not produce are both refused before the document is opened, and the exports describe text
+  only: `PdfLayoutOptions.IncludeImages` is reserved for the image regions a later release places beside it.
+- **A document can be signed without rewriting a byte that is already signed.** `IPdfDocumentSigner` —
+  resolved by `AddSharpCorePDF()` and constructible by hand like every other engine port — appends one
+  revision to a source and returns a `PdfSignatureInfo` read back from the file it wrote: the field, the
+  filter and sub-filter, the digest, the signer, the byte range and the revision the signature covers.
+  The CMS is built here rather than by `SignedCms`, because a detached signature over a reserved byte
+  range needs the digest of everything except its own placeholder, the signed attributes CAdES names, and
+  a size known before the value exists: the writer reserves `ByteRange` and `Contents`, hashes the
+  revision with the gap removed, patches the range, and only then writes the signature into it. The
+  certificate's key decides the algorithm — RSA PKCS#1 v1.5 or ECDSA — and the options decide the digest.
+  A certificate with no private key, an encrypted document and a revision too small for the chain are
+  refused before anything is written, so a half-signed file cannot exist; a visible appearance writes a
+  form XObject, a widget and an `/Annots` entry in that same revision, and `/AcroForm` is added when the
+  document had none.
+- **A signature can carry a timestamp the caller obtained.** `PdfSignatureOptions.TimestampProvider` is
+  the whole of it: the library hands the caller's `IPdfTimestampProvider` the digest of the signature
+  value and embeds the RFC 3161 token it answers with as the `signatureTimeStampToken` unsigned
+  attribute. Nothing here opens a socket, and a provider that throws stops the signature instead of
+  leaving a document that only looks signed. The token travels unverified, and says so: a token that
+  cannot be read is a `TimestampInvalid` problem rather than a claim about its time, and
+  `PdfTrustOptions.CheckTimestampTrust` is reserved for the release that checks the authority's own
+  signature.
+- **Every signature in a document is checked, and the two questions are answered apart.**
+  `IPdfDocumentSignatureValidator` finds each signature field in the form tree and on the page widgets,
+  reads its byte range and its CMS, and reports one `PdfSignatureValidation` per signature: `Integrity` —
+  the digest the CMS carries matches the bytes the range covers — and, only when the caller names anchors
+  through `PdfTrustOptions`, `Trust` — the chain leads to one of them. They are separate results because
+  they are separate failures: a document changed after it was signed is not the same defect as a
+  certificate that leads nowhere, and `IsValid` speaks only about integrity, which is the half this
+  library can decide on its own. No machine trust store is consulted, no certificate is fetched and no
+  authority is asked whether one was revoked; a placeholder signature, an unreadable structure or a range
+  that does not reach the end of the file is `Unknown`, never `Valid`.
 
 ### Fixed
 

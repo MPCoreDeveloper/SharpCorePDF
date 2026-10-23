@@ -37,7 +37,7 @@ public interface IPdfLayoutReader
         string? password = null,
         CancellationToken cancellationToken = default);
 
-    Task ExportAsync(
+    Task<PdfReadResult<PdfTextBlock>> ExportAsync(
         IPdfContentSource source,
         PageRange range,
         PdfLayoutFormat format,
@@ -59,7 +59,9 @@ public interface IPdfLayoutReader
 - `ReadBlocksAsync` supports raw content order, nearest-neighbour words, recursive XY cut and
   Docstrum-style segmentation. The selected strategy is recorded in the result.
 - `ExportAsync` writes a well-formed document for `PdfLayoutFormat.Alto`, `PageXml`, `Hocr` or
-  `SvgText`; coordinates are in page space and text is XML-escaped.
+  `SvgText`; coordinates are in page space and text is XML-escaped. It returns the blocks it wrote, with
+  the warnings and the strategy that produced them, so a page whose font could not be mapped is exported
+  as an empty page plus a `TextUnreadable` warning rather than as silence.
 
 ## Extraction Options
 

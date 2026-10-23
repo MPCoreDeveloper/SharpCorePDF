@@ -87,8 +87,43 @@ dotnet test .\tests\SharpCorePDF.Tests\SharpCorePDF.Tests.csproj -p:TargetFramew
 uv run --with pikepdf python docs/tools/validate-pdf.py tests/SharpCorePDF.Tests/Assets/parity/corpus/unicode-01.pdf
 ```
 
-The parity matrix names the per-capability test and command. This README only owns the corpus: provenance,
-the manifest contract, regeneration and the integrity test.
+The parity matrix names the per-capability test and command. This README owns the corpus — provenance,
+the manifest contract, regeneration and the integrity test — and the command that scores a reading against
+it (below).
+
+## Scoring a reading (SC-004)
+
+SC-004 is measured rather than asserted: `docs/tools/score-layout.py` reads a folder of ALTO exports and
+the label files beside the labelled PDFs, and prints one line per threshold. It needs no third-party
+package, so a plain `python` runs it:
+
+```powershell
+# Score the ALTO exports of the labelled documents; --labels defaults to the checked-in folder.
+python docs\tools\score-layout.py artifacts\layout-exports `
+  --labels tests\SharpCorePDF.Tests\Assets\parity\labelled `
+  --known-order-mismatch table
+```
+
+`<exports>` holds one document per label file, named after it: `two-columns.alto.xml` is scored against
+`two-columns.json`. Any caller can write that folder — `ExportAsync(..., PdfLayoutFormat.Alto, ...)` is
+the whole of it, and the `extract-layout` example writes the same format for its own sample document.
+
+| Measurement | Threshold | What is counted |
+| --- | --- | --- |
+| Character recall | 99.5% | Characters of the labelled words the read found, matched page by page and word by word. A space has no box of its own in an export, so the recall is over the characters of the words. |
+| Box agreement | 95% | Matched words whose four edges are within half a point of the labelled box. |
+| Reading order | 95% | Pairs of matched words that sit on different lines on both sides and come out in the labelled order. Words whose line was split or merged carry no evidence and are not counted either way, so the measurement is about order and not about segmentation. |
+
+The `table` document is passed to `--known-order-mismatch` and recorded as a limitation rather than
+counted as agreement. A table is symmetric under the XY cut — the gap between its columns is as wide as
+the gap between its rows — so a cell becomes a block and the reading order reports a column before the
+next column, which is the order a two-column page needs. Telling a table from two columns whose lines
+align is a semantic judgement, and table semantics are out of contract. The parity test
+`PdfLayoutCorpusTests.Table_page_is_still_read_column_by_column` fails if the limitation ever goes away,
+so the exception cannot outlive the behaviour it records.
+
+As measured on 2026-10-22: recall 100% and boxes 100% on all five documents, reading order 100% on four
+and 66.7% on `table` (18 of 27 word pairs).
 
 ## Licensing and review
 

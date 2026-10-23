@@ -822,6 +822,32 @@ internal static class PdfContentFixtures
     }
 
     /// <summary>
+    /// One page whose line is drawn from the characters a markup document reads as structure: an angle
+    /// bracket and an ampersand, which an export has to escape rather than write.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] TextMarkup()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+
+        var font = builder.Add(
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+
+        var content = builder.Add(Content(
+            "BT /F1 12 Tf 1 0 0 1 72 720 Tm (a < b & c > d) Tj ET"));
+
+        builder.Set(page, TextPage(pages, $"/F1 {font} 0 R", content));
+        builder.Set(pages, PageTree(page));
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
     /// One page drawn with two paragraphs, the lower one first, so that the drawing order of the content
     /// and the reading order of the page are not the same.
     /// </summary>
@@ -840,6 +866,61 @@ internal static class PdfContentFixtures
         var content = builder.Add(Content(
             "BT /F1 12 Tf 1 0 0 1 72 600 Tm (Later paragraph) Tj "
             + "1 0 0 1 72 720 Tm (Earlier paragraph) Tj ET"));
+
+        builder.Set(page, TextPage(pages, $"/F1 {font} 0 R", content));
+        builder.Set(pages, PageTree(page));
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
+    /// One page laid out in two columns, drawn right column first, so that the order of the content is not
+    /// the order a reader takes the page in.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] TextTwoColumns()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+
+        var font = builder.Add(
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+
+        var content = builder.Add(Content(
+            "BT /F1 12 Tf 1 0 0 1 330 720 Tm (Right one) Tj "
+            + "1 0 0 1 330 706 Tm (Right two) Tj "
+            + "1 0 0 1 72 720 Tm (Left one) Tj "
+            + "1 0 0 1 72 706 Tm (Left two) Tj ET"));
+
+        builder.Set(page, TextPage(pages, $"/F1 {font} 0 R", content));
+        builder.Set(pages, PageTree(page));
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
+    /// One page whose first line is a rule drawn as a run of hyphens, far enough above the prose under it to
+    /// be a block of its own: ink the page draws that carries no letter and no digit.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] TextDecoration()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+
+        var font = builder.Add(
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+
+        var content = builder.Add(Content(
+            "BT /F1 12 Tf 1 0 0 1 72 760 Tm (----) Tj 1 0 0 1 72 700 Tm (Prose) Tj ET"));
 
         builder.Set(page, TextPage(pages, $"/F1 {font} 0 R", content));
         builder.Set(pages, PageTree(page));
@@ -1056,6 +1137,188 @@ internal static class PdfContentFixtures
         builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
 
         return builder.Build(catalog);
+    }
+
+    /// <summary>
+    /// One page that draws its words in the wrong order: the second word of the top line before the first,
+    /// and the top line before the line under it is drawn, so that the order of the content and the order of
+    /// the page are not the same.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] TextOutOfOrder()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+
+        var font = builder.Add(
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+
+        var content = builder.Add(Content(
+            "BT /F1 12 Tf 1 0 0 1 108 720 Tm (World) Tj "
+            + "1 0 0 1 72 720 Tm (Hello) Tj "
+            + "1 0 0 1 72 706 Tm (Second) Tj ET"));
+
+        builder.Set(page, TextPage(pages, $"/F1 {font} 0 R", content));
+        builder.Set(pages, PageTree(page));
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
+    /// One page whose text runs right to left: a horizontal scaling of minus one hundred percent turns the
+    /// advance of every glyph round, so the baseline of the run goes towards the left edge.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] TextRightToLeft()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+
+        var font = builder.Add(
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+
+        var content = builder.Add(Content("BT /F1 12 Tf -100 Tz 1 0 0 1 200 700 Tm (AB) Tj ET"));
+
+        builder.Set(page, TextPage(pages, $"/F1 {font} 0 R", content));
+        builder.Set(pages, PageTree(page));
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>Gets the compressed bytes the object graph fixture writes into its stream.</summary>
+    public static byte[] GraphStreamData { get; } =
+        PdfBuilder.Compress(Encoding.Latin1.GetBytes("graph stream payload"));
+
+    /// <summary>
+    /// A one page document whose objects name each other in a cycle, name an object the file does not
+    /// hold and carry a stream that declares a chain of filters.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    /// <remarks>
+    /// The objects are numbered so a test can name them: 1 the catalog, 2 the page tree, 3 the page,
+    /// 4 its content, 5 and 6 a pair that point at each other and 7 the compressed stream. Both the page
+    /// and object 5 name object 99, which the file does not hold, so a graph must report the hole once
+    /// rather than once per mention.
+    /// </remarks>
+    public static byte[] ObjectGraph()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.Reserve();
+        var first = builder.Reserve();
+        var second = builder.Reserve();
+
+        var stream = builder.AddStream(
+            "<< /Type /Metadata /Subtype /XML /Filter [/FlateDecode /ASCIIHexDecode]",
+            GraphStreamData);
+
+        builder.Set(content, Content("0 0 m 10 10 l S"));
+        builder.Set(
+            page,
+            $"<< /Type /Page /Parent {pages} 0 R /MediaBox [0 0 200 200] /Contents {content} 0 R "
+            + $"/Resources << >> /Example 99 0 R /Also 99 0 R /Cycle {first} 0 R >>");
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
+        builder.Set(first, $"<< /Peer {second} 0 R /Missing 99 0 R >>");
+        builder.Set(second, $"<< /Peer {first} 0 R >>");
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R /Metadata {stream} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
+    /// A one page document whose content states a graphics state change, a matrix, an inline image and an
+    /// XObject invocation, so the operations of a page can be read in the order the page states them.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    /// <remarks>
+    /// The samples are the ones <see cref="InlineSamples"/> gives, whose last byte is the letter A: a read
+    /// that ended an inline image on a delimiter rather than on EI standing on its own would take the
+    /// samples for an operator and never see the Q and the Do that follow them.
+    /// </remarks>
+    public static byte[] ContentOperations()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.Reserve();
+
+        var prefix = Encoding.Latin1.GetBytes("q 1 0 0 1 10 20 cm BI /W 1 /H 1 /CS /G /BPC 8 ID ");
+        var suffix = Encoding.Latin1.GetBytes(" EI Q /Fm1 Do");
+        var body = new byte[prefix.Length + InlineSamples.Length + suffix.Length];
+
+        prefix.CopyTo(body, 0);
+        InlineSamples.CopyTo(body, prefix.Length);
+        suffix.CopyTo(body, prefix.Length + InlineSamples.Length);
+
+        builder.Set(content, PdfBuilder.StreamBody(string.Empty, body));
+        builder.Set(
+            page,
+            $"<< /Type /Page /Parent {pages} 0 R /MediaBox [0 0 200 200] "
+            + $"/Resources << >> /Contents {content} 0 R >>");
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
+    /// A one page document whose content nests arrays as deep as asked and then states two operators, so a
+    /// read that stops descending can be shown to carry on with the rest of the page.
+    /// </summary>
+    /// <param name="depth">The number of arrays the content nests, one inside the other.</param>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] NestedContent(int depth)
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.Reserve();
+
+        builder.Set(content, Content(new string('[', depth) + new string(']', depth) + " S BT ET"));
+        builder.Set(page, Page(pages, string.Empty, content));
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
+    /// A one page document whose trailer names an encryption this library does not implement, so the page
+    /// tree is the only part of it a read can see.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] UnopenedEncryption()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.Reserve();
+
+        var encrypt = builder.Add("<</Filter/Standard/V 9/R 9/O <00>/U <00>>>");
+
+        builder.Set(content, Content("q Q"));
+        builder.Set(page, Page(pages, string.Empty, content));
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog, $"/Encrypt {encrypt} 0 R");
     }
 
     /// <summary>Builds the body of a page that names the fonts given and draws the content given.</summary>

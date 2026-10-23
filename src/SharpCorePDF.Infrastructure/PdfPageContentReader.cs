@@ -39,7 +39,7 @@ public sealed partial class PdfPageContentReader : IPdfPageContentReader
     /// <param name="password">The password, when the document is encrypted.</param>
     /// <param name="cancellationToken">A token to cancel the read.</param>
     /// <returns>The opened document.</returns>
-    private async Task<PdfFileReader> OpenAsync(
+    internal async Task<PdfFileReader> OpenAsync(
         string sourceName,
         Stream content,
         string? password,
@@ -82,7 +82,7 @@ public sealed partial class PdfPageContentReader : IPdfPageContentReader
     /// <summary>Adds the remark that explains why an encrypted document produced nothing.</summary>
     /// <param name="reader">The document.</param>
     /// <param name="warnings">The list that receives the remark.</param>
-    private static void NoteClosedEncryption(PdfFileReader reader, List<PdfWarning> warnings)
+    internal static void NoteClosedEncryption(PdfFileReader reader, List<PdfWarning> warnings)
     {
         if (reader.IsEncrypted && reader.Security is null)
         {
@@ -98,7 +98,7 @@ public sealed partial class PdfPageContentReader : IPdfPageContentReader
     /// <param name="items">The items that were read.</param>
     /// <param name="warnings">The remarks made while reading.</param>
     /// <returns>The result.</returns>
-    private static PdfReadResult<T> Result<T>(
+    internal static PdfReadResult<T> Result<T>(
         PdfFileReader reader,
         IEnumerable<T> items,
         List<PdfWarning> warnings) => new()

@@ -22,6 +22,23 @@ public sealed record PdfReadResult<T>
     /// library does not decode or a named destination that does not resolve.</summary>
     public IReadOnlyList<PdfWarning> Warnings { get; init; } = [];
 
+    /// <summary>
+    /// Gets the segmentation the read applied, or <see langword="null"/> when the read does not group words
+    /// into blocks.
+    /// </summary>
+    /// <remarks>
+    /// The rule that produced the items travels with them, so a caller that compares two reads — or stores
+    /// one for a later comparison — does not have to recall which options it passed. A read that produced
+    /// no item still names the rule, which is the difference between an empty page and an untried one.
+    /// </remarks>
+    public PdfPageSegmentationStrategy? Segmentation { get; init; }
+
+    /// <summary>
+    /// Gets the order the read reported the items in, or <see langword="null"/> when the read does not order
+    /// blocks.
+    /// </summary>
+    public PdfReadingOrderStrategy? ReadingOrderStrategy { get; init; }
+
     /// <summary>Gets the number of items that were read.</summary>
     public int Count => Items.Count;
 }

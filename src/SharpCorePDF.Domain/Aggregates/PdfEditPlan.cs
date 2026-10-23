@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using SharpCorePDF.Domain.Exceptions;
+using SharpCorePDF.Domain.Ports;
 using SharpCorePDF.Domain.ValueObjects;
 
 namespace SharpCorePDF.Domain.Aggregates;
@@ -132,6 +133,96 @@ public sealed record PdfEditPlan
     /// <returns>The new plan.</returns>
     public PdfEditPlan DuplicatePage(int pageNumber, int insertAt) =>
         Add(new PdfDuplicatePageOperation(pageNumber, insertAt));
+
+    /// <summary>Copies one page of another document into this one.</summary>
+    /// <param name="source">The document to copy the page from; it is never modified.</param>
+    /// <param name="sourcePageNumber">The one-based page number in <paramref name="source"/>.</param>
+    /// <param name="insertAt">The one-based position the copied page is inserted before; the current page count plus one appends it.</param>
+    /// <param name="password">The user or owner password of <paramref name="source"/>, when it is encrypted.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan ImportPage(
+        IPdfContentSource source,
+        int sourcePageNumber,
+        int insertAt,
+        string? password = null)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return Add(new PdfImportPageOperation(source, sourcePageNumber, insertAt, password));
+    }
+
+    /// <summary>Inserts a generated page.</summary>
+    /// <param name="insertAt">The one-based position the page is inserted before.</param>
+    /// <param name="size">The page size the generated page was drawn at.</param>
+    /// <param name="page">A document that holds exactly one page: the one to insert.</param>
+    /// <returns>The new plan.</returns>
+    /// <remarks>
+    /// This overload takes a finished one-page document. Infrastructure offers
+    /// <c>InsertPage(int, PdfPageSize, Action&lt;PdfPageCanvas&gt;)</c>, which builds that document from
+    /// a drawing callback, which is the shape the editing contract describes.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="page"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan InsertPage(int insertAt, PdfPageSize size, IPdfContentSource page)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        return Add(new PdfInsertPageOperation(insertAt, size, page));
+    }
+
+    /// <summary>Appends pages of another document.</summary>
+    /// <param name="source">The document to copy pages from; it is never modified.</param>
+    /// <param name="pages">The pages to append; every page when omitted.</param>
+    /// <param name="password">The user or owner password of <paramref name="source"/>, when it is encrypted.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan Append(
+        IPdfContentSource source,
+        PageRange? pages = null,
+        string? password = null)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return Add(new PdfAppendOperation(source, pages ?? PageRange.All, password));
+    }
+
+    /// <summary>Puts every page in an explicit order.</summary>
+    /// <param name="order">The one-based page numbers in their new order: a permutation of the page count at that point.</param>
+    /// <returns>The new plan.</returns>
+    public PdfEditPlan ReorderPages(params int[] order) => ReorderPages((IEnumerable<int>)order);
+
+    /// <summary>Puts every page in an explicit order.</summary>
+    /// <param name="order">The one-based page numbers in their new order: a permutation of the page count at that point.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="order"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan ReorderPages(IEnumerable<int> order)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+        return Add(new PdfReorderPagesOperation([.. order]));
+    }
+
+    /// <summary>Keeps only a range of pages and removes the rest.</summary>
+    /// <param name="pages">The pages to keep, in their existing order.</param>
+    /// <returns>The new plan.</returns>
+    public PdfEditPlan ExtractPages(PageRange pages) => Add(new PdfExtractPagesOperation(pages));
+
+    /// <summary>Writes the document as several documents, each holding a run of pages.</summary>
+    /// <param name="pagesPerDocument">The number of pages each part receives; defaults to one page per part.</param>
+    /// <returns>The new plan.</returns>
+    /// <remarks>
+    /// The parts are cut from the document as the plan leaves it, so any other operation runs first.
+    /// Apply such a plan with <c>IPdfDocumentEditor.SplitAsync</c>, which writes the parts; a single
+    /// destination cannot receive several documents.
+    /// </remarks>
+    public PdfEditPlan SplitDocument(int pagesPerDocument = 1) =>
+        Add(new PdfSplitDocumentOperation(pagesPerDocument));
+
+    /// <summary>Adds an operation that the typed helpers do not cover.</summary>
+    /// <param name="operation">The operation to append.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="operation"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan AddOperation(PdfEditOperation operation)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        return Add(operation);
+    }
 
     /// <summary>Overrides part or all of the document information.</summary>
     /// <param name="metadata">The values to apply; fields left unset keep their source value.</param>
@@ -285,9 +376,102 @@ public sealed record PdfEditPlan
 
                 break;
 
+            case PdfImportPageOperation import:
+                if (import.Source is null)
+                {
+                    yield return $"operation {index}: the document to import from is null.";
+                }
+
+                if (import.SourcePageNumber < 1)
+                {
+                    yield return $"operation {index}: source page number {import.SourcePageNumber} is not one-based.";
+                }
+
+                if (import.InsertAt < 1)
+                {
+                    yield return $"operation {index}: insert position {import.InsertAt} is not one-based.";
+                }
+
+                break;
+
+            case PdfInsertPageOperation insert:
+                if (insert.Page is null)
+                {
+                    yield return $"operation {index}: the page to insert is null.";
+                }
+
+                if (insert.InsertAt < 1)
+                {
+                    yield return $"operation {index}: insert position {insert.InsertAt} is not one-based.";
+                }
+
+                break;
+
+            case PdfAppendOperation append:
+                if (append.Source is null)
+                {
+                    yield return $"operation {index}: the document to append is null.";
+                }
+
+                foreach (var problem in ValidateRange(append.Pages, index))
+                {
+                    yield return problem;
+                }
+
+                break;
+
+            case PdfReorderPagesOperation reorder:
+                if (reorder.Order is not { Count: > 0 })
+                {
+                    yield return $"operation {index}: the new page order is empty.";
+                    break;
+                }
+
+                var seen = new HashSet<int>();
+
+                for (var position = 0; position < reorder.Order.Count; position++)
+                {
+                    var pageNumber = reorder.Order[position];
+
+                    if (pageNumber < 1)
+                    {
+                        yield return $"operation {index}: page number {pageNumber} is not one-based.";
+                    }
+                    else if (!seen.Add(pageNumber))
+                    {
+                        yield return $"operation {index}: page {pageNumber} appears twice in the new order.";
+                    }
+                }
+
+                break;
+
+            case PdfExtractPagesOperation extract:
+                foreach (var problem in ValidateRange(extract.Pages, index))
+                {
+                    yield return problem;
+                }
+
+                break;
+
+            case PdfSplitDocumentOperation split when split.PagesPerDocument < 1:
+                yield return $"operation {index}: a split must give each part at least one page, not {split.PagesPerDocument}.";
+                break;
+
             case PdfSetMetadataOperation metadata when metadata.Metadata is null:
                 yield return $"operation {index}: the metadata to set is null.";
                 break;
+        }
+    }
+
+    private static IEnumerable<string> ValidateRange(PageRange pages, int index)
+    {
+        if (pages.From < 1)
+        {
+            yield return $"operation {index}: page range '{pages}' does not start at a one-based page.";
+        }
+        else if (!pages.IsOpenEnded && pages.To < pages.From)
+        {
+            yield return $"operation {index}: page range '{pages}' ends before it starts.";
         }
     }
 }

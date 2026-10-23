@@ -74,8 +74,9 @@ internal sealed class PdfBuilder
 
     /// <summary>Writes the document.</summary>
     /// <param name="root">The object number of the catalog.</param>
+    /// <param name="entries">Entries to write in the trailer besides <c>/Size</c> and <c>/Root</c>.</param>
     /// <returns>The bytes of the document.</returns>
-    public byte[] Build(int root)
+    public byte[] Build(int root, string? entries = null)
     {
         using var output = new MemoryStream();
         var offsets = new long[objects.Count];
@@ -104,7 +105,7 @@ internal sealed class PdfBuilder
             output,
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"trailer\n<< /Size {objects.Count + 1} /Root {root} 0 R >>\nstartxref\n{startXref}\n%%EOF\n"));
+                $"trailer\n<< /Size {objects.Count + 1} /Root {root} 0 R{(entries is null ? string.Empty : " " + entries)} >>\nstartxref\n{startXref}\n%%EOF\n"));
 
         return output.ToArray();
     }
