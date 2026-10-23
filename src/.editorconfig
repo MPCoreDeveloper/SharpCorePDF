@@ -27,6 +27,11 @@ dotnet_diagnostic.CA1720.severity = none
 # CA1720: Single is the natural name for "exactly one page", matching Enumerable.Single.
 dotnet_diagnostic.CA1720.severity = none
 
+[**/ValueObjects/PdfObjectViewKind.cs]
+# CA1720: Integer, Real and String are the PDF object kinds as the standard and every reference manual
+# name them; renaming them would make the projection disagree with the documents it describes.
+dotnet_diagnostic.CA1720.severity = none
+
 [**/ValueObjects/PdfEditOperation.cs]
 # S1694: an edit operation is a closed hierarchy of values that the engine switches over; an
 # interface would let any type claim to be an operation the engine cannot execute.

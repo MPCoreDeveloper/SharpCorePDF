@@ -62,6 +62,12 @@ internal sealed class ExampleContext : IDisposable
     /// <summary>Gets the content reader, exactly as an application would resolve it.</summary>
     public IPdfContentReader ContentReader => services.GetRequiredService<IPdfContentReader>();
 
+    /// <summary>Gets the layout reader, exactly as an application would resolve it.</summary>
+    public IPdfLayoutReader LayoutReader => services.GetRequiredService<IPdfLayoutReader>();
+
+    /// <summary>Gets the object inspector, exactly as an application would resolve it.</summary>
+    public IPdfObjectInspector ObjectInspector => services.GetRequiredService<IPdfObjectInspector>();
+
     /// <summary>Creates the sample documents and the container the examples run against.</summary>
     /// <returns>The context; dispose it to release the container.</returns>
     public static ExampleContext Create()

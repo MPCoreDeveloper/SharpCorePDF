@@ -39,6 +39,8 @@ when every example ran, `1` when one failed, and `2` when a name on the command 
 | `no-container` | The same merge without a dependency injection container, and the proof that the result is the same. |
 | `inspect-first` | Describing a folder of documents before merging, which is how a file that is unusable, or encrypted and waiting for its password, is found without an exception. |
 | `read-content` | Reading what a document already contains: the image a page paints, the text both pages draw as blocks of words, the comment and the link with its resolved target, the form field, the bookmark, the attachment extracted to disk, and the XMP packet with the values parsed beside it, then the same pages one at a time. |
+| `extract-layout` | Reading the layout of a page: the block of every paragraph in reading order with the segmentation and the order that produced them, the box and baseline of every letter, and the same reading written as ALTO, PAGE XML, hOCR and SVG. |
+| `inspect-objects` | Walking a document as the object graph it is — every object, its dangling references and the warnings — and the operators of page 1's content stream with the offset each one starts at. |
 | `options` | Metadata policy and override, outline and page-label policy, the target version, and a reproducible result (byte for byte). |
 | `protect-result` | A result written with AES-256, a user and an owner password and a permission set: what a reader is asked for, what it is allowed to do, and how an encrypted source is merged into a document that is sealed again under new passwords. |
 | `warnings` | The two channels: what inspection reports about a document, and what the merge reports about its own work. |
@@ -135,7 +137,7 @@ services.AddSharpCorePDF(config);    // or from the "SharpCorePDF" configuration
 | --- | --- |
 | `Program.cs` | The runner: argument handling, Ctrl+C cancellation, and the exit code. |
 | `Scenarios.cs` | The example registry and the command line handling. |
-| `ExampleContext.cs` | The sample documents, the container (`AddSharpCorePDF` from `appsettings.json`), the three ports, and the report helper. |
+| `ExampleContext.cs` | The sample documents, the container (`AddSharpCorePDF` from `appsettings.json`), the ports, and the report helper. |
 | `SampleDocuments.cs` | The fixture generator described above. |
 | `ContentSampleDocument.cs` | The one sample with an image, text on both pages, a comment, a link, a form field, a bookmark, an attachment and an XMP packet, which is what `read-content` reads. |
 | `MergeExamples.cs` | `merge-files`, `select-pages`. |
@@ -144,6 +146,7 @@ services.AddSharpCorePDF(config);    // or from the "SharpCorePDF" configuration
 | `Assets/DejaVuSans-subset.ttf` | The embedded font of `author-page`, with its licence beside it, so the example runs without a system font. |
 | `InspectionExamples.cs` | `inspect-first`. |
 | `ContentInspectionExamples.cs` | `read-content`. |
+| `LayoutExamples.cs` | `extract-layout`, `inspect-objects`. |
 | `OptionExamples.cs` | `options`, `protect-result`, `warnings`. |
 | `ErrorHandlingExamples.cs` | `errors`. |
 | `appsettings.json` | The engine options the container binds, including `VerifyOutput`, so every example also proves its output can be read back. |
@@ -162,5 +165,13 @@ project file to `net10.0` runs exactly the same examples on the older target.
 
   ```powershell
   uv run --with pikepdf python .\docs\tools\validate-pdf.py "$env:TEMP\SharpCorePDF.Examples\output\combined.pdf"
+  ```
+
+* [`docs/tools/score-layout.py`](../docs/tools/score-layout.py) — score a layout read against human labels
+  (character recall, box agreement and reading order), which is how `extract-layout`'s output is measured
+  against the labelled corpus:
+
+  ```powershell
+  python .\docs\tools\score-layout.py artifacts\layout-exports --known-order-mismatch table
   ```
 

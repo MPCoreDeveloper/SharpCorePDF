@@ -19,6 +19,8 @@ internal static class Scenarios
         new("no-container", "use the packages without a dependency injection container", SourceExamples.WithoutContainerAsync),
         new("inspect-first", "describe documents before merging them", InspectionExamples.InspectFirstAsync),
         new("read-content", "read the images, text, comments, form, bookmarks, attachments and metadata a document carries", ContentInspectionExamples.ReadContentAsync),
+        new("extract-layout", "read the letters, blocks and reading order of a page, and write it as ALTO, PAGE XML, hOCR and SVG", LayoutExamples.ExtractLayoutAsync),
+        new("inspect-objects", "walk the object graph of a document and the operators of a content stream", LayoutExamples.InspectObjectsAsync),
         new("options", "control metadata, bookmarks, the version and reproducibility", OptionExamples.MetadataAndVersionAsync),
         new("protect-result", "write a result that needs a password, with the permissions you choose", OptionExamples.ProtectResultAsync),
         new("warnings", "read what the merge reports about what it had to change", OptionExamples.WarningsAsync),

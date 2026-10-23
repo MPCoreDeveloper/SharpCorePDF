@@ -14,48 +14,24 @@ namespace SharpCorePDF.Infrastructure;
 public sealed partial class PdfEditEngine
 {
     /// <summary>Turns the page tree of the source into the ordered list of pages the plan produces.</summary>
-    /// <param name="reader">The source document.</param>
+    /// <param name="sources">The documents of the edit.</param>
     /// <param name="plan">The plan being applied.</param>
     /// <param name="warnings">The list that receives normalisation remarks.</param>
     /// <param name="layoutChanged">Receives whether any operation changed the order or number of pages.</param>
     /// <returns>The pages in output order.</returns>
     /// <exception cref="PdfEditPlanValidationException">An operation names a page or position that does not exist at that point.</exception>
     private static List<EditedPage> BuildLayout(
-        PdfFileReader reader,
+        EditSources sources,
         PdfEditPlan plan,
         List<PdfWarning> warnings,
         out bool layoutChanged)
     {
-        var layout = new List<EditedPage>(reader.Pages.Count);
+        var document = sources.Document;
+        var layout = new List<EditedPage>(document.Pages.Count);
 
-        foreach (var page in reader.Pages)
+        foreach (var page in document.Pages)
         {
-            var mediaBox = ReadBox(reader, page, "MediaBox", out var mediaInverted);
-
-            if (mediaBox is null)
-            {
-                warnings.Add(new(
-                    PdfWarningKind.PageSizeAssumed,
-                    $"'{reader.SourceName}': page {page.Index + 1} has no readable /MediaBox; it is treated as A4 while editing."));
-                mediaBox = new PdfRectangle(0d, 0d, PdfPageSize.A4.WidthPoints, PdfPageSize.A4.HeightPoints);
-            }
-            else if (mediaInverted)
-            {
-                warnings.Add(new(
-                    PdfWarningKind.PageGeometryNormalized,
-                    $"'{reader.SourceName}': the /MediaBox of page {page.Index + 1} is inverted and was normalised to [{mediaBox.Left:0.##} {mediaBox.Bottom:0.##} {mediaBox.Right:0.##} {mediaBox.Top:0.##}]."));
-            }
-
-            var cropBox = ReadBox(reader, page, "CropBox", out var cropInverted);
-
-            if (cropInverted)
-            {
-                warnings.Add(new(
-                    PdfWarningKind.PageGeometryNormalized,
-                    $"'{reader.SourceName}': the /CropBox of page {page.Index + 1} is inverted and was normalised to [{cropBox!.Left:0.##} {cropBox.Bottom:0.##} {cropBox.Right:0.##} {cropBox.Top:0.##}]."));
-            }
-
-            layout.Add(new EditedPage(page, mediaBox) { CropBox = cropBox });
+            layout.Add(CreatePage(document, page, warnings));
         }
 
         layoutChanged = false;
@@ -67,7 +43,7 @@ public sealed partial class PdfEditEngine
             switch (operation)
             {
                 case PdfRotatePageOperation rotate:
-                    EnsurePage(layout, rotate.PageNumber, index, reader.SourceName);
+                    EnsurePage(layout, rotate.PageNumber, index, document.SourceName);
 
                     var rotated = layout[rotate.PageNumber - 1];
                     rotated.AddedRotation = PageRotationExtensions.Normalize(
@@ -75,22 +51,22 @@ public sealed partial class PdfEditEngine
                     break;
 
                 case PdfCropPageOperation crop:
-                    EnsurePage(layout, crop.PageNumber, index, reader.SourceName);
-                    ApplyCrop(layout[crop.PageNumber - 1], crop, index, reader.SourceName, warnings);
+                    EnsurePage(layout, crop.PageNumber, index, document.SourceName);
+                    ApplyCrop(layout[crop.PageNumber - 1], crop, index, document.SourceName, warnings);
                     break;
 
                 case PdfResizePageOperation resize:
-                    EnsurePage(layout, resize.PageNumber, index, reader.SourceName);
+                    EnsurePage(layout, resize.PageNumber, index, document.SourceName);
                     ApplyResize(layout[resize.PageNumber - 1], resize);
                     break;
 
                 case PdfDeletePageOperation delete:
-                    EnsurePage(layout, delete.PageNumber, index, reader.SourceName);
+                    EnsurePage(layout, delete.PageNumber, index, document.SourceName);
 
                     if (layout.Count == 1)
                     {
                         throw new PdfEditPlanValidationException(
-                            $"operation {index}: deleting page {delete.PageNumber} would leave '{reader.SourceName}' without a page.");
+                            $"operation {index}: deleting page {delete.PageNumber} would leave '{document.SourceName}' without a page.");
                     }
 
                     layout.RemoveAt(delete.PageNumber - 1);
@@ -98,12 +74,12 @@ public sealed partial class PdfEditEngine
                     break;
 
                 case PdfMovePageOperation move:
-                    EnsurePage(layout, move.From, index, reader.SourceName);
+                    EnsurePage(layout, move.From, index, document.SourceName);
 
                     if (move.To > layout.Count)
                     {
                         throw new PdfEditPlanValidationException(
-                            $"operation {index}: position {move.To} does not exist in '{reader.SourceName}', which has {layout.Count} page(s) at that point.");
+                            $"operation {index}: position {move.To} does not exist in '{document.SourceName}', which has {layout.Count} page(s) at that point.");
                     }
 
                     var moved = layout[move.From - 1];
@@ -113,12 +89,12 @@ public sealed partial class PdfEditEngine
                     break;
 
                 case PdfDuplicatePageOperation duplicate:
-                    EnsurePage(layout, duplicate.PageNumber, index, reader.SourceName);
+                    EnsurePage(layout, duplicate.PageNumber, index, document.SourceName);
 
                     if (duplicate.InsertAt > layout.Count + 1)
                     {
                         throw new PdfEditPlanValidationException(
-                            $"operation {index}: insert position {duplicate.InsertAt} is beyond the end of '{reader.SourceName}', which has {layout.Count} page(s) at that point.");
+                            $"operation {index}: insert position {duplicate.InsertAt} is beyond the end of '{document.SourceName}', which has {layout.Count} page(s) at that point.");
                     }
 
                     var original = layout[duplicate.PageNumber - 1];
@@ -127,6 +103,64 @@ public sealed partial class PdfEditEngine
                     break;
 
                 case PdfSetMetadataOperation:
+                    break;
+
+                case PdfImportPageOperation import:
+                {
+                    var source = sources.SourceOf(import);
+                    var page = SelectPage(source, import.SourcePageNumber, index);
+                    EnsurePosition(layout, import.InsertAt, index, document.SourceName);
+                    layout.Insert(import.InsertAt - 1, CreatePage(source, page, warnings));
+                    layoutChanged = true;
+                    break;
+                }
+
+                case PdfInsertPageOperation insert:
+                {
+                    var generated = sources.SourceOf(insert);
+                    EnsurePosition(layout, insert.InsertAt, index, document.SourceName);
+                    layout.Insert(insert.InsertAt - 1, CreatePage(generated, generated.Pages[0], warnings));
+                    layoutChanged = true;
+                    break;
+                }
+
+                case PdfAppendOperation append:
+                {
+                    var appended = sources.SourceOf(append);
+                    var count = appended.Pages.Count;
+
+                    if (append.Pages.From > count)
+                    {
+                        throw new PdfEditPlanValidationException(
+                            $"operation {index}: page range '{append.Pages}' starts at page {append.Pages.From} but '{appended.SourceName}' only has {count} page(s).");
+                    }
+
+                    // A range that reaches past the last page of the appended document simply stops
+                    // there, which is the same rule an extraction follows inside the edited document.
+                    var last = Math.Min(append.Pages.IsOpenEnded ? count : append.Pages.To, count);
+
+                    for (var number = append.Pages.From; number <= last; number++)
+                    {
+                        layout.Add(CreatePage(appended, appended.Pages[number - 1], warnings));
+                    }
+
+                    layoutChanged = true;
+                    break;
+                }
+
+                case PdfReorderPagesOperation reorder:
+                    layout = Reorder(layout, reorder, index, document.SourceName);
+                    layoutChanged = true;
+                    break;
+
+                case PdfExtractPagesOperation extract:
+                    layout = Extract(layout, extract, index, document.SourceName);
+                    layoutChanged = true;
+                    break;
+
+                case PdfSplitDocumentOperation:
+                    // A split produces several documents, so the engine refuses such a plan in
+                    // ApplyAsync; the operation itself changes nothing about the layout.
                     break;
 
                 default:
@@ -151,13 +185,13 @@ public sealed partial class PdfEditEngine
 
     /// <summary>Points every reference to a source page at the first page it survives as.</summary>
     /// <param name="reader">The source document, whose complete page list is redirected.</param>
-    /// <param name="layout">The pages in output order.</param>
+    /// <param name="layout">The pages of the result that come from this source, in output order.</param>
     /// <param name="copier">The copier that writes the source objects into the result.</param>
     /// <remarks>
     /// A bookmark, a link or a form field keeps pointing at a real page even when its page was
     /// deleted or duplicated. The first occurrence of a source page is the one such a reference
-    /// follows. A page that did not survive is folded onto the first page of the result, which is the
-    /// same rule a merge uses for pages that were not selected.
+    /// follows. A page that did not survive is folded onto the first page this source contributes,
+    /// which is the same rule a merge uses for pages that were not selected.
     /// </remarks>
     private static void RedirectSourcePages(
         PdfFileReader reader,
@@ -193,14 +227,12 @@ public sealed partial class PdfEditEngine
     }
 
     /// <summary>Builds and writes the dictionary of every page.</summary>
-    /// <param name="reader">The source document.</param>
-    /// <param name="copier">The copier that writes the source objects into the result.</param>
+    /// <param name="sources">The documents of the edit.</param>
     /// <param name="writer">The writer of the result.</param>
     /// <param name="pagesNodeNumber">The object number of the page tree node of the result.</param>
     /// <param name="layout">The pages in output order.</param>
     private static void WritePages(
-        PdfFileReader reader,
-        PdfObjectCopier copier,
+        EditSources sources,
         PdfWriter writer,
         int pagesNodeNumber,
         List<EditedPage> layout)
@@ -214,20 +246,21 @@ public sealed partial class PdfEditEngine
 
             // The page object itself is written directly: a duplicated page needs its own object,
             // while the resources and annotations it shares with the original are reserved once by
-            // the copier and shared by reference.
-            writer.WriteObject(entry.TargetNumber, BuildPage(reader, copier, writer, entry, pagesNodeNumber));
+            // the copier and shared by reference. Each page is read through the copier of its own
+            // document, so a page copied from another file is written exactly like a native one.
+            writer.WriteObject(
+                entry.TargetNumber,
+                BuildPage(sources.CopierOf(entry.Reader), writer, entry, pagesNodeNumber));
         }
     }
 
     /// <summary>Builds one page dictionary of the result.</summary>
-    /// <param name="reader">The source document.</param>
-    /// <param name="copier">The copier that writes the source objects into the result.</param>
+    /// <param name="copier">The copier that writes the objects of the document the page comes from.</param>
     /// <param name="writer">The writer of the result.</param>
-    /// <param name="entry">The page and the rotation the plan added to it.</param>
+    /// <param name="entry">The page and the changes the plan applied to it.</param>
     /// <param name="pagesNodeNumber">The object number of the page tree node of the result.</param>
     /// <returns>The page dictionary.</returns>
     private static PdfDictionary BuildPage(
-        PdfFileReader reader,
         PdfObjectCopier copier,
         PdfWriter writer,
         EditedPage entry,
@@ -271,7 +304,7 @@ public sealed partial class PdfEditEngine
 
         if (entry.HasContentFrame)
         {
-            page.Set("Contents", FramedContents(reader, copier, writer, entry, source.Get("Contents")));
+            page.Set("Contents", FramedContents(entry.Reader, copier, writer, entry, source.Get("Contents")));
         }
         else if (source.Get("Contents") is { } content)
         {
@@ -321,6 +354,143 @@ public sealed partial class PdfEditEngine
             throw new PdfEditPlanValidationException(
                 $"operation {index}: page {pageNumber} does not exist in '{sourceName}', which has {layout.Count} page(s) at that point.");
         }
+    }
+
+    /// <summary>Builds the edited page of one page of one of the documents of the edit.</summary>
+    /// <param name="reader">The document the page comes from.</param>
+    /// <param name="page">The page.</param>
+    /// <param name="warnings">The list that receives the geometry remarks.</param>
+    /// <returns>The page as the edit sees it.</returns>
+    private static EditedPage CreatePage(PdfFileReader reader, SourcePage page, List<PdfWarning> warnings)
+    {
+        var mediaBox = ReadBox(reader, page, "MediaBox", out var mediaInverted);
+
+        if (mediaBox is null)
+        {
+            warnings.Add(new(
+                PdfWarningKind.PageSizeAssumed,
+                $"'{reader.SourceName}': page {page.Index + 1} has no readable /MediaBox; it is treated as A4 while editing."));
+            mediaBox = new PdfRectangle(0d, 0d, PdfPageSize.A4.WidthPoints, PdfPageSize.A4.HeightPoints);
+        }
+        else if (mediaInverted)
+        {
+            warnings.Add(new(
+                PdfWarningKind.PageGeometryNormalized,
+                $"'{reader.SourceName}': the /MediaBox of page {page.Index + 1} is inverted and was normalised to [{mediaBox.Left:0.##} {mediaBox.Bottom:0.##} {mediaBox.Right:0.##} {mediaBox.Top:0.##}]."));
+        }
+
+        var cropBox = ReadBox(reader, page, "CropBox", out var cropInverted);
+
+        if (cropInverted)
+        {
+            warnings.Add(new(
+                PdfWarningKind.PageGeometryNormalized,
+                $"'{reader.SourceName}': the /CropBox of page {page.Index + 1} is inverted and was normalised to [{cropBox!.Left:0.##} {cropBox.Bottom:0.##} {cropBox.Right:0.##} {cropBox.Top:0.##}]."));
+        }
+
+        return new EditedPage(reader, page, mediaBox) { CropBox = cropBox };
+    }
+
+    /// <summary>Selects a page of another document of the edit.</summary>
+    /// <param name="reader">The document to read from.</param>
+    /// <param name="pageNumber">The one-based page number inside that document.</param>
+    /// <param name="index">The position of the operation in the plan.</param>
+    /// <returns>The page.</returns>
+    /// <exception cref="PdfEditPlanValidationException">The document has no such page.</exception>
+    private static SourcePage SelectPage(PdfFileReader reader, int pageNumber, int index)
+    {
+        if (pageNumber < 1 || pageNumber > reader.Pages.Count)
+        {
+            throw new PdfEditPlanValidationException(
+                $"operation {index}: page {pageNumber} does not exist in '{reader.SourceName}', which has {reader.Pages.Count} page(s).");
+        }
+
+        return reader.Pages[pageNumber - 1];
+    }
+
+    /// <summary>Checks that a page can be inserted at a position of the pages produced so far.</summary>
+    /// <param name="layout">The pages in output order so far.</param>
+    /// <param name="position">The one-based position the new page takes.</param>
+    /// <param name="index">The position of the operation in the plan.</param>
+    /// <param name="sourceName">The name of the edited document, for diagnostics.</param>
+    /// <exception cref="PdfEditPlanValidationException">The position is past the end.</exception>
+    private static void EnsurePosition(List<EditedPage> layout, int position, int index, string sourceName)
+    {
+        if (position < 1 || position > layout.Count + 1)
+        {
+            throw new PdfEditPlanValidationException(
+                $"operation {index}: insert position {position} is beyond the end of '{sourceName}', which has {layout.Count} page(s) at that point.");
+        }
+    }
+
+    /// <summary>Rearranges the pages produced so far.</summary>
+    /// <param name="layout">The pages in output order so far.</param>
+    /// <param name="reorder">The operation.</param>
+    /// <param name="index">The position of the operation in the plan.</param>
+    /// <param name="sourceName">The name of the edited document, for diagnostics.</param>
+    /// <returns>The pages in the requested order.</returns>
+    /// <exception cref="PdfEditPlanValidationException">The order is not a permutation of the pages.</exception>
+    private static List<EditedPage> Reorder(
+        List<EditedPage> layout,
+        PdfReorderPagesOperation reorder,
+        int index,
+        string sourceName)
+    {
+        var order = reorder.Order;
+
+        if (order.Count != layout.Count)
+        {
+            throw new PdfEditPlanValidationException(
+                $"operation {index}: the new page order lists {order.Count} page(s) but '{sourceName}' has {layout.Count} page(s) at that point.");
+        }
+
+        var seen = new HashSet<int>(layout.Count);
+
+        foreach (var pageNumber in order)
+        {
+            if (pageNumber < 1 || pageNumber > layout.Count)
+            {
+                throw new PdfEditPlanValidationException(
+                    $"operation {index}: page {pageNumber} of the new page order does not exist in '{sourceName}', which has {layout.Count} page(s) at that point.");
+            }
+
+            if (!seen.Add(pageNumber))
+            {
+                throw new PdfEditPlanValidationException(
+                    $"operation {index}: page {pageNumber} is listed more than once in the new page order.");
+            }
+        }
+
+        return [.. order.Select(pageNumber => layout[pageNumber - 1])];
+    }
+
+    /// <summary>Keeps only the pages an extraction selects.</summary>
+    /// <param name="layout">The pages in output order so far.</param>
+    /// <param name="extract">The operation.</param>
+    /// <param name="index">The position of the operation in the plan.</param>
+    /// <param name="sourceName">The name of the edited document, for diagnostics.</param>
+    /// <returns>The selected pages, in their original order.</returns>
+    /// <exception cref="PdfEditPlanValidationException">The range selects no page.</exception>
+    private static List<EditedPage> Extract(
+        List<EditedPage> layout,
+        PdfExtractPagesOperation extract,
+        int index,
+        string sourceName)
+    {
+        var kept = new List<EditedPage>(layout.Count);
+
+        for (var position = 0; position < layout.Count; position++)
+        {
+            if (extract.Pages.Contains(position + 1))
+            {
+                kept.Add(layout[position]);
+            }
+        }
+
+        return kept.Count > 0
+            ? kept
+            : throw new PdfEditPlanValidationException(
+                $"operation {index}: page range '{extract.Pages}' selects no page of '{sourceName}', which has {layout.Count} page(s) at that point.");
     }
 
     /// <summary>Reads an inherited page box, or <see langword="null"/> when it is missing or unreadable.</summary>
@@ -578,8 +748,11 @@ public sealed partial class PdfEditEngine
     }
 
     /// <summary>One page of the edited document while its layout is being resolved.</summary>
-    private sealed class EditedPage(SourcePage source, PdfRectangle mediaBox)
+    private sealed class EditedPage(PdfFileReader reader, SourcePage source, PdfRectangle mediaBox)
     {
+        /// <summary>Gets the document the page comes from.</summary>
+        public PdfFileReader Reader { get; } = reader;
+
         public SourcePage Source { get; } = source;
 
         public PageRotation AddedRotation { get; set; } = PageRotation.None;
@@ -601,7 +774,7 @@ public sealed partial class PdfEditEngine
         public PageRotation EffectiveRotation =>
             PageRotationExtensions.Normalize(ReadRotation(Source).Degrees + AddedRotation.Degrees);
 
-        public EditedPage Copy() => new(Source, MediaBox)
+        public EditedPage Copy() => new(Reader, Source, MediaBox)
         {
             AddedRotation = AddedRotation,
             CropBox = CropBox,

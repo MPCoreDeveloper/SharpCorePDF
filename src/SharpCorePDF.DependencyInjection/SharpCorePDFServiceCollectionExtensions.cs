@@ -6,12 +6,14 @@ using SharpCorePDF.Application.Ports;
 using SharpCorePDF.Application.Services;
 using SharpCorePDF.Domain.Ports;
 using SharpCorePDF.Infrastructure;
+using SharpCorePDF.Infrastructure.Reading;
 
 namespace SharpCorePDF.DependencyInjection;
 
 /// <summary>
 /// Registration of SharpCorePDF in a dependency injection container: one <c>AddSharpCorePDF()</c> call
-/// wires the merger, the editor, the inspector and the PDF engines behind their ports.
+/// wires the merger, the editor, the inspector, the signer, the signature validator and the PDF engines
+/// behind their ports.
 /// </summary>
 /// <remarks>
 /// Every service is stateless, so all of them are registered as singletons; a merge executes on its
@@ -71,7 +73,7 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
         return services.AddSharpCorePDFCore();
     }
 
-    /// <summary>Registers the reader, the engines, the merger, the editor and the inspector.</summary>
+    /// <summary>Registers the reader, the engines, the merger, the editor, the inspector and the signer.</summary>
     /// <param name="services">The service collection to add to.</param>
     /// <returns>The same collection, so calls can be chained.</returns>
     private static IServiceCollection AddSharpCorePDFCore(this IServiceCollection services)
@@ -80,15 +82,27 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
         services.TryAddSingleton(sp => new PdfMergeEngine(sp.GetRequiredService<PdfEngineOptions>()));
         services.TryAddSingleton(sp => new PdfEditEngine(sp.GetRequiredService<PdfEngineOptions>()));
         services.TryAddSingleton(sp => new PdfPageContentReader(sp.GetRequiredService<PdfEngineOptions>()));
+        services.TryAddSingleton(sp => new PdfLayoutReader(sp.GetRequiredService<PdfEngineOptions>()));
+        services.TryAddSingleton(sp => new PdfObjectInspector(sp.GetRequiredService<PdfEngineOptions>()));
+        services.TryAddSingleton(sp => new PdfDocumentSigner(sp.GetRequiredService<PdfEngineOptions>()));
+        services.TryAddSingleton(sp => new PdfDocumentSignatureValidator(sp.GetRequiredService<PdfEngineOptions>()));
 
         services.TryAddSingleton<IPdfDocumentReader>(sp => sp.GetRequiredService<PdfDocumentReader>());
         services.TryAddSingleton<IPdfMergeEngine>(sp => sp.GetRequiredService<PdfMergeEngine>());
         services.TryAddSingleton<IPdfEditEngine>(sp => sp.GetRequiredService<PdfEditEngine>());
         services.TryAddSingleton<IPdfPageContentReader>(sp => sp.GetRequiredService<PdfPageContentReader>());
+        services.TryAddSingleton<IPdfPageLayoutReader>(sp => sp.GetRequiredService<PdfLayoutReader>());
+        services.TryAddSingleton<IPdfDocumentObjectInspector>(sp => sp.GetRequiredService<PdfObjectInspector>());
+        services.TryAddSingleton<IPdfDocumentSigner>(sp => sp.GetRequiredService<PdfDocumentSigner>());
+        services.TryAddSingleton<IPdfDocumentSignatureValidator>(sp => sp.GetRequiredService<PdfDocumentSignatureValidator>());
         services.TryAddSingleton<IPdfMerger, PdfMergerService>();
         services.TryAddSingleton<IPdfDocumentEditor, PdfDocumentEditorService>();
         services.TryAddSingleton<IPdfInspector, PdfInspectorService>();
         services.TryAddSingleton<IPdfContentReader, PdfContentReaderService>();
+        services.TryAddSingleton<IPdfLayoutReader, PdfLayoutReaderService>();
+        services.TryAddSingleton<IPdfObjectInspector, PdfObjectInspectorService>();
+        services.TryAddSingleton<IPdfSigner, PdfSignerService>();
+        services.TryAddSingleton<IPdfSignatureValidator, PdfSignatureValidatorService>();
 
         return services;
     }

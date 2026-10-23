@@ -317,4 +317,17 @@ public enum PdfWarningKind
     /// that lies inside the page. The page is written with the normalised box.
     /// </summary>
     PageGeometryNormalized,
+
+    /// <summary>
+    /// A reference names an object the document does not hold. The reference stays in the object graph
+    /// with <c>PdfObjectView.IsResolved</c> cleared, so the hole is visible instead of being repaired.
+    /// </summary>
+    DanglingReference,
+
+    /// <summary>
+    /// A content stream nests arrays or dictionaries deeper than <c>PdfEngineOptions.MaxNestingDepth</c>.
+    /// The operations read so far are returned and the read stops descending at that depth, so a document
+    /// cannot turn an inspection into an unbounded walk.
+    /// </summary>
+    ContentNestingTooDeep,
 }

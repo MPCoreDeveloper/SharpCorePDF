@@ -65,6 +65,12 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
 
         plan.EnsureValid();
 
+        if (plan.Operations.Any(operation => operation is PdfSplitDocumentOperation))
+        {
+            throw new PdfEditPlanValidationException(
+                "the plan asks for a split, which produces several documents; apply it with SplitAsync instead of writing one destination.");
+        }
+
         var started = Stopwatch.GetTimestamp();
         var bytes = await PdfByteReader
             .ReadAllAsync(content, options.MaxSourceBytes, sourceName, cancellationToken)
@@ -85,7 +91,8 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
         }
 
         var warnings = new List<PdfWarning>(reader.Warnings);
-        var layout = BuildLayout(reader, plan, warnings, out var layoutChanged);
+        var sources = await OpenSourcesAsync(reader, plan, warnings, cancellationToken).ConfigureAwait(false);
+        var layout = BuildLayout(sources, plan, warnings, out var layoutChanged);
 
         if (layout.Count == 0)
         {
@@ -102,20 +109,40 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
         var writer = new PdfWriter(capture ?? destination, plan.Output.TargetVersion, options);
         var catalogNumber = writer.AllocateObject();
         var pagesNodeNumber = writer.AllocateObject();
-        var copier = new PdfObjectCopier(reader, writer);
 
-        RedirectPageTree(reader, copier, pagesNodeNumber);
+        // Every document the plan reads has its own copier, because object numbers are only unique
+        // inside one document. All copiers write into the same result, which is what makes an
+        // imported page indistinguishable from a page that was already there.
+        sources.Attach(writer);
+
+        foreach (var (source, copier) in sources.Copiers)
+        {
+            RedirectPageTree(source, copier, pagesNodeNumber);
+        }
+
         AllocatePageTargets(writer, layout);
-        RedirectSourcePages(reader, layout, copier);
-        WritePages(reader, copier, writer, pagesNodeNumber, layout);
 
-        var catalog = BuildCatalog(reader, copier, pagesNodeNumber, plan, layoutChanged, warnings);
+        foreach (var (source, copier) in sources.Copiers)
+        {
+            var contributed = layout.Where(page => page.Reader == source).ToList();
+
+            if (contributed.Count == 0)
+            {
+                continue;
+            }
+
+            RedirectSourcePages(source, contributed, copier);
+        }
+
+        WritePages(sources, writer, pagesNodeNumber, layout);
+
+        var catalog = BuildCatalog(reader, sources.CopierOf(reader), pagesNodeNumber, plan, layoutChanged, warnings);
         writer.WriteObject(catalogNumber, catalog);
         WritePagesNode(writer, pagesNodeNumber, layout);
 
         // Resources, contents and annotations were reserved while the pages were built; this is where
         // their bodies are written.
-        copier.Flush();
+        sources.Flush();
 
         var infoNumber = WriteInformation(reader, plan, writer, modificationDate);
         WriteTrailer(writer, catalogNumber, infoNumber, identifier);
