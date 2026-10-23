@@ -412,7 +412,7 @@ from the same file.
 | G3 — notes a consumer can read | **Yes** | `CHANGELOG.md` holds `## [1.1.0] - 2026-10-23`, written in the same commit as the bump, with a *Known limits at 1.1.0* section that names the coverage figure and the two 1.0 limits that remain |
 | G4 — symbols and reproducible binaries | **Still partly** | no `.snupkg` is packed and nothing is code-signed; `<Deterministic>true</Deterministic>` is set, and T102 proves the *output* is stable run to run, which is not the two-build comparison this gate asks for |
 | G5 — trusted publishing and `NUGET_USERNAME` | **Unchanged, outside the tree** | the policy and the secret live on nuget.org and in the repository settings; the 1.0.0 push proved both, and `1.1.0` needs no new subject |
-| G6 — a dry run on the commit to be tagged | **To be re-run** | `Actions → publish → publish: false` against the release commit; the 1.0.0 dispatch proved the handshake, not this commit |
+| G6 — a dry run on the commit to be tagged | **To be re-run** | dispatch `publish` with `publish: false` on `main` **after** the merge and **before** the tag: its `sonar-gate` job compares `github.sha` with the newest analysis of `main`, so a dispatch from the branch is refused by design and not by a red gate. The 1.0.0 dispatch proved the handshake, not this commit |
 | G7 — the tag equals `<Version>` | **To be cut** | the tag must read `v1.1.0`; `publish.yml` refuses any other value |
 | G8 — the packages install and open a document | **After the push** | the same three checks as at 1.0.0, on `1.1.0` |
 | G9 — the quality gate on the tagged commit | **Local number recorded, 77.76%; the gate passed on the release commit** | T103's measurement and [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md). SonarCloud's own `new_coverage` is 83.5% against its floor of 80, so coverage was never the failing condition; `new_reliability_rating` = 3 was, from one new bug in `PdfImageFilters`, fixed in the release commit — after which the run on `ea95c78` reported `QUALITY GATE STATUS: PASSED`. `publish.yml` still reads the gate on the commit the tag names |
@@ -425,7 +425,7 @@ Two things stand between this table and a tag, and neither of them is code:
    the analysis is read after the merge rather than before it.
 
 The pull request that used to be on that list exists:
-[#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4), `003-pdf-platform-parity` → `main`, twelve commits.
+[#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4), `003-pdf-platform-parity` → `main`, nineteen commits.
 `artifacts/t104-release-transcript.md` is ignored by Git, so the transcript is in the body under a collapsed block
 rather than attached as a file, and the body says why. It also says that the summary row reading 76.36% is the
 run's own figure before the five tests the release commit adds — 77.76% is what the release ships with.
