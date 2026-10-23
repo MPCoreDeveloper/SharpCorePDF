@@ -369,8 +369,8 @@ one is the stricter, and it is the one this repository's 90% floor is applied to
 **The decision that figure carried is [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md)**: `1.1.0` ships with
 77.76% recorded in this section, in that record and in the release notes; the floor stays at 90% and is
 re-measured on 1.2's new code; no test is written whose only effect is to execute a line; and the parsers'
-refusal branches become a named 1.2 task. The record is **Proposed** until the release owner signs it, and the
-tag waits for that signature — an unsigned waiver is the one outcome this section is written to prevent.
+refusal branches become a named 1.2 task. The record is **Accepted**: the release owner signed it on
+2026-10-23, before the tag, because an unsigned waiver is the one outcome this section is written to prevent.
 
 ## The 1.1.0 run of `quickstart.md` (T104)
 
@@ -417,12 +417,13 @@ from the same file.
 | G8 — the packages install and open a document | **After the push** | the same three checks as at 1.0.0, on `1.1.0` |
 | G9 — the quality gate on the tagged commit | **Local number recorded, 77.76%; the gate passed on the release commit** | T103's measurement and [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md). SonarCloud's own `new_coverage` is 83.5% against its floor of 80, so coverage was never the failing condition; `new_reliability_rating` = 3 was, from one new bug in `PdfImageFilters`, fixed in the release commit — after which the run on `ea95c78` reported `QUALITY GATE STATUS: PASSED`. `publish.yml` still reads the gate on the commit the tag names |
 
-Two things stand between this table and a tag, and neither of them is code:
+Two things stood between this table and a tag, and neither of them was code. The first is done:
 
-1. **ADR-002 must be signed** by the release owner. It is `Proposed`; T103's checkbox closes on the signature,
-   and T106 does not run without it.
+1. **ADR-002 is signed** — `Accepted`, `MPCoreDeveloper`, 2026-10-23 — so T103's box closes on the measured
+   77.76% rather than on the threshold being met.
 2. **The tag must name the commit whose SonarCloud analysis is the newest on `main`** (G9, T106), which is why
-   the analysis is read after the merge rather than before it.
+   the analysis is read after the merge rather than before it — and why the G6 dry run is dispatched on `main`
+   between the two, since its `sonar-gate` job refuses a commit that `main` has not analysed.
 
 The pull request that used to be on that list exists:
 [#4](https://github.com/MPCoreDeveloper/SharpCorePDF/pull/4), `003-pdf-platform-parity` → `main`, nineteen commits.
