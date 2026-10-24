@@ -148,7 +148,7 @@ foreach (var image in images.Items)
 
 | Method | Answers |
 | --- | --- |
-| `ReadImagesAsync` | One entry per distinct image object the range paints: every page that draws it, the position of the first draw, geometry, filter, and the soft or explicit mask beside the samples. |
+| `ReadImagesAsync` | One entry per distinct image object the range paints: every page that draws it, the position of the first draw, geometry, filter, the soft or explicit mask beside the samples, and — when the payload was decoded — the pixels themselves as `DecodedPixels` in `Gray8` or `Rgb24`. |
 | `CopyImageDataAsync` | Writes the bytes of one image to a stream you supply. |
 | `CopyImageMaskDataAsync` | Writes the bytes of one image's soft or explicit mask to a stream you supply; a colour key mask has no bytes and is refused by name. |
 | `ReadAnnotationsAsync` | Every annotation with its page, subtype, rectangle, flags, text, author, date, appearance and, for a link, the resolved `Target`. |
@@ -204,7 +204,47 @@ open, because they did not open it.
 its size is known to fit in memory; `SaveImageDataAsync` and `SaveEmbeddedFileAsync` are the copy route with
 the file opened for you. A `ReadOnlyMemory<byte>` that escapes a call never aliases a rented buffer.
 
-## One page at a time
+### Pixels
+
+`Data` is the payload as the document stores it, which for most images is samples behind a compression
+filter. `DecodedPixels` is the same samples already unpacked — tightly packed, top row first, one byte per
+sample — so a caller that wants to look at a picture does not write a decoder first. `PixelFormat` names the
+layout: `Gray8`, one channel, or `Rgb24`, three interleaved.
+
+```csharp
+foreach (var image in images.Items)
+{
+    if (image.DecodedPixels is not { } pixels)
+    {
+        continue;                       // a payload, not pixels — see the table below for why
+    }
+
+    var channels = image.PixelFormat == "Rgb24" ? 3 : 1;
+    var stride = image.Width!.Value * channels;
+    var first = pixels.Span[..stride]; // the top row, one byte per sample
+}
+```
+
+The pixels are present only when nothing is left to interpret: the library decoded the payload itself, the
+document states the width, the height and eight bits per sample, the colour space is one whose samples are
+its channels (`DeviceGray`, `CalGray`, `G`, `DeviceRGB`, `CalRGB`, `RGB`), and the payload is exactly
+`Width × Height × channels` bytes. That last one is an invariant a caller can check instead of trusting, and
+it is why an image whose geometry disagrees with its data is reported rather than reinterpreted.
+
+Three cases yield `null`, and the record always states which one it is:
+
+| Case | What the entry says | Why no pixels |
+| --- | --- | --- |
+| A `DCTDecode` image | `IsDecodable` true, `Filter` `DCTDecode`, `PixelFormat` null | The bytes are already a JPEG, which a caller can read; unpacking it here would mean shipping a second decoder. |
+| A filter the library passes through — `JPXDecode`, `JBIG2Decode` and the rest | `IsDecodable` false, `Filter` names it | Nothing was decoded, so there are no samples to hand back. |
+| Another bit depth, a palette, a `CMYK` or an `ICCBased` space, or a geometry the document does not state | `BitsPerComponent` or `ColorSpace` states which | Pixels are eight bit and channel-ordered by contract; converting or guessing would hide the mismatch from the caller. |
+
+`DecodedPixels` is subject to the same inline budget as `Data`: when a payload is withheld, the pixels are
+`null` as well, because they are the payload. Nothing is resampled, colour-converted or rotated here, and
+nothing in this library renders a page to a raster — Chapter 20's exports describe a page rather than paint
+it. This surface exists so that text extraction, an OCR pipeline or a checksum can see the samples without
+carrying a decoder of its own.
+
 
 `ReadPageDetailsAsync` is how an index is built: it parses and decodes one page, yields its detail, and only
 then reads the next, so a 200-page document costs the pages consumed rather than the document.

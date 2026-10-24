@@ -43,6 +43,52 @@ public enum PdfEditOperationKind
 
     /// <summary>Only a range of the pages is kept.</summary>
     ExtractPages,
+
+    /// <summary>A page of another document is recorded over a page of this one.</summary>
+    OverlayPage,
+
+    /// <summary>A page of another document is recorded under a page of this one.</summary>
+    UnderlayPage,
+
+    /// <summary>The XMP metadata packet is replaced.</summary>
+    SetXmp,
+
+    /// <summary>The bookmarks are replaced.</summary>
+    SetOutline,
+
+    /// <summary>The page labels are replaced.</summary>
+    SetPageLabels,
+
+    /// <summary>What a viewer shows when it opens the document is replaced.</summary>
+    SetViewerPreferences,
+
+    /// <summary>An annotation is written on a page.</summary>
+    AddAnnotation,
+
+    /// <summary>An annotation on a page is replaced.</summary>
+    UpdateAnnotation,
+
+    /// <summary>An annotation is removed from a page.</summary>
+    RemoveAnnotation,
+
+    /// <summary>Form fields are written into the document's form.</summary>
+    SetFormField,
+
+    /// <summary>Every field of the document's form is put back to its default value.</summary>
+    ResetForm,
+
+    /// <summary>The form is drawn into the pages and removed, so the document keeps no form.</summary>
+    FlattenForm,
+}
+
+/// <summary>Determines whether a page of another document is recorded under or over a page of this one.</summary>
+public enum PdfOverlayLayer
+{
+    /// <summary>The page is drawn first, so the content of the page it is applied to covers it.</summary>
+    Under = 0,
+
+    /// <summary>The page is drawn last, so it covers the content of the page it is applied to.</summary>
+    Over = 1,
 }
 
 /// <summary>
@@ -254,4 +300,229 @@ public sealed record PdfExtractPagesOperation(PageRange Pages) : PdfEditOperatio
     /// <summary>Formats the operation for diagnostics.</summary>
     /// <returns>The formatted operation.</returns>
     public override string ToString() => $"extract pages '{Pages}'";
+}
+
+/// <summary>Records one page of another document over or under one page of this document.</summary>
+/// <param name="Overlay">A document that holds exactly one page: the one to record.</param>
+/// <param name="PageNumber">The one-based number of the page the overlay is applied to.</param>
+/// <param name="Options">How the overlay page is placed and composited.</param>
+/// <param name="Layer">Whether the overlay goes under or over the page content.</param>
+/// <param name="Password">The user or owner password of <paramref name="Overlay"/>, when it is encrypted.</param>
+/// <remarks>
+/// The overlay is recorded in a form XObject, so the content stream of the page it is applied to keeps
+/// its bytes and the resources of the overlay never collide with the resources of the page.
+/// </remarks>
+public sealed record PdfOverlayOperation(
+    IPdfContentSource Overlay,
+    int PageNumber,
+    PdfOverlayOptions Options,
+    PdfOverlayLayer Layer,
+    string? Password = null) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind =>
+        Layer == PdfOverlayLayer.Under ? PdfEditOperationKind.UnderlayPage : PdfEditOperationKind.OverlayPage;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The formatted operation.</returns>
+    public override string ToString() => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"record '{Overlay?.DisplayName}' {(Layer == PdfOverlayLayer.Under ? "under" : "over")} page {PageNumber} at opacity {Options?.Opacity ?? 1.0:0.##}");
+}
+
+/// <summary>Replaces the XMP metadata packet of the document.</summary>
+/// <param name="Xmp">The packet, as UTF-8 XML; it must be well formed.</param>
+/// <remarks>
+/// The packet replaces the one the source carried rather than adding to it, because a document has
+/// exactly one XMP packet at <c>/Metadata</c>. Setting a packet on a document that is written for a
+/// PDF/A profile is refused by the engine: the profile writes its own packet, and two packets would
+/// describe the same document in two ways.
+/// </remarks>
+public sealed record PdfSetXmpOperation(ReadOnlyMemory<byte> Xmp) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.SetXmp;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The formatted operation.</returns>
+    public override string ToString() => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"set the XMP packet ({Xmp.Length} bytes)");
+}
+
+/// <summary>Replaces the bookmarks of the document.</summary>
+/// <param name="Outline">The bookmarks to write; page numbers are the ones the edit leaves behind.</param>
+public sealed record PdfSetOutlineOperation(PdfOutline Outline) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.SetOutline;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The formatted operation.</returns>
+    public override string ToString() =>
+        $"set the outline ({Outline?.Items.Count ?? 0} bookmark(s))";
+}
+
+/// <summary>Replaces the page labels of the document.</summary>
+/// <param name="Labels">The labels to write, or <see cref="PdfPageLabeling.None"/> to write none.</param>
+public sealed record PdfSetPageLabelsOperation(PdfPageLabeling Labels) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.SetPageLabels;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The formatted operation.</returns>
+    public override string ToString() =>
+        $"set page labels ({Labels?.Ranges.Count ?? 0} range(s))";
+}
+
+/// <summary>Replaces what a viewer shows when it opens the document.</summary>
+/// <param name="Preferences">The window, panel, binding and printing preferences to write.</param>
+public sealed record PdfSetViewerPreferencesOperation(PdfViewerPreferences Preferences) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.SetViewerPreferences;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The formatted operation.</returns>
+    public override string ToString() => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"set viewer preferences ({Preferences?.PageLayout}, {Preferences?.PageMode})");
+}
+
+/// <summary>Writes one annotation on a page.</summary>
+/// <param name="PageNumber">The one-based page number.</param>
+/// <param name="Annotation">The annotation to write, in page space.</param>
+/// <remarks>
+/// The page's <c>/Annots</c> array keeps every annotation it already had: the new one is appended to it,
+/// and the content of the page is never rewritten. An annotation that states no identifier is named
+/// <c>scpdf-N</c>, so a later operation of the same plan can update or remove it.
+/// </remarks>
+public sealed record PdfAddAnnotationOperation(int PageNumber, PdfAnnotation Annotation) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.AddAnnotation;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The formatted operation.</returns>
+    public override string ToString() => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"add {Annotation?.Kind} annotation '{Annotation?.Name ?? "(unnamed)"}' to page {PageNumber}");
+}
+
+/// <summary>Replaces one annotation of a page with another.</summary>
+/// <param name="PageNumber">The one-based page number.</param>
+/// <param name="AnnotationId">The identifier the annotation was written with, its <c>/NM</c> entry.</param>
+/// <param name="Annotation">The annotation to write in its place.</param>
+/// <remarks>
+/// The replacement keeps the rectangle of the annotation it replaces unless the new annotation states
+/// one, and it is written as a new object: the annotation the source held is not modified, so a page
+/// that shared it with another page keeps the old one there.
+/// </remarks>
+public sealed record PdfUpdateAnnotationOperation(
+    int PageNumber,
+    string AnnotationId,
+    PdfAnnotation Annotation) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.UpdateAnnotation;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The formatted operation.</returns>
+    public override string ToString() => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"update {Annotation?.Kind} annotation '{AnnotationId}' on page {PageNumber}");
+}
+
+/// <summary>Removes one annotation from a page.</summary>
+/// <param name="PageNumber">The one-based page number.</param>
+/// <param name="AnnotationId">The identifier the annotation was written with, its <c>/NM</c> entry.</param>
+/// <remarks>
+/// The annotation leaves the page's <c>/Annots</c> array, and an appearance or an action only it
+/// referenced is not copied at all, because the objects the result keeps are the ones its pages
+/// reach. An annotation without an identifier cannot be named, so it cannot be removed by this
+/// operation.
+/// </remarks>
+public sealed record PdfRemoveAnnotationOperation(int PageNumber, string AnnotationId) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.RemoveAnnotation;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The formatted operation.</returns>
+    public override string ToString() => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"remove annotation '{AnnotationId}' from page {PageNumber}");
+}
+
+/// <summary>Writes form fields into the form of the document.</summary>
+/// <param name="Form">The fields to write, each with the page its widget is drawn on.</param>
+/// <remarks>
+/// <para>
+/// A field is merged by name: a name the document's form already carries is filled in place, keeping the
+/// ancestors and the widgets the document had, and a name it does not carry is created. Nothing else in
+/// the form is touched, so a caller can fill ten fields in one operation and leave the rest alone.
+/// </para>
+/// <para>
+/// The form is created when the document has none, and a document that carried an XFA form loses it:
+/// the XFA packet is a form of its own, and a viewer that honoured it would show the XFA fields instead
+/// of the ones this operation writes. The removal is reported as a warning rather than performed
+/// silently.
+/// </para>
+/// </remarks>
+public sealed record PdfSetFormOperation(PdfForm Form) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.SetFormField;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The number of fields and their names.</returns>
+    public override string ToString() => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"set {Form?.Fields.Count ?? 0} form field(s): {string.Join(", ", Form?.Fields.Select(field => field?.Name ?? "(null)") ?? [])}");
+}
+
+/// <summary>Puts every field of the form back to the value the document states as its default.</summary>
+/// <remarks>
+/// The default is the field's <c>/DV</c> entry, which the document wrote when it was designed; a field
+/// that states none is emptied. A read-only field is reset as well: the reset restores what the
+/// document said, and refusing it would leave a filled field that a caller asked to empty.
+/// </remarks>
+public sealed record PdfResetFormOperation : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.ResetForm;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>A fixed description of the operation.</returns>
+    public override string ToString() => "reset the form to its default values";
+}
+
+/// <summary>Draws the form into the pages and removes it, leaving no interactive field behind.</summary>
+/// <param name="PageNumber">The one-based page to flatten, or <see langword="null"/> for every page.</param>
+/// <remarks>
+/// <para>
+/// Flattening writes each widget's appearance into the content of the page that carries it, so the
+/// value is part of the page and a viewer that has no form support — and a printer — still shows it.
+/// The widgets leave the page's annotation array, and the form is removed from the document once its
+/// last widget is gone.
+/// </para>
+/// <para>
+/// The appearance is placed by the widget's rectangle, not by its default appearance: what the reader
+/// saw before the flatten is what the page shows after it.
+/// </para>
+/// </remarks>
+public sealed record PdfFlattenFormOperation(int? PageNumber = null) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.FlattenForm;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The page, or the whole form.</returns>
+    public override string ToString() =>
+        PageNumber is { } page
+            ? string.Create(
+                System.Globalization.CultureInfo.InvariantCulture,
+                $"flatten the form on page {page}")
+            : "flatten the form";
 }

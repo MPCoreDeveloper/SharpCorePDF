@@ -215,6 +215,15 @@ public sealed partial class PdfPageContentReader
             {
                 entry.Pages.Sort();
 
+                var (format, pixels) = ImagePixels.Of(
+                    entry.IsDecodable,
+                    entry.Filter,
+                    entry.ColorSpace,
+                    entry.Width,
+                    entry.Height,
+                    entry.BitsPerComponent,
+                    entry.Data);
+
                 images.Add(new PdfImageInfo
                 {
                     Id = entry.Id,
@@ -230,6 +239,8 @@ public sealed partial class PdfPageContentReader
                     ByteLength = entry.ByteLength,
                     IsBuffered = entry.Data is not null,
                     Data = entry.Data,
+                    DecodedPixels = pixels,
+                    PixelFormat = format,
                     Mask = entry.Mask,
                     Position = entry.Position,
                 });

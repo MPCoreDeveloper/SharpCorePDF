@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using SharpCorePDF.Domain.Aggregates;
 using SharpCorePDF.Domain.Exceptions;
@@ -16,6 +17,7 @@ public sealed partial class PdfEditEngine
     /// <summary>Turns the page tree of the source into the ordered list of pages the plan produces.</summary>
     /// <param name="sources">The documents of the edit.</param>
     /// <param name="plan">The plan being applied.</param>
+    /// <param name="form">The form state the operations of the plan fill in.</param>
     /// <param name="warnings">The list that receives normalisation remarks.</param>
     /// <param name="layoutChanged">Receives whether any operation changed the order or number of pages.</param>
     /// <returns>The pages in output order.</returns>
@@ -23,6 +25,7 @@ public sealed partial class PdfEditEngine
     private static List<EditedPage> BuildLayout(
         EditSources sources,
         PdfEditPlan plan,
+        FormPlan form,
         List<PdfWarning> warnings,
         out bool layoutChanged)
     {
@@ -103,7 +106,115 @@ public sealed partial class PdfEditEngine
                     break;
 
                 case PdfSetMetadataOperation:
+                case PdfSetXmpOperation:
+                case PdfSetOutlineOperation:
+                case PdfSetPageLabelsOperation:
+                case PdfSetViewerPreferencesOperation:
+                    // These describe the document rather than its pages; they are written with the
+                    // catalog, after the layout is known.
                     break;
+
+                case PdfSetFormOperation setForm:
+                {
+                    form.Touched = true;
+
+                    if (setForm.Form?.DefaultTextStyle is { } style)
+                    {
+                        form.DefaultStyle = style;
+                    }
+
+                    foreach (var field in setForm.Form?.Fields ?? [])
+                    {
+                        if (field is null)
+                        {
+                            continue;
+                        }
+
+                        EnsurePage(layout, field.PageNumber, index, document.SourceName);
+                        form.Fields.Add((index, field));
+                    }
+
+                    break;
+                }
+
+                case PdfResetFormOperation:
+                    form.Touched = true;
+                    form.Reset = true;
+                    break;
+
+                case PdfFlattenFormOperation flatten:
+                {
+                    form.Touched = true;
+
+                    if (flatten.PageNumber is { } pageNumber)
+                    {
+                        EnsurePage(layout, pageNumber, index, document.SourceName);
+                        form.FlattenPages.Add(pageNumber);
+                    }
+                    else
+                    {
+                        form.FlattenAll = true;
+                    }
+
+                    break;
+                }
+
+                case PdfOverlayOperation overlay:
+                {
+                    EnsurePage(layout, overlay.PageNumber, index, document.SourceName);
+
+                    // The operation names a document of exactly one page, so the layer is that page.
+                    // It travels with the page it was applied to: a duplicate keeps it, a deletion
+                    // removes it, and a move carries it along.
+                    var layer = sources.SourceOf(overlay);
+                    layout[overlay.PageNumber - 1].Overlays.Add(
+                        new OverlayLayer(layer, layer.Pages[0], overlay.Options, overlay.Layer));
+                    break;
+                }
+
+                case PdfAddAnnotationOperation add:
+                    ApplyAnnotation(
+                        layout,
+                        add.PageNumber,
+                        new AnnotationChange
+                        {
+                            Kind = AnnotationChangeKind.Add,
+                            Annotation = add.Annotation,
+                            Name = add.Annotation.Name ?? string.Create(CultureInfo.InvariantCulture, $"scpdf-{index + 1}"),
+                        },
+                        index,
+                        document.SourceName);
+                    break;
+
+                case PdfUpdateAnnotationOperation update:
+                    ApplyAnnotation(
+                        layout,
+                        update.PageNumber,
+                        new AnnotationChange
+                        {
+                            Kind = AnnotationChangeKind.Update,
+                            Annotation = update.Annotation,
+                            Id = update.AnnotationId,
+                            Name = update.AnnotationId,
+                        },
+                        index,
+                        document.SourceName);
+                    break;
+
+                case PdfRemoveAnnotationOperation remove:
+                    ApplyAnnotation(
+                        layout,
+                        remove.PageNumber,
+                        new AnnotationChange
+                        {
+                            Kind = AnnotationChangeKind.Remove,
+                            Id = remove.AnnotationId,
+                            Name = remove.AnnotationId,
+                        },
+                        index,
+                        document.SourceName);
+                    break;
+
 
                 case PdfImportPageOperation import:
                 {
@@ -231,18 +342,31 @@ public sealed partial class PdfEditEngine
     /// <param name="writer">The writer of the result.</param>
     /// <param name="pagesNodeNumber">The object number of the page tree node of the result.</param>
     /// <param name="layout">The pages in output order.</param>
+    /// <param name="annotations">The annotations of the edit.</param>
+    /// <param name="warnings">The list that receives the remarks made while writing.</param>
     private static void WritePages(
         EditSources sources,
         PdfWriter writer,
         int pagesNodeNumber,
-        List<EditedPage> layout)
+        List<EditedPage> layout,
+        AnnotationContext annotations,
+        List<PdfWarning> warnings)
     {
-        foreach (var entry in layout)
+        for (var index = 0; index < layout.Count; index++)
         {
+            var entry = layout[index];
             // A resized page keeps its original content stream untouched. Two tiny streams around it
             // open a graphics state, apply the scale or the offset, and close it again; a viewer
             // concatenates the array, so the original bytes are still exactly the bytes that were read.
             WriteContentFrame(writer, entry);
+
+            // The form XObject of an overlay or underlay and the stream that draws it are written
+            // before the page, because the page names both of them.
+            WriteOverlayLayers(sources, writer, entry);
+
+            // The annotations of the page are written before it for the same reason: its /Annots array
+            // names the objects, and an appearance is named by the annotation that owns it.
+            WritePageAnnotations(writer, entry, annotations, layout, index + 1, warnings);
 
             // The page object itself is written directly: a duplicated page needs its own object,
             // while the resources and annotations it shares with the original are reserved once by
@@ -268,17 +392,21 @@ public sealed partial class PdfEditEngine
     {
         var source = entry.Source.Dictionary;
         var page = new PdfDictionary();
+        var layered = entry.HasLayer;
 
         // Attributes the page inherited from its ancestors travel with the page, because the edited
         // document has one flat page tree; the page's own entries always win.
-        foreach (var inherited in entry.Source.Inherited.Entries.Where(item => !source.ContainsKey(item.Key)))
+        foreach (var inherited in entry.Source.Inherited.Entries.Where(item =>
+            !source.ContainsKey(item.Key) && !(layered && item.Key is "Resources")))
         {
             page.Set(inherited.Key, copier.Clone(inherited.Value));
         }
 
         foreach (var item in source.Entries)
         {
-            if (item.Key is "Parent" or "Rotate" or "MediaBox" or "CropBox" or "Contents")
+            if (item.Key is "Parent" or "Rotate" or "MediaBox" or "CropBox" or "Contents"
+                || (layered && item.Key is "Resources")
+                || (entry.AnnotationSlots is not null && item.Key is "Annots"))
             {
                 continue;
             }
@@ -302,13 +430,28 @@ public sealed partial class PdfEditEngine
             page.SetInteger("Rotate", rotation.Degrees);
         }
 
-        if (entry.HasContentFrame)
+        if (layered)
+        {
+            // An overlay or underlay is content, not an annotation: the streams the page already had
+            // are kept byte for byte and wrapped in q/Q, so a reader that ignores the layer still
+            // shows every byte the page carried before the edit.
+            page.Set("Contents", LayeredContents(copier, writer, entry));
+            page.Set("Resources", LayeredResources(copier, entry));
+        }
+        else if (entry.HasContentFrame)
         {
             page.Set("Contents", FramedContents(entry.Reader, copier, writer, entry, source.Get("Contents")));
         }
         else if (source.Get("Contents") is { } content)
         {
             page.Set("Contents", copier.Clone(content));
+        }
+
+        // The array is rebuilt from the slots the page kept, so a removed annotation is simply absent
+        // and an added one names the object written for it.
+        if (entry.AnnotationSlots is not null)
+        {
+            page.Set("Annots", BuildAnnots(copier, entry));
         }
 
         return page;
@@ -763,7 +906,27 @@ public sealed partial class PdfEditEngine
 
         public DomainMatrix Transform { get; set; } = DomainMatrix.Identity;
 
+        public List<OverlayLayer> Overlays { get; } = [];
+
+        /// <summary>Gets the annotations the plan added, replaced or removed on this page.</summary>
+        public List<AnnotationChange> AnnotationChanges { get; } = [];
+
+        /// <summary>Gets or sets the annotations the page carries once its changes are applied.</summary>
+        public List<AnnotationSlot>? AnnotationSlots { get; set; }
+
         public bool HasContentFrame => Transform != DomainMatrix.Identity;
+
+        /// <summary>
+        /// Gets or sets the object number of the stream that draws the flattened fields of the page,
+        /// or zero when no field of this page was flattened.
+        /// </summary>
+        public int FlattenStreamNumber { get; set; }
+
+        /// <summary>Gets the appearances a flattened page draws, by the name its stream selects them by.</summary>
+        public List<(string Name, int Number)> FlattenAppearances { get; } = [];
+
+        /// <summary>Gets a value indicating whether the page draws anything on top of its own content.</summary>
+        public bool HasLayer => Overlays.Count > 0 || FlattenStreamNumber != 0;
 
         public int PrefixNumber { get; set; }
 
@@ -774,11 +937,23 @@ public sealed partial class PdfEditEngine
         public PageRotation EffectiveRotation =>
             PageRotationExtensions.Normalize(ReadRotation(Source).Degrees + AddedRotation.Degrees);
 
-        public EditedPage Copy() => new(Reader, Source, MediaBox)
+        public EditedPage Copy()
         {
-            AddedRotation = AddedRotation,
-            CropBox = CropBox,
-            Transform = Transform,
-        };
+            var copy = new EditedPage(Reader, Source, MediaBox)
+            {
+                AddedRotation = AddedRotation,
+                CropBox = CropBox,
+                Transform = Transform,
+            };
+
+            // A duplicate draws the same layers as the page it copies, so the layers themselves are
+            // shared and the form of each is written once for both pages.
+            copy.Overlays.AddRange(Overlays);
+
+            // The annotations a page carried when it was copied travel with it the same way: a later
+            // addition to the original page is not part of the copy the plan already made.
+            copy.AnnotationChanges.AddRange(AnnotationChanges);
+            return copy;
+        }
     }
 }

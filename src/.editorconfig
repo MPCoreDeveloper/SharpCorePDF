@@ -32,6 +32,11 @@ dotnet_diagnostic.CA1720.severity = none
 # name them; renaming them would make the projection disagree with the documents it describes.
 dotnet_diagnostic.CA1720.severity = none
 
+[**/ValueObjects/PdfPageLabeling.cs]
+# CA1720: Decimal is the numbering style the PDF standard names /D and every reference manual calls the
+# decimal style; renaming it would put the API at odds with the documents it writes and reads.
+dotnet_diagnostic.CA1720.severity = none
+
 [**/ValueObjects/PdfEditOperation.cs]
 # S1694: an edit operation is a closed hierarchy of values that the engine switches over; an
 # interface would let any type claim to be an operation the engine cannot execute.

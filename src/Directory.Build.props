@@ -33,9 +33,9 @@
     <Deterministic>true</Deterministic>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
 
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <FileVersion>1.2.0.0</FileVersion>
     <Authors>MPCoreDeveloper</Authors>
     <Company>SharpCorePDF</Company>
     <Product>SharpCorePDF</Product>
@@ -51,7 +51,7 @@
       consumer reads before downloading. It stays a pointer rather than a copy: the changelog is the
       detail, and two copies of the same notes drift the moment one of them is edited.
     -->
-    <PackageReleaseNotes>1.1.0 - Creation, editing and reading in one package: SharpCorePDF depends on the four layers and carries no assemblies of its own. Adds page authoring with embedded fonts and PNG images, page editing (rotate, delete, move, duplicate, crop, resize, extract, split, import, append, metadata), layout reading with ALTO/PAGE XML/hOCR/SVG export, digital signatures and PDF/A-1b/-2b/-3b output. Both legs (net10.0, net11.0) ship in one package. Details: https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PackageReleaseNotes>1.2.0 - Parity with the 1.1 target completed: annotation authoring with drawn appearances, form creation, filling, reset and flatten through the edit plan, text measurement and word wrap, JPEG/BMP/GIF images and ICC profiles, overlays and underlays, bookmarks, page labels, viewer preferences and XMP in an edited document, incremental updates that keep an existing signature, and pixels for images a caller wants to read. Adds fill-form, watermark and sign-and-archive examples. Both legs (net10.0, net11.0) ship in one package. Details: https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/CHANGELOG.md</PackageReleaseNotes>
   </PropertyGroup>
 
   <!--

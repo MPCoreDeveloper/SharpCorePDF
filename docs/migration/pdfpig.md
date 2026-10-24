@@ -27,7 +27,7 @@ as properties on a page object you keep alive.
 | `document.Structure`, raw object access | `IPdfObjectInspector.ReadObjectsAsync(source)` returns an immutable `PdfObjectView` graph, dangling references visible and never followed | `inspect-objects` |
 | `document.Information`, XMP access | `ReadMetadataAsync` returns the XMP packet and the values parsed beside it | `read-content` |
 | `document.GetBookmarks()` and similar outline walking | `ReadOutlineAsync` returns a tree of `PdfOutlineItem` with resolved destinations | `read-content` |
-| PdfPig's `PdfDocumentBuilder` | `PdfDocumentBuilder.Create(...)` — same idea, different type in a different assembly; pages, text, vector drawing, PNG images and PDF/A output are what it adds | `author-page`, `edit-pages` |
+| PdfPig's `PdfDocumentBuilder` | `PdfDocumentBuilder.Create(...)` — same idea, different type in a different assembly; pages, text, vector drawing, PNG, JPEG, BMP and GIF images and PDF/A output are what it adds | `author-page`, `edit-pages` |
 
 Three differences that a port has to account for:
 

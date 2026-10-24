@@ -6,11 +6,15 @@ long-form reference for the API.
 
 ## The manual
 
-- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.1.0.pdf)** — 86 pages, A4, with a
+- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.2.0.pdf)** — 113 pages, A4, with a
   linked contents page and PDF bookmarks.
 - **Read the chapters as Markdown** in [`manual/src`](manual/src). Each file is one chapter, and the
-  file-name order is the chapter order. Chapters 15 to 19 are reserved for the `1.2` additions and are not
-  part of this edition; the preface says so, and the numbers are kept so that cross-references stay stable.
+  file-name order is the chapter order. This edition describes `1.2.0`. Chapters 16 to 19 were written
+  while `1.1.0` was the package on the feed, and their heads used to say which part of their surface it
+  already carried — the annotation writer and the form model shipped there, while the form writer, the
+  text layouter and the JPEG, BMP and GIF readers are what `1.2` adds. They now describe the surface as it
+  stands. The [`1.1.0` edition](SharpCorePDF-Manual-1.1.0.pdf) stays beside this one as the record of what
+  that release shipped, and the chapter numbers are kept so that a cross-reference survives both.
 
 | Chapter | What it covers |
 | --- | --- |
@@ -26,9 +30,14 @@ long-form reference for the API.
 | [9. Errors, Exceptions and Warnings](manual/src/09-error-handling.md) | The exception family, what throws when, writing files safely, and warnings versus errors. |
 | [10. Dependency Injection](manual/src/10-dependency-injection.md) | `AddSharpCorePDF`, engine options, configuration binding, logging and testing with the container. |
 | [11. Architecture](manual/src/11-architecture.md) | The layers, the life of a merge, immutability, the memory model, extension points and concurrency. |
-| [12. Authoring a Page](manual/src/12-authoring.md) | Writing a page from nothing: coordinates, standard and embedded fonts, PNG images, determinism, and the boundary of the feature. |
+| [12. Authoring a Page](manual/src/12-authoring.md) | Writing a page from nothing: coordinates, standard and embedded fonts, PNG, JPEG, BMP and GIF images, determinism, and the boundary of the feature. |
 | [13. Cookbook](manual/src/13-cookbook.md) | Complete recipes for folder merges, password prompts, extraction, encryption, uploads, logging, batching, preflight gates and cover pages. |
 | [14. Editing an Existing Document](manual/src/14-editing.md) | Rotating, deleting, moving and duplicating pages, ordering rules, metadata overrides, warnings, reproducible output and what an edit cannot change. |
+| [15. Drawing](manual/src/15-drawing.md) | Coordinates and the rectangle names, lines, rectangles, ellipses, paths and fill rules, paint and stroke style, dashes, clipping, transforms, the saved graphics state, and what the surface deliberately does not do. |
+| [16. Text Layout](manual/src/16-text-layout.md) | Measuring a line, the metrics a face reports, wrapping a paragraph into a column, alignment, justification and overflow, drawing the result, and what a layout deliberately does not do. |
+| [17. Image Formats](manual/src/17-image-formats.md) | What is read out of a PNG, a JPEG, a BMP and a GIF, the colour profile a PNG states, natural size and stretching, refusals by name, and what the surface deliberately does not do. |
+| [18. Annotations](manual/src/18-annotations.md) | The kinds and their factories, appearance streams, updating and removing by identifier, clipping, the warnings, and what an annotation is not. |
+| [19. Forms](manual/src/19-forms.md) | The field model and its factories, writing a form, filling by name, reset, flatten, appearance generation, the refusals, XFA, and reading the result back. |
 | [20. Extraction](manual/src/20-extraction.md) | `PdfReadResult<T>`, letters, words, blocks, the four export formats, the coordinate flip, reproducible export bytes, and what extraction is not. |
 | [21. Layout Analysis](manual/src/21-layout-analysis.md) | Segmentation and reading-order strategies, the em-based word rules, decorations versus prose, comparing two readings, and where the analysis stops. |
 | [22. The Object Graph](manual/src/22-object-graph.md) | One node per listed object, references reported rather than followed, dangling references, streams without bytes, and the operators of a page. |
@@ -37,7 +46,8 @@ long-form reference for the API.
 
 The first four chapters are the shortest path to a working merge. Chapters 5 to 10 cover one part of the
 API each, chapters 11 to 14 are for design context, authoring, ready-to-adapt recipes and editing, chapters
-20 to 22 cover the reading surface, and chapters 23 and 24 cover signatures and archival output.
+15 to 19 continue the authoring surface — drawing, text layout, images, annotations and forms — chapters 20
+to 22 cover the reading surface, and chapters 23 and 24 cover signatures and archival output.
 `Chapter 3` is the place to start if you only want to see a document merged.
 
 ### Building the PDF
@@ -45,7 +55,7 @@ API each, chapters 11 to 14 are for design context, authoring, ready-to-adapt re
 The PDF is generated from the Markdown chapters; do not edit it by hand.
 
 ```powershell
-python .\docs\manual\build-manual.py                 # write docs/SharpCorePDF-Manual-1.1.0.pdf
+python .\docs\manual\build-manual.py                 # write docs/SharpCorePDF-Manual-1.2.0.pdf
 python .\docs\manual\build-manual.py --keep-html     # also keep docs/manual/build/manual.html
 python .\docs\manual\build-manual.py --no-stamp      # skip the footer, bookmarks and document metadata
 ```

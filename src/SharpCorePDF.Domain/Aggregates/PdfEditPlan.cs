@@ -234,6 +234,149 @@ public sealed record PdfEditPlan
         return Add(new PdfSetMetadataOperation(metadata));
     }
 
+    /// <summary>Records one page of another document over one page of this document.</summary>
+    /// <param name="overlay">A document that holds exactly one page: the one to record.</param>
+    /// <param name="pageNumber">The one-based number of the page the overlay is applied to.</param>
+    /// <param name="options">How the overlay page is placed and composited; defaults to <see cref="PdfOverlayOptions.Default"/>.</param>
+    /// <param name="password">The user or owner password of <paramref name="overlay"/>, when it is encrypted.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="overlay"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan Overlay(
+        IPdfContentSource overlay,
+        int pageNumber,
+        PdfOverlayOptions? options = null,
+        string? password = null) =>
+        AddOverlay(overlay, pageNumber, options, PdfOverlayLayer.Over, password);
+
+    /// <summary>Records one page of another document under one page of this document.</summary>
+    /// <param name="underlay">A document that holds exactly one page: the one to record.</param>
+    /// <param name="pageNumber">The one-based number of the page the underlay is applied to.</param>
+    /// <param name="options">How the underlay page is placed and composited; defaults to <see cref="PdfOverlayOptions.Default"/>.</param>
+    /// <param name="password">The user or owner password of <paramref name="underlay"/>, when it is encrypted.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="underlay"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan Underlay(
+        IPdfContentSource underlay,
+        int pageNumber,
+        PdfOverlayOptions? options = null,
+        string? password = null) =>
+        AddOverlay(underlay, pageNumber, options, PdfOverlayLayer.Under, password);
+
+    /// <summary>Replaces the XMP metadata packet of the document.</summary>
+    /// <param name="xmp">The packet as UTF-8 XML; it must be well formed.</param>
+    /// <returns>The new plan.</returns>
+    public PdfEditPlan SetXmp(ReadOnlyMemory<byte> xmp) => Add(new PdfSetXmpOperation(xmp));
+
+    /// <summary>Replaces the bookmarks of the document.</summary>
+    /// <param name="outline">The bookmarks to write, numbered in the order the plan leaves the pages in.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="outline"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan SetOutline(PdfOutline outline)
+    {
+        ArgumentNullException.ThrowIfNull(outline);
+        return Add(new PdfSetOutlineOperation(outline));
+    }
+
+    /// <summary>Replaces the page labels of the document.</summary>
+    /// <param name="labels">The labels to write, or <see cref="PdfPageLabeling.None"/> to write none.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="labels"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan SetPageLabels(PdfPageLabeling labels)
+    {
+        ArgumentNullException.ThrowIfNull(labels);
+        return Add(new PdfSetPageLabelsOperation(labels));
+    }
+
+    /// <summary>Replaces what a viewer shows when it opens the document.</summary>
+    /// <param name="preferences">The window, panel, binding and printing preferences to write.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="preferences"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan SetViewerPreferences(PdfViewerPreferences preferences)
+    {
+        ArgumentNullException.ThrowIfNull(preferences);
+        return Add(new PdfSetViewerPreferencesOperation(preferences));
+    }
+
+    /// <summary>Writes one annotation on a page.</summary>
+    /// <param name="pageNumber">The one-based page number.</param>
+    /// <param name="annotation">The annotation to write; use <see cref="PdfAnnotations"/> to create one.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="annotation"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan AddAnnotation(int pageNumber, PdfAnnotation annotation)
+    {
+        ArgumentNullException.ThrowIfNull(annotation);
+        return Add(new PdfAddAnnotationOperation(pageNumber, annotation));
+    }
+
+    /// <summary>Replaces one annotation of a page with another.</summary>
+    /// <param name="pageNumber">The one-based page number.</param>
+    /// <param name="annotationId">The identifier the annotation was written with.</param>
+    /// <param name="annotation">The annotation to write in its place.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="annotation"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="annotationId"/> is blank.</exception>
+    public PdfEditPlan UpdateAnnotation(int pageNumber, string annotationId, PdfAnnotation annotation)
+    {
+        ArgumentNullException.ThrowIfNull(annotation);
+        ArgumentException.ThrowIfNullOrWhiteSpace(annotationId);
+        return Add(new PdfUpdateAnnotationOperation(pageNumber, annotationId, annotation));
+    }
+
+    /// <summary>Removes one annotation from a page.</summary>
+    /// <param name="pageNumber">The one-based page number.</param>
+    /// <param name="annotationId">The identifier the annotation was written with.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentException"><paramref name="annotationId"/> is blank.</exception>
+    public PdfEditPlan RemoveAnnotation(int pageNumber, string annotationId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(annotationId);
+        return Add(new PdfRemoveAnnotationOperation(pageNumber, annotationId));
+    }
+
+    /// <summary>Writes form fields into the form of the document.</summary>
+    /// <param name="form">The fields to write, each with the page its widget is drawn on.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="form"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan SetForm(PdfForm form)
+    {
+        ArgumentNullException.ThrowIfNull(form);
+        return Add(new PdfSetFormOperation(form));
+    }
+
+    /// <summary>Writes one field into the form of the document.</summary>
+    /// <param name="field">The field to write; the page it states is the page its widget is drawn on.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="field"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan SetFormField(PdfFormField field)
+    {
+        ArgumentNullException.ThrowIfNull(field);
+        return Add(new PdfSetFormOperation(PdfForm.Create(field)));
+    }
+
+    /// <summary>Writes one field on a page the call states.</summary>
+    /// <param name="pageNumber">The one-based number of the page the widget is drawn on.</param>
+    /// <param name="field">The field to write; the page of the call wins over the one the field states.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="field"/> is <see langword="null"/>.</exception>
+    public PdfEditPlan SetFormField(int pageNumber, PdfFormField field)
+    {
+        ArgumentNullException.ThrowIfNull(field);
+        return SetFormField(field with { PageNumber = pageNumber });
+    }
+
+    /// <summary>Puts every field of the form back to the value the document states as its default.</summary>
+    /// <returns>The new plan.</returns>
+    public PdfEditPlan ResetForm() => Add(new PdfResetFormOperation());
+
+    /// <summary>Draws every field of the form into its page and removes the form.</summary>
+    /// <returns>The new plan.</returns>
+    public PdfEditPlan FlattenForm() => Add(new PdfFlattenFormOperation());
+
+    /// <summary>Draws the fields of one page into it and removes them from the form.</summary>
+    /// <param name="pageNumber">The one-based number of the page to flatten.</param>
+    /// <returns>The new plan.</returns>
+    public PdfEditPlan FlattenForm(int pageNumber) => Add(new PdfFlattenFormOperation(pageNumber));
+
     /// <summary>Replaces the options of the plan.</summary>
     /// <param name="output">The new options.</param>
     /// <returns>The new plan.</returns>
@@ -274,6 +417,91 @@ public sealed record PdfEditPlan
             errors.AddRange(ValidateOperation(operation, index));
         }
 
+        // A PDF/A document carries exactly one XMP packet, and the one the profile writes is the one
+        // that declares conformance. A caller's packet would either replace that declaration or be
+        // replaced by it, so the combination is refused instead of resolved silently.
+        if (Output.PdfAProfile is { } profile && operations.Any(operation => operation is PdfSetXmpOperation))
+        {
+            errors.Add(
+                $"the XMP packet cannot be set on a document written for {profile}: the profile writes its own packet.");
+        }
+
+        // PDF/A-1b is built on a version of PDF that has no transparency, so an overlay that asks for
+        // one would state a graphics state the profile forbids. It is refused rather than written
+        // opaque, because a caller who asked for a translucent stamp would not get one.
+        if (Output.PdfAProfile == PdfAProfile.PdfA1B)
+        {
+            for (var index = 0; index < operations.Length; index++)
+            {
+                if (operations[index] is PdfOverlayOperation overlay
+                    && (overlay.Options.Opacity < 1d || overlay.Options.BlendMode != PdfOverlayBlendMode.Normal))
+                {
+                    errors.Add(
+                        $"operation {index}: a layer with an opacity below 1 or a blend mode other than Normal cannot be written for PDF/A-1b, which has no transparency.");
+                }
+
+                if (operations[index] is PdfAddAnnotationOperation { Annotation.Opacity: < 1d }
+                    || operations[index] is PdfUpdateAnnotationOperation { Annotation.Opacity: < 1d })
+                {
+                    errors.Add(
+                        $"operation {index}: an annotation with an opacity below 1 cannot be written for PDF/A-1b, which has no transparency.");
+                }
+            }
+        }
+
+        // An identifier names one annotation of the result, so two annotations cannot share one: a
+        // later update or removal would have to choose between them, and the document would report two
+        // annotations under the same name.
+        var names = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        for (var index = 0; index < operations.Length; index++)
+        {
+            if (operations[index] is not PdfAddAnnotationOperation { Annotation.Name: { Length: > 0 } name })
+            {
+                continue;
+            }
+
+            if (names.TryGetValue(name, out var first))
+            {
+                errors.Add(
+                    $"operation {index}: the annotation name '{name}' is already used by operation {first}.");
+            }
+            else
+            {
+                names[name] = index;
+            }
+        }
+
+        // A field is addressed by its name, so two operations cannot write the same name: the second
+        // would replace what the first wrote, and a caller who asked for two values would get one.
+        var fields = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        for (var index = 0; index < operations.Length; index++)
+        {
+            if (operations[index] is not PdfSetFormOperation { Form.Fields: { } formFields })
+            {
+                continue;
+            }
+
+            foreach (var field in formFields)
+            {
+                if (field is null || string.IsNullOrWhiteSpace(field.Name))
+                {
+                    continue;
+                }
+
+                if (fields.TryGetValue(field.Name, out var first))
+                {
+                    errors.Add(
+                        $"operation {index}: the form field '{field.Name}' is already set by operation {first}.");
+                }
+                else
+                {
+                    fields[field.Name] = index;
+                }
+            }
+        }
+
         return errors;
     }
 
@@ -299,6 +527,17 @@ public sealed record PdfEditPlan
     private PdfEditPlan Add(PdfEditOperation operation) =>
         new(operations.Add(operation), Output);
 
+    private PdfEditPlan AddOverlay(
+        IPdfContentSource source,
+        int pageNumber,
+        PdfOverlayOptions? options,
+        PdfOverlayLayer layer,
+        string? password)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return Add(new PdfOverlayOperation(source, pageNumber, options ?? PdfOverlayOptions.Default, layer, password));
+    }
+
     private static IEnumerable<string> ValidateOperation(PdfEditOperation operation, int index)
     {
         switch (operation)
@@ -318,6 +557,24 @@ public sealed record PdfEditPlan
 
             case PdfDeletePageOperation delete when delete.PageNumber < 1:
                 yield return $"operation {index}: page number {delete.PageNumber} is not one-based.";
+                break;
+
+            case PdfSetFormOperation setForm:
+                if (setForm.Form is null)
+                {
+                    yield return $"operation {index}: the form to write is null.";
+                    break;
+                }
+
+                foreach (var problem in setForm.Form.Validate())
+                {
+                    yield return $"operation {index}: {problem}";
+                }
+
+                break;
+
+            case PdfFlattenFormOperation flatten when flatten.PageNumber is < 1:
+                yield return $"operation {index}: page number {flatten.PageNumber} is not one-based.";
                 break;
 
             case PdfMovePageOperation move:
@@ -460,6 +717,186 @@ public sealed record PdfEditPlan
             case PdfSetMetadataOperation metadata when metadata.Metadata is null:
                 yield return $"operation {index}: the metadata to set is null.";
                 break;
+
+            case PdfOverlayOperation overlay:
+                if (overlay.Overlay is null)
+                {
+                    yield return $"operation {index}: the document to overlay is null.";
+                }
+
+                if (overlay.PageNumber < 1)
+                {
+                    yield return $"operation {index}: page number {overlay.PageNumber} is not one-based.";
+                }
+
+                if (!Enum.IsDefined(overlay.Layer))
+                {
+                    yield return $"operation {index}: overlay layer '{(int)overlay.Layer}' is not one the engine writes.";
+                }
+
+                if (overlay.Options is not { } overlayOptions)
+                {
+                    yield return $"operation {index}: the overlay options are null.";
+                }
+                else
+                {
+                    foreach (var problem in overlayOptions.Validate())
+                    {
+                        yield return $"operation {index}: {problem}";
+                    }
+                }
+
+                break;
+
+            case PdfSetXmpOperation xmp:
+                if (xmp.Xmp.IsEmpty)
+                {
+                    yield return $"operation {index}: the XMP packet is empty.";
+                }
+                else if (!IsWellFormedXml(xmp.Xmp))
+                {
+                    yield return $"operation {index}: the XMP packet is not well-formed XML.";
+                }
+
+                break;
+
+            case PdfSetOutlineOperation outline:
+                if (outline.Outline is not { } tree)
+                {
+                    yield return $"operation {index}: the outline to set is null.";
+                }
+                else
+                {
+                    foreach (var problem in tree.Validate())
+                    {
+                        yield return $"operation {index}: {problem}";
+                    }
+                }
+
+                break;
+
+            case PdfSetPageLabelsOperation labels:
+                if (labels.Labels is not { } labeling)
+                {
+                    yield return $"operation {index}: the page labels to set are null.";
+                }
+                else
+                {
+                    foreach (var problem in labeling.Validate())
+                    {
+                        yield return $"operation {index}: {problem}";
+                    }
+                }
+
+                break;
+
+            case PdfSetViewerPreferencesOperation preferences:
+                if (preferences.Preferences is not { } viewer)
+                {
+                    yield return $"operation {index}: the viewer preferences to set are null.";
+                }
+                else
+                {
+                    foreach (var problem in viewer.Validate())
+                    {
+                        yield return $"operation {index}: {problem}";
+                    }
+                }
+
+                break;
+
+            case PdfAddAnnotationOperation add:
+                if (add.PageNumber < 1)
+                {
+                    yield return $"operation {index}: page number {add.PageNumber} is not one-based.";
+                }
+
+                if (add.Annotation is not { } added)
+                {
+                    yield return $"operation {index}: the annotation to add is null.";
+                    break;
+                }
+
+                foreach (var problem in added.Validate())
+                {
+                    yield return $"operation {index}: {problem}";
+                }
+
+                break;
+
+            case PdfUpdateAnnotationOperation update:
+                if (update.PageNumber < 1)
+                {
+                    yield return $"operation {index}: page number {update.PageNumber} is not one-based.";
+                }
+
+                if (string.IsNullOrWhiteSpace(update.AnnotationId))
+                {
+                    yield return $"operation {index}: the identifier of the annotation to update is blank.";
+                }
+
+                if (update.Annotation is not { } replacement)
+                {
+                    yield return $"operation {index}: the annotation to write is null.";
+                    break;
+                }
+
+                foreach (var problem in replacement.Validate())
+                {
+                    yield return $"operation {index}: {problem}";
+                }
+
+                break;
+
+            case PdfRemoveAnnotationOperation remove:
+                if (remove.PageNumber < 1)
+                {
+                    yield return $"operation {index}: page number {remove.PageNumber} is not one-based.";
+                }
+
+                if (string.IsNullOrWhiteSpace(remove.AnnotationId))
+                {
+                    yield return $"operation {index}: the identifier of the annotation to remove is blank.";
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Reads an XMP packet to its end to prove it is well-formed XML.
+    /// </summary>
+    /// <param name="xmp">The packet, as UTF-8 bytes.</param>
+    /// <returns><see langword="true"/> when the packet parses; <see langword="false"/> when it does not.</returns>
+    /// <remarks>
+    /// A packet that does not parse is refused before the document is opened, because it would be
+    /// written into the result exactly as handed over and every reader that trusts <c>/Metadata</c>
+    /// would report a damaged document. A DTD is prohibited: an XMP packet never needs one, and one
+    /// that has it is asking the engine to fetch something.
+    /// </remarks>
+    private static bool IsWellFormedXml(ReadOnlyMemory<byte> xmp)
+    {
+        var settings = new System.Xml.XmlReaderSettings
+        {
+            DtdProcessing = System.Xml.DtdProcessing.Prohibit,
+            XmlResolver = null,
+        };
+
+        try
+        {
+            using var stream = new MemoryStream(xmp.ToArray(), writable: false);
+            using var reader = System.Xml.XmlReader.Create(stream, settings);
+
+            while (reader.Read())
+            {
+                // Reading to the end is the check: the reader throws at the first malformed byte.
+            }
+
+            return true;
+        }
+        catch (System.Xml.XmlException)
+        {
+            return false;
         }
     }
 

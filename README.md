@@ -55,10 +55,10 @@ independent implementations (`qpdf` via `pikepdf`, and `pypdf`).
 The product boundary is recorded in [ADR-001](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/adr/0001-pdf-platform-boundary.md).
 The capability target is PDFsharp 6.5 for creation and processing and PdfPig 0.1.x for reading and layout
 analysis; rendering, conversion, OCR, conformance validation, services and CLIs stay outside the product.
-`1.1.0` ships the part of that target which is implemented and evidenced — authoring, page editing,
-reading with layout analysis, signatures and PDF/A — and the remainder is scheduled for `1.2.0` in
-[`docs/parity.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/parity.md), which names
-the release of every row. Current capability is described below, not the target.
+`1.2.0` ships that target for creation, editing and reading — authoring, page editing, reading with layout
+analysis, signatures and PDF/A — with the exceptions [`docs/parity.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/parity.md)
+still records; that file names the release of every row and the test and external command behind it.
+Current capability is described below, not the target.
 
 ## What it does
 
@@ -124,9 +124,12 @@ await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
   `Kind` names the condition — the part a caller may match on, while its message is only text.
 * **A cover page can be written from nothing and merged in front.** `PdfDocumentBuilder` adds pages of
   a chosen size, draws lines of text with one of the twelve standard fonts or a TrueType program you
-  supply, and places PNG images at fixed positions — a top-left origin, `y` downwards, and the text
-  at a baseline. An embedded font is subsetted, carries a `ToUnicode` map and needs no system font; an
-  RGBA PNG gets a soft mask. The result is a `PdfByteArraySource`, so it merges without a temp file:
+  supply, and places PNG, JPEG, BMP and GIF images at fixed positions — a top-left origin, `y`
+  downwards, and the text at a baseline. An embedded font is subsetted, carries a `ToUnicode` map and
+  needs no system font; an RGBA PNG gets a soft mask, a JPEG is passed through untouched and a BMP or a
+  GIF is decoded to its first frame. The document can also carry an XMP packet, a bookmark tree, and
+  pages copied out of another file, so a cover and the chapters it binds come from one builder. The
+  result is a `PdfByteArraySource`, so it merges without a temp file:
 
   ```csharp
   var cover = PdfDocumentBuilder.Create()
@@ -141,8 +144,14 @@ await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
       .AddFile(@"C:\reports\statement.pdf");
   ```
 
-  It is authoring for fixed-position content, not a layout engine: no word wrap, tables, vector
-  drawing or JPEG images. Chapter 12 of the manual states the boundary.
+  It is authoring for fixed-position content, not a page-flow engine: no tables, page breaks, columns or
+  JPEG images, and vector drawing is shapes placed at coordinates rather than a scene graph. A paragraph
+  does wrap and align inside a fixed box — `PdfTextLayouter.Layout` measures with the face's own data and
+  hands `DrawTextLayout` the lines to draw. Chapter 15 covers the shape surface — paths, fill and stroke,
+  dashes, clipping, transforms and the saved graphics state — and Chapter 16 covers measuring and wrapping,
+  which `1.2` adds to the surface this section describes. The
+  `author-page` and `draw-shapes` scenarios in `examples/` show both: one writes a cover and merges it in
+  front of a document, the other draws a clipped, dashed, rotated page from nothing.
 * **An existing document can be edited into a new one.** `IPdfDocumentEditor` applies an immutable
   `PdfEditPlan` to a source: rotate a page, delete it, move it, duplicate it, and override document
   information. Page numbers are one-based and refer to the document state produced by the preceding
@@ -242,7 +251,7 @@ or pack all five into a local feed and install them from there:
 ```powershell
 dotnet pack .\SharpCorePDF.slnx -c Release -o $env:TEMP\SharpCorePDF-feed
 dotnet nuget add source $env:TEMP\SharpCorePDF-feed --name SharpCorePDF
-dotnet add package SharpCorePDF --version 1.0.0
+dotnet add package SharpCorePDF --version 1.2.0
 ```
 
 Every package carries the logo as its package icon and embeds this README, so the page a feed shows for
@@ -283,11 +292,11 @@ walks through each one.
 ## Documentation
 
 The [manual](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md) is the long-form
-guide to the API: twenty chapters, from the first merge to encryption, inspection, dependency injection,
+guide to the API: twenty-four chapters, from the first merge to encryption, inspection, dependency injection,
 the architecture, authoring a page, a cookbook of complete recipes, editing an existing document,
 extraction, layout analysis, the object graph, digital signatures and archival output. Read it as
-[a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.1.0.pdf)
-(the 1.1.0 edition) or chapter by chapter as Markdown, starting with
+[a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.2.0.pdf)
+(the 1.2.0 edition) or chapter by chapter as Markdown, starting with
 [Installation and First Merge](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/manual/src/03-installation.md).
 The [documentation index](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md)
 links every chapter and the supporting measurement, release and governance documents.

@@ -7,6 +7,7 @@ using SharpCorePDF.Domain.Aggregates;
 using SharpCorePDF.Domain.Ports;
 using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure;
+using SharpCorePDF.Infrastructure.Authoring;
 using SharpCorePDF.Infrastructure.Extensions;
 using SharpCorePDF.Infrastructure.Pdf;
 using SharpCorePDF.Infrastructure.Sources;
@@ -701,6 +702,51 @@ static void CreatorParity()
 
     AuthoringRow("creator: 10 pages, 200 lines, RGBA logo", () => Build(withLogo: true));
     AuthoringRow("creator: 10 pages, 200 lines, no image", () => Build(withLogo: false));
+
+    // The wrap has a row of its own because a caller lays text out far more often than it writes a
+    // whole document, and it is the part with a per-character cost: sixty sentences through one box.
+    var style = new PdfTextStyle(body, 12);
+    var paragraph = string.Join(
+        " ",
+        Enumerable.Repeat("Veuillez trouver ci-joint le décompte pour l'immeuble 12345.", 60));
+
+    LayoutRow("layout: 60 sentences wrapped at 400 pt", () => PdfTextLayouter.Layout(paragraph, style, 400));
+}
+
+/// <summary>Measures one layout shape and prints its median allocations, time and line count.</summary>
+/// <param name="label">The row label.</param>
+/// <param name="layout">The layout under measurement.</param>
+static void LayoutRow(string label, Func<PdfTextLayout> layout)
+{
+    const int Rounds = 5;
+
+    var allocated = new List<long>(Rounds);
+    var elapsed = new List<double>(Rounds);
+    var lines = 0;
+
+    // One warm-up, so JIT compilation is not part of the first measured wrap.
+    _ = layout();
+
+    for (var round = 0; round < Rounds; round++)
+    {
+        CollectForMeasurement();
+
+        var before = GC.GetTotalAllocatedBytes(precise: true);
+        var watch = Stopwatch.StartNew();
+        var result = layout();
+
+        watch.Stop();
+        allocated.Add(GC.GetTotalAllocatedBytes(precise: true) - before);
+        elapsed.Add(watch.Elapsed.TotalMilliseconds);
+        lines = result.LineCount;
+    }
+
+    allocated.Sort();
+    elapsed.Sort();
+
+    Console.WriteLine(
+        $"{label,-46} : {allocated[Rounds / 2] / 1024.0,9:N0} KB  {elapsed[Rounds / 2],8:N2} ms  "
+        + $"{lines,9:N0} lines  live after GC {ManagedHeapBytes() / 1024.0 / 1024.0,5:N2} MB");
 }
 
 /// <summary>

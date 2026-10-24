@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Security.Cryptography;
 using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure.Pdf;
@@ -65,9 +64,9 @@ internal sealed class AuthoringResources
     /// <summary>Gets the resource of an image, creating it when it is used for the first time.</summary>
     /// <param name="image">The image.</param>
     /// <returns>The resource.</returns>
-    public ImageResource UseImage(PngImage image)
+    public ImageResource UseImage(IEmbeddedImage image)
     {
-        var key = KeyFor(image);
+        var key = EmbeddedImage.KeyFor(image);
 
         if (!images.TryGetValue(key, out var resource))
         {
@@ -94,33 +93,5 @@ internal sealed class AuthoringResources
             font.Write(writer);
             hash.AppendData(font.Fingerprint);
         }
-    }
-
-    /// <summary>Builds a stable key for the prepared bytes of an image.</summary>
-    /// <param name="image">The image.</param>
-    /// <returns>The key as a hexadecimal string.</returns>
-    private static string KeyFor(PngImage image)
-    {
-        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-
-        Span<byte> size = stackalloc byte[8];
-        BinaryPrimitives.WriteInt32BigEndian(size, image.Width);
-        BinaryPrimitives.WriteInt32BigEndian(size[4..], image.Height);
-        hash.AppendData(size);
-        hash.AppendData(System.Text.Encoding.UTF8.GetBytes(image.ColorSpace.ToString() ?? string.Empty));
-        hash.AppendData(image.ColorData);
-
-        if (image.AlphaData is { } alpha)
-        {
-            hash.AppendData(alpha);
-        }
-
-        foreach (var value in image.ColorKey ?? [])
-        {
-            BinaryPrimitives.WriteInt32BigEndian(size, value);
-            hash.AppendData(size[..4]);
-        }
-
-        return Convert.ToHexString(hash.GetHashAndReset());
     }
 }

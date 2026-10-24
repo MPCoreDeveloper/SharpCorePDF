@@ -77,6 +77,47 @@ public sealed partial class PdfContentReaderTests
         Assert.Equal(PdfContentFixtures.JpegData.Length, segment.Count);
     }
 
+    /// <summary>The samples of a decoded image are exposed as pixels, with the layout they have.</summary>
+    [Fact]
+    public async Task Exposes_the_samples_of_a_decoded_image_as_pixels()
+    {
+        var source = Source(PdfContentFixtures.Images(), "images.pdf");
+
+        var result = await Reader().ReadImagesAsync(source, PageRange.All, cancellationToken: Token);
+        var flate = Assert.Single(result.Items, image => image.Filter == "FlateDecode" && image.Mask is null);
+
+        Assert.Equal("Rgb24", flate.PixelFormat);
+        Assert.Equal(PdfContentFixtures.ImageSamples, flate.DecodedPixels!.Value.ToArray());
+        Assert.Equal(2 * 2 * 3, flate.DecodedPixels!.Value.Length);
+    }
+
+    /// <summary>A JPEG stays a JPEG, so it is a payload and not a set of pixels.</summary>
+    [Fact]
+    public async Task Does_not_expose_a_jpeg_as_pixels()
+    {
+        var source = Source(PdfContentFixtures.Images(), "images.pdf");
+
+        var result = await Reader().ReadImagesAsync(source, PageRange.All, cancellationToken: Token);
+        var jpeg = Assert.Single(result.Items, image => image.Filter == "DCTDecode");
+
+        Assert.Null(jpeg.PixelFormat);
+        Assert.Null(jpeg.DecodedPixels);
+    }
+
+    /// <summary>A filter the library does not decode leaves both the payload and the pixels raw.</summary>
+    [Fact]
+    public async Task Does_not_expose_the_pixels_of_a_filter_it_cannot_decode()
+    {
+        var source = Source(PdfContentFixtures.Images(), "images.pdf");
+
+        var result = await Reader().ReadImagesAsync(source, PageRange.All, cancellationToken: Token);
+        var jpx = Assert.Single(result.Items, image => image.Filter == "JPXDecode");
+
+        Assert.False(jpx.IsDecodable);
+        Assert.Null(jpx.PixelFormat);
+        Assert.Null(jpx.DecodedPixels);
+    }
+
     /// <summary>A payload survives the document, the source and a full collection.</summary>
     [Fact]
     public async Task Keeps_the_jpeg_alive_after_everything_else_is_gone()

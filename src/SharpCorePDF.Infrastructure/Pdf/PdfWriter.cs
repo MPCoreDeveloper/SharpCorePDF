@@ -15,6 +15,7 @@ internal sealed class PdfWriter
     private readonly PdfOutputBuffer output;
     private readonly PdfSecurityWriter? security;
     private readonly Dictionary<int, long> offsets = [];
+    private readonly long origin;
     private int lastObjectNumber;
 
     /// <summary>Initializes a new instance of the <see cref="PdfWriter"/> class.</summary>
@@ -51,8 +52,44 @@ internal sealed class PdfWriter
         }
     }
 
+    /// <summary>
+    /// Creates a writer that appends a revision to a document whose bytes are already in the stream.
+    /// </summary>
+    /// <param name="destination">The stream that already holds the earlier revisions; it is written to at its current position.</param>
+    /// <param name="options">The engine options.</param>
+    /// <param name="highestObjectNumber">The highest object number an earlier revision used, so new objects are numbered above it.</param>
+    /// <param name="origin">The absolute offset of the first byte this writer writes.</param>
+    /// <returns>The writer.</returns>
+    /// <remarks>
+    /// An appended revision has no header of its own: the header of the file belongs to the first
+    /// revision, and writing a second one would make the file unreadable. Every offset recorded here is
+    /// absolute in the output, because that is what the cross-reference section of the revision holds.
+    /// </remarks>
+    public static PdfWriter Append(
+        Stream destination,
+        PdfEngineOptions options,
+        int highestObjectNumber,
+        long origin)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        ArgumentNullException.ThrowIfNull(options);
+
+        return new PdfWriter(destination, options, highestObjectNumber, origin);
+    }
+
+    private PdfWriter(Stream destination, PdfEngineOptions options, int highestObjectNumber, long origin)
+    {
+        this.origin = origin;
+        lastObjectNumber = highestObjectNumber;
+        output = new PdfOutputBuffer(destination);
+    }
+
     /// <summary>Gets the number of bytes written so far.</summary>
-    public long Length => output.Length;
+    /// <remarks>
+    /// For a writer that appends a revision this is the size of the whole file, because the bytes of the
+    /// earlier revisions precede everything this writer wrote.
+    /// </remarks>
+    public long Length => origin + output.Length;
 
     /// <summary>Reserves the next object number.</summary>
     /// <returns>The reserved object number.</returns>
@@ -66,7 +103,7 @@ internal sealed class PdfWriter
     /// <param name="body">The body of the object.</param>
     public void WriteObject(int objectNumber, PdfObject body)
     {
-        offsets[objectNumber] = output.Length;
+        offsets[objectNumber] = Length;
         output.WriteInteger(objectNumber);
         output.Write(" 0 obj\n"u8);
 
@@ -89,7 +126,7 @@ internal sealed class PdfWriter
         ArgumentNullException.ThrowIfNull(security);
 
         var objectNumber = AllocateObject();
-        offsets[objectNumber] = output.Length;
+        offsets[objectNumber] = Length;
         output.WriteInteger(objectNumber);
         output.Write(" 0 obj\n"u8);
         PdfSerializer.WriteDictionary(security.Dictionary, output);
@@ -104,7 +141,7 @@ internal sealed class PdfWriter
     {
         ArgumentNullException.ThrowIfNull(trailer);
 
-        var startXref = output.Length;
+        var startXref = Length;
         output.Write("xref\n"u8);
         WriteSubsections();
 

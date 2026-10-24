@@ -292,9 +292,27 @@ public enum PdfWarningKind
     AnnotationAppearanceRegenerated,
 
     /// <summary>
+    /// An annotation's rectangle reached outside the page and was clipped to the part that lies inside
+    /// it, or lay entirely outside it and was not written at all.
+    /// </summary>
+    AnnotationClipped,
+
+    /// <summary>
     /// A form field had no appearance and one was generated from its value and style.
     /// </summary>
     FormAppearanceGenerated,
+
+    /// <summary>
+    /// An XFA form was removed because the edit writes AcroForm fields beside it, and a viewer would
+    /// show the XFA fields instead of the ones that were written.
+    /// </summary>
+    XfaFormRemoved,
+
+    /// <summary>
+    /// A field or one of its widgets carried an action; it was copied as it stands and is never
+    /// executed, because this library has no JavaScript engine.
+    /// </summary>
+    FormFieldActionPreserved,
 
     /// <summary>
     /// A signature was requested with a timestamp, but no timestamp authority was available, so the
@@ -342,4 +360,28 @@ public enum PdfWarningKind
     /// cannot turn an inspection into an unbounded walk.
     /// </summary>
     ContentNestingTooDeep,
+
+    /// <summary>
+    /// The edit appended its result to the bytes of the source as a new revision instead of rewriting
+    /// them, so every byte of every earlier revision — and every signature that covers one — is intact.
+    /// </summary>
+    IncrementalUpdateAppended,
+
+    /// <summary>
+    /// An incremental update cannot change the version in the file header, because the header belongs to
+    /// an earlier revision. The result keeps the version of the source rather than the requested one.
+    /// </summary>
+    IncrementalUpdateVersionKept,
+
+    /// <summary>
+    /// The source carries a signature, and the edit appended a revision instead of rewriting the file,
+    /// so the signature still covers exactly the bytes it was made over.
+    /// </summary>
+    PriorSignaturePreserved,
+
+    /// <summary>
+    /// The source carries a signature, and the edit rewrote the document, so the signature no longer
+    /// covers the bytes of the result and cannot be reported as valid there.
+    /// </summary>
+    PriorSignatureInvalidated,
 }

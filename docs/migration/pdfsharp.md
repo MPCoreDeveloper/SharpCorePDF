@@ -77,4 +77,4 @@ completes it. A migration that depends on one of them should wait for 1.2 rather
 * [`docs/measurements.md`](../measurements.md) — what a merge, an edit, a read and an archive cost in time
   and memory, measured on this machine with the method written down.
 * [`docs/parity.md`](../parity.md) — the scorecard, with the test and the external command behind each row.
-* [`examples/README.md`](../../examples/README.md) — the fifteen examples, each of which runs.
+* [`examples/README.md`](../../examples/README.md) — the nineteen examples, each of which runs.

@@ -6,6 +6,11 @@ namespace SharpCorePDF.Infrastructure.Authoring;
 /// The immutable result of laying text out: the style it was laid out with, its lines and the box the
 /// lines occupy.
 /// </summary>
+/// <remarks>
+/// The lines and the box are in the layout's own space: its origin is the top-left corner of the box and
+/// its y grows downwards, so the first baseline is one ascent below that corner. Adding a point to a line
+/// start places the layout at that point on a page.
+/// </remarks>
 public sealed class PdfTextLayout
 {
     private readonly PdfTextLine[] lines;
@@ -49,7 +54,11 @@ public sealed class PdfTextLayout
     /// <summary>Gets the lines, in reading order.</summary>
     public IReadOnlyList<PdfTextLine> Lines => lines;
 
-    /// <summary>Gets the box the lines occupy.</summary>
+    /// <summary>Gets the box the lines occupy, measured from its top-left corner.</summary>
+    /// <remarks>
+    /// The left and bottom edges are zero, the width is the width the text was laid out in and the height
+    /// runs from the top of the box to the last line's descender.
+    /// </remarks>
     public PdfRectangle Bounds { get; }
 
     /// <summary>Gets the y coordinate of the first line's baseline, or zero when there are no lines.</summary>

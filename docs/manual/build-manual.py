@@ -66,9 +66,9 @@ BUILD = ROOT / "build"
 CSS = ROOT / "manual.css"
 LOGO = DOCS.parent / "Logo-256.png"
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 PRODUCT = "SharpCorePDF"
-MANUAL_TITLE = "SharpCorePDF 1.1.0 — The Manual"
+MANUAL_TITLE = "SharpCorePDF 1.2.0 — The Manual"
 
 LANGUAGE_LABELS = {
     "csharp": "C#",

@@ -6,7 +6,7 @@ about five minutes.
 ## Install the package
 
 ```bash
-dotnet add package SharpCorePDF --version 1.0.0
+dotnet add package SharpCorePDF --version 1.2.0
 ```
 
 One package is enough. `SharpCorePDF` is a meta-package that brings the domain model, the application
@@ -22,7 +22,7 @@ it; the package selects the matching assembly.
 ```bash
 dotnet new console -n MergeDemo
 cd MergeDemo
-dotnet add package SharpCorePDF --version 1.0.0
+dotnet add package SharpCorePDF --version 1.2.0
 ```
 
 Put two or more PDFs beside the project, or change the paths below. The example uses `cover.pdf`,

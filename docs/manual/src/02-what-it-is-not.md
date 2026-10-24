@@ -7,17 +7,22 @@ configuration will change that.
 ## It is not a page layout or reporting library
 
 SharpCorePDF can start a document from a blank page: `PdfDocumentBuilder` adds pages of a chosen size,
-draws lines of text in a standard or an embedded TrueType font, places PNG images at fixed positions and
+draws lines of text in a standard or an embedded TrueType font, places images at fixed positions and
 draws fixed-position vector graphics — lines, rectangles, ellipses, arbitrary paths, dashed strokes,
-transparency and clipping (Chapter 12). That is enough for a cover page, an address block, a form-shaped
-frame or a fixed marker, and it is where authorship stops. There is no word wrap, paragraph flow, table or
-list layout; text is not shaped beyond what the font program itself does; JPEG, GIF, BMP and SVG are not
-embedded; and no font is ever read from the machine the code runs on. The merge side still receives
-documents as a file, a byte array, a stream or a custom `IPdfContentSource`, copies the pages you select
-and combines them.
+transparency and clipping (Chapter 12, and Chapter 15 for the shape surface in full). It can also wrap a
+paragraph into a column, align or justify each line and draw it in one call (Chapter 16). That is enough for a
+cover page, an address block, a form-shaped frame or a fixed marker, and it is where authorship stops. There is
+no **page flow**: no table or list layout, no page breaks, no columns, and no hyphenation — a block that does
+not fit its column is refused, broken by character, clipped or continued, and a block that does not fit its
+page runs off it. Text is not shaped beyond what the font program itself does; the image formats are the
+four Chapter 12 covers, with SVG and the rest re-saved by the caller; and no font is ever read from the
+machine the code runs on. The merge side still receives documents
+as a file, a byte array, a stream or a custom `IPdfContentSource`, copies the pages you select and combines
+them.
 
-**Use instead:** a reporting or layout library that produces PDF when a page has to flow, wrap or lay
-out a table. SharpCorePDF can merge those reports afterwards and can add its own fixed-position cover.
+**Use instead:** a reporting or layout library that produces PDF when a report has to flow across pages, lay
+out a table or hyphenate its text. SharpCorePDF can merge those reports afterwards and can add its own
+fixed-position cover.
 
 ## It does not rewrite page content yet
 
@@ -31,11 +36,11 @@ Signing and archival output are separate surfaces that change the file rather th
 signature appends one revision to the bytes it is given (Chapter 23), and the archival writer states the
 structures a PDF/A profile requires (Chapter 24). Neither rewrites what a page paints.
 
-The 1.1 parity plan extends editing to page content, annotations, forms and page geometry. Page geometry
-and the page-level operations ship in `1.1.0`; page content, annotation and form authoring are `1.2.0`
-commitments under the scope amendment recorded in the specification, and this chapter will be rewritten as
-each capability ships. Until then the boundary above is the accurate one. The capabilities that stay
-outside the product at every release —
+The 1.1 parity plan extended editing to page content, annotations, forms and page geometry. Page geometry
+and the page-level operations shipped in `1.1.0`; annotation and form authoring, text layout and the
+remaining image formats shipped in `1.2.0`, and an edit can now record a page of another document over or
+under a page of the source. What an edit still does not do is rewrite the operators a page already carries:
+a layer is added beside them. The capabilities that stay outside the product at every release —
 rendering, conversion, OCR, conformance validation, services and CLIs — are the sections below.
 
 **Use instead:** a viewer/editor SDK for interactive editing, a form-filling library when field values
@@ -139,12 +144,14 @@ cookbook shows one.
 | Encrypt the merged result | Yes |
 | Learn page counts, sizes, outline size or encryption state before merging | Yes |
 | Read the images, text, comments, form fields and bookmarks a document carries | Yes |
-| Create a fixed-position page from scratch: text, PNG images, vector graphics, standard or embedded fonts | Yes |
+| Create a fixed-position page from scratch: text, PNG, JPEG, BMP and GIF images, vector graphics, standard or embedded fonts | Yes |
+| Draw lines, paths, ellipses, clipping and transforms on a page (Chapter 15) | Yes |
 | Sign a document, or validate a signature's integrity and trust | Yes |
 | Write for PDF/A-1b, -2b or -3b | Yes |
 | Read letters, words, blocks and reading order; export ALTO, PAGE XML, hOCR or SVG | Yes |
 | Walk the object graph and the operators of a page, read-only | Yes |
-| Lay out a report: flow, wrapping, tables, line breaking, JPEG images | No |
+| Lay out a report: page flow, tables, columns, hyphenation, JPEG images | No |
+| Wrap and align a paragraph inside a fixed box (Chapter 16) | Yes |
 | Change a page's size or media box, replace text or images, add or edit annotations and form fields | No |
 | Fill forms, redact, or rebuild tagged structure | No |
 | Render, convert, OCR or reflow text | No |

@@ -163,6 +163,13 @@ veraPDF 1.30.3, all three files and the same three profiles of a real six-page d
 "Microsoft: Print To PDF" reported `PASS`; `docs/parity.md` records the runs. A document whose `Text`
 annotation carries no appearance stream was refused rather than written, which is the intended behaviour.
 
+The `sign-and-archive` scenario signs what it archived: one authored page written as PDF/A-3b, and then a
+signature appended to that file (Chapter 23). The order is what makes both promises hold at once — the
+conversion writes the archival structures, and the signer adds a revision after them rather than rewriting
+anything — so a validator reads the same structures the conversion wrote, and the signature covers the whole
+file. Its certificate is made for the run and never written down, which is why the artifact can be produced
+without a key in the repository.
+
 ## What this is not
 
 - It is not a validator, and it does not report "PDF/A compliant".

@@ -70,6 +70,61 @@ The order matters, and it is why the value cannot be computed in one pass: the w
 placeholder, hashes the revision with the gap removed, patches `/ByteRange`, and only then writes the
 signature into the gap. A count that changed after the hash would invalidate the hash.
 
+## Signing an archived document
+
+A conversion rewrites a document; a signature appends a revision to the bytes it is handed. That makes the
+order the whole design: archive first, sign after.
+
+```csharp
+// 1. the archival document — Chapter 24
+await using (var archival = File.Create("archive-3b.pdf"))
+{
+    var conversion = await archiveWriter.ConvertAsync(
+        new PdfFileSource("master.pdf"), archival, PdfAProfile.PdfA3B,
+        new PdfAConversionOptions
+        {
+            ModificationDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+            DocumentId = "00112233445566778899AABBCCDDEEFF",
+        });
+
+    if (!conversion.IsWritten)
+    {
+        return;   // conversion.UnsatisfiedRequirements names every requirement the source cannot meet
+    }
+}
+
+// 2. the signature over the bytes the conversion wrote
+await using (var output = File.Create("archive-3b-signed.pdf"))
+{
+    await signer.SignAsync(
+        new PdfFileSource("archive-3b.pdf"),
+        output,
+        new PdfSignatureOptions
+        {
+            Certificate = certificate,
+            FieldName = "ArchivalSignature",
+            Reason = "Archival delivery",
+            SigningTime = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+        });
+}
+```
+
+The signed file is the archival file plus one revision, so the structures the profile asks for are still the
+ones the conversion wrote, and the signature covers all of them — pyHanko reports coverage `ENTIRE_FILE` for
+exactly this shape. The reverse order is not offered: converting a signed file reads it and writes a new one,
+which replaces the bytes the signature covers, so the signature would be reported invalid by any reader.
+
+An archival *edit* is the one case where a conversion and a signature do combine in the other order: a
+`PdfEditPlan` with a profile appends its revision (Chapter 24), so a source that is already signed keeps that
+signature and gains the archival structure, and the outcome reports `PriorSignaturePreserved`.
+
+The `sign-and-archive` scenario of `examples/SharpCorePDF.Examples` writes this pair — one authored page
+archived as PDF/A-3b and then signed — with a certificate the run makes and never writes to disk, so the
+repository carries no key. It prints the integrity and the trust of the result as two verdicts, anchored on
+that same certificate, and takes a timestamp token from `SCPDF_TIMESTAMP_TOKEN` only when the caller supplies
+one. On 2026-10-24 pyHanko read its output as field `ArchivalSignature`, `integrity intact` with coverage
+`ENTIRE_FILE`, by the signer the run made; `docs/parity.md` records the run.
+
 ## Timestamps
 
 A timestamp is the caller's, never this library's, because obtaining one opens a socket:

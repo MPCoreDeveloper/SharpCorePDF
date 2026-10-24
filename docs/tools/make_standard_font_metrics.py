@@ -1,0 +1,215 @@
+"""Generates the metrics of the twelve standard fonts this engine writes.
+
+Run with:  uv run --with pdfminer.six --with reportlab python docs/tools/make_standard_font_metrics.py
+
+Writes `src/SharpCorePDF.Infrastructure/Authoring/StandardFontMetrics.cs`. The numbers are not
+typed by hand. The codes come from the `WinAnsiEncoding` table `pdfminer.six` carries
+(`pdfminer/encodingdb.py`), which is the encoding every standard font is written with; the widths
+come from the Adobe AFM widths `reportlab` ships by glyph name, and the vertical metrics from the
+AFM data in `pdfminer/fontmetrics.py`. Where both libraries state a width for the same glyph the
+script refuses to run unless they agree, so the table is a citation of two sources rather than a
+transcription of one. A width is indexed by code, which is what the writer emits, so measurement
+and encoding cannot disagree about which glyph a character is.
+
+The file is generated rather than loaded at run time because a standard font has no font program in
+the document: without this table the engine could draw text it could not measure, and there is no
+way to know where a wrapped line ends.
+"""
+
+import importlib
+import sys
+from pathlib import Path
+
+from pdfminer import encodingdb
+from pdfminer.fontmetrics import FONT_METRICS
+
+# The enum member, the name the AFM file is filed under, and the reportlab module that carries the
+# same face's widths by glyph name.
+FAMILIES = [
+    ("Helvetica", "Helvetica", "helvetica"),
+    ("HelveticaBold", "Helvetica-Bold", "helveticabold"),
+    ("HelveticaOblique", "Helvetica-Oblique", "helveticaoblique"),
+    ("HelveticaBoldOblique", "Helvetica-BoldOblique", "helveticaboldoblique"),
+    ("TimesRoman", "Times-Roman", "timesroman"),
+    ("TimesBold", "Times-Bold", "timesbold"),
+    ("TimesItalic", "Times-Italic", "timesitalic"),
+    ("TimesBoldItalic", "Times-BoldItalic", "timesbolditalic"),
+    ("Courier", "Courier", "courier"),
+    ("CourierBold", "Courier-Bold", "courierbold"),
+    ("CourierOblique", "Courier-Oblique", "courieroblique"),
+    ("CourierBoldOblique", "Courier-BoldOblique", "courierboldoblique"),
+]
+
+OUTPUT = (
+    Path(__file__).resolve().parents[2]
+    / "src"
+    / "SharpCorePDF.Infrastructure"
+    / "Authoring"
+    / "StandardFontMetrics.cs"
+)
+
+# The WinAnsi column of pdfminer's `ENCODING` table: glyph name, then its code in each encoding.
+WIN_ANSI_COLUMN = 3
+
+
+def win_ansi_codes() -> dict[int, str]:
+    """Returns the glyph name of every code of WinAnsiEncoding."""
+    codes: dict[int, str] = {}
+
+    for row in encodingdb.ENCODING:
+        code = row[WIN_ANSI_COLUMN]
+        if code is not None:
+            codes[code] = row[0]
+
+    return codes
+
+
+def widths_by_code(font_name: str, reportlab_name: str, codes: dict[int, str]) -> list[int]:
+    """Returns the advance width of every WinAnsi code, in units of 1/1000 em.
+
+    The width of a code is the width reportlab states for the glyph that code names. Where the AFM
+    data pdfminer carries also states a width for the character, the two have to agree: a
+    disagreement means one of the two sources is not the Adobe metrics, and the table it would
+    produce would be a guess rather than a citation.
+    """
+    _, afm_widths = FONT_METRICS[font_name]
+    glyph_widths = importlib.import_module(
+        f"reportlab.pdfbase._fontdata_widths_{reportlab_name}"
+    ).widths
+    widths = [0] * 256
+    disagreements = []
+
+    for code, glyph in codes.items():
+        width = glyph_widths.get(glyph)
+        if width is None:
+            continue
+
+        widths[code] = int(round(width))
+
+        try:
+            character = encodingdb.name2unicode(glyph)
+        except Exception:  # noqa: BLE001 - a name pdfminer cannot read is simply not cross-checked
+            continue
+
+        afm_width = afm_widths.get(character)
+        if afm_width is not None and int(round(afm_width)) != widths[code]:
+            disagreements.append(f"{font_name} {code:#04x} {glyph}: {afm_width} != {width}")
+
+    if disagreements:
+        raise SystemExit("The two metric sources disagree:\n  " + "\n  ".join(disagreements))
+
+    return widths
+
+
+def metrics(font_name: str) -> tuple[int, int, int, int]:
+    """Returns the ascent, descent, cap height and x height of a font, in 1/1000 em."""
+    afm_metrics, _ = FONT_METRICS[font_name]
+
+    return (
+        int(round(afm_metrics["Ascent"])),
+        int(round(afm_metrics["Descent"])),
+        int(round(afm_metrics["CapHeight"])),
+        int(round(afm_metrics["XHeight"])),
+    )
+
+
+def format_widths(widths: list[int]) -> str:
+    """Renders one width array as a C# collection expression, sixteen values to a line."""
+    lines = []
+
+    for start in range(0, 256, 16):
+        row = ", ".join(str(width) for width in widths[start : start + 16])
+        lines.append(f"        {row},")
+
+    return "\n".join(lines)
+
+
+def build() -> str:
+    """Builds the C# source of the table."""
+    codes = win_ansi_codes()
+    parts = [
+        "// <auto-generated>",
+        "//     Generated by docs/tools/make_standard_font_metrics.py. Do not edit this file:",
+        "//     change the script and run it, so the table stays reproducible from its source.",
+        "//     The numbers are the Adobe AFM metrics pdfminer.six ships, by WinAnsiEncoding code.",
+        "// </auto-generated>",
+        "",
+        "using SharpCorePDF.Domain.ValueObjects;",
+        "",
+        "namespace SharpCorePDF.Infrastructure.Authoring;",
+        "",
+        "/// <summary>",
+        "/// The vertical metrics and advance widths of the twelve standard fonts, as their AFM files",
+        "/// state them.",
+        "/// </summary>",
+        "/// <remarks>",
+        "/// A standard font has no font program in the document, so these numbers are the only",
+        "/// description of it the engine has: <see cref=\"PdfTypeface.Measure(string, double)\"/> needs them to place a",
+        "/// line, and <see cref=\"PdfTypeface.Metrics\"/> needs them to place the next one. Widths are",
+        "/// indexed by <c>WinAnsiEncoding</c> code, which is how the writer encodes the text, so a",
+        "/// character cannot be measured as one glyph and drawn as another.",
+        "/// </remarks>",
+        "internal static class StandardFontMetrics",
+        "{",
+        "    /// <summary>Gets the vertical metrics of a standard font, in 1/1000 em.</summary>",
+        "    /// <param name=\"family\">The standard font.</param>",
+        "    /// <returns>The ascent, descent, cap height and x height, the numbers the AFM file states.</returns>",
+        "    /// <exception cref=\"ArgumentOutOfRangeException\"><paramref name=\"family\"/> is not a standard font.</exception>",
+        "    public static (int Ascent, int Descent, int CapHeight, int XHeight) Get(StandardFont family) =>",
+        "        family switch",
+        "        {",
+    ]
+
+    for member, font_name, _ in FAMILIES:
+        ascent, descent, cap_height, x_height = metrics(font_name)
+        parts.append(
+            f"            StandardFont.{member} => ({ascent}, {descent}, {cap_height}, {x_height}),"
+        )
+
+    parts += [
+        "            _ => throw new ArgumentOutOfRangeException(nameof(family), family, \"The standard font is not one the engine knows.\"),",
+        "        };",
+        "",
+        "    /// <summary>Gets the advance widths of a standard font, by WinAnsi code, in 1/1000 em.</summary>",
+        "    /// <param name=\"family\">The standard font.</param>",
+        "    /// <returns>Two hundred and fifty-six widths; a code the font has no glyph for is zero.</returns>",
+        "    /// <exception cref=\"ArgumentOutOfRangeException\"><paramref name=\"family\"/> is not a standard font.</exception>",
+        "    public static ReadOnlySpan<ushort> Widths(StandardFont family) =>",
+        "        family switch",
+        "        {",
+    ]
+
+    for member, _, _ in FAMILIES:
+        parts.append(f"            StandardFont.{member} => {member}Widths,")
+
+    parts += [
+        "            _ => throw new ArgumentOutOfRangeException(nameof(family), family, \"The standard font is not one the engine knows.\"),",
+        "        };",
+        "",
+    ]
+
+    for member, font_name, reportlab_name in FAMILIES:
+        widths = widths_by_code(font_name, reportlab_name, codes)
+        parts.append(f"    private static readonly ushort[] {member}Widths =")
+        parts.append("    [")
+        parts.append(format_widths(widths))
+        parts.append("    ];")
+        parts.append("")
+
+    parts.append("}")
+    parts.append("")
+
+    return "\n".join(parts)
+
+
+def main() -> int:
+    """Writes the table and reports what it contains."""
+    source = build()
+    OUTPUT.write_text(source, encoding="utf-8", newline="\n")
+    print(f"wrote {OUTPUT} ({len(source)} bytes, {len(FAMILIES)} faces, 256 codes each)")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

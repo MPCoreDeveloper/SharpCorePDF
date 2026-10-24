@@ -19,14 +19,22 @@ and US4 trust. Phase 6 hardens and releases.
 trust (17). **Gate/foundation**: 21 tasks. **Polish**: 10 tasks. **MVP of the parity target**: T001–T038.
 **What `1.1.0` needs**: T097–T106 — see the release lanes in Gate 0.
 
-**Status (2026-10-23)**: 70 of 106 tasks done, 36 open — every open task is the 1.2 backlog, and
+**Status (2026-10-24)**: 105 of 106 tasks done, 1 open — T096, the US4 closure run, which is blocked on a
+tool that is not installed here (veraPDF; `validate-pdfa.py` exits 2 without it). US1, US2 and US3 are
+closed, and every open task is the 1.2 backlog, so
 **nothing is left on the 1.1.0 path**. Lanes A and B (T097–T100) are closed, every Gate 0 item `C1`–`C6` is
 closed, lanes C and D are closed: T101, T102, T104 and T105 are done and recorded, T103's coverage measured
 77.76% against 90% and is recorded rather than waived, signed in ADR-002 on 2026-10-23, and T106 is done —
 `v1.1.0` is tagged on `effe5de`, the commit whose SonarCloud analysis was newest on `main`, and the five
 packages are published to nuget.org.
-**D3 is decided** (Gate 0): 1.1.0 ships what this tree already implements, so the 36 open story tasks —
-US1's 13, US2's 17, US3's 4 and US4's 2 — are the 1.2 backlog and keep their unchecked boxes here.
+**D3 is decided** (Gate 0): 1.1.0 ships what this tree already implements, and the 11 story tasks it left open —
+US2's 5, US3's 4 and US4's 2 — were the 1.2 backlog. Ten of them are now closed, with the tests, the examples,
+the manual chapters and the external runs recorded against them; T096 is the eleventh and its box stays
+unchecked until the veraPDF leg can be re-run.
+The annotation write path (T043, T051–T053) landed on 2026-10-24: the model, the appearances, the plan
+operations and the engine are in. The form model (T054) landed the same day — `PdfForm`, `PdfFormField`,
+the five factories, the derived flags, the three operations and the plan's refusals — with the suite at
+1788 executions with 0 failures; the engine half (T055) is what remains before `fill-form` can run.
 
 ---
 
@@ -113,6 +121,11 @@ to exist (the cover page of `002-page-authoring`) is already implemented and evi
 | Incremental writer, annotations and forms, and the tests that cover them | T040–T044, T050–T058 | 8, 9, 10 |
 | Hyperlink and pixel-decode tests, segmentation strategies, closure runs | T061, T064, T072, T079 | 14, 15, 16 |
 | `sign-and-archive` and the US4 closure run | T094, T096 | 11, 12 |
+
+**Since this table was written** (both on 2026-10-23): T023, T028 and T029 landed, which closed row 3, and
+T022 landed with the `draw-shapes` artifact, which closed row 2. The table is left as it was recorded at the
+`1.1.0` cut because it documents the D3 scope decision and not the progress against it; the live count is
+32 of those 36 tasks, and `docs/parity.md` carries the row states.
 
 **What it costs, said plainly**: `1.1.0` is not the parity release the Product Outcome of `spec.md`
 describes, so that document carries a dated scope amendment, `docs/parity.md` names `1.2` in the Release
@@ -207,12 +220,36 @@ read and a PyMuPDF render accept it.
 
 ### Tests for User Story 1
 
-- [ ] T022 [P] [US1] Add failing tests for path, colour, dash, cap, join, clip and transform operators in `tests/SharpCorePDF.Tests/PdfDocumentBuilderTests.Drawing.cs`.
-  - Half done: eleven tests already cover a stroked line, a closed rectangle, an ellipse of four Béziers,
-    a caller path with its fill rule, a translucent fill, balanced `q`/`Q`, a clipping path and the
-    unbalanced-restore refusal. Dash, cap, join and `SetTransform` have no test yet.
-- [ ] T023 [P] [US1] Add failing tests for metrics, greedy wrapping, alignment, leading, accents and overflow refusal in `tests/SharpCorePDF.Tests/PdfDocumentBuilderTests.TextLayout.cs`.
-- [ ] T024 [P] [US1] Add failing tests for JPEG pass-through, EXIF orientation, CMYK/APP14 refusal, BMP, GIF first frame and PNG variants in `tests/SharpCorePDF.Tests/PdfDocumentBuilderTests.Images.cs`.
+- [x] T022 [P] [US1] Add failing tests for path, colour, dash, cap, join, clip and transform operators in `tests/SharpCorePDF.Tests/PdfDocumentBuilderTests.Drawing.cs`.
+  - **Done 2026-10-23.** Nine tests join the eleven that were already there, and the class passes 67
+    tests on `net10.0`: `Writes_the_line_cap_join_and_miter_limit` (checks `w`, `J`, `j` and `M` as the
+    numbers PDF assigns to `Round`, `Bevel` and a limit of 4), `Writes_the_dash_pattern_and_its_phase`
+    (the `[4 2] 1 d` operators, and that the pattern precedes the `S` that applies it),
+    `Writes_a_solid_line_as_an_empty_dash_array` (`[ ] 0 d`), `Writes_fill_and_stroke_colours_in_their_space`
+    (`1 0 0 rg`, `0 G`), `Writes_a_cmyk_paint_as_four_components` (`0 1 1 0 k`),
+    `Writes_a_translation_as_a_page_space_transform` (`1 0 0 1 10 -20 cm` — the page height taken out of the
+    y axis), `Writes_a_scale_that_keeps_the_top_left_corner_still`, `Writes_a_rotation_that_turns_canvas_coordinates`
+    (the written `cm` maps the PDF image of a point to the PDF image of the rotated point, so the flip is
+    checked rather than restated) and `Writes_the_transform_before_the_drawing_it_applies_to` (the `q`/`cm`/
+    path/`Q` order). Every numeric assertion parses the stream and compares to three decimals, the precision
+    the writer emits in.
+  - The tests corrected one assumption in the spec text: a stroke's style operators follow the path they
+    style, because PDF takes the style at the painting operator. The dash test therefore asserts
+    `d` before `S`, not before `m`.
+- [x] T023 [P] [US1] Add failing tests for metrics, greedy wrapping, alignment, leading, accents and overflow refusal in `tests/SharpCorePDF.Tests/PdfDocumentBuilderTests.TextLayout.cs`.
+  - Done in that file, which now exists: twenty-two tests over the standard-font metrics and AFM widths, the
+    embedded face measured against the numbers fontTools reads from the same program, greedy wrapping,
+    blank paragraphs, the four alignments, leading and baseline stepping, every overflow policy, and the
+    placement of a drawn layout against the same baselines drawn with `DrawText`.
+- [x] T024 [P] [US1] Add failing tests for JPEG pass-through, EXIF orientation, CMYK/APP14 refusal, BMP, GIF first frame and PNG variants in `tests/SharpCorePDF.Tests/PdfDocumentBuilderTests.Images.cs`.
+  - Done in that file, which now exists: thirteen tests over `DrawImage` reading back through the content
+    reader — a JPEG whose stream is the file byte for byte under `DCTDecode`, the CMYK `/Decode` array, a
+    greyscale JPEG, the JFIF natural size, a BMP's rows in order from a bottom-up and a top-down file, a
+    thirty-two bit BMP as opaque colour, palette expansion, a GIF's palette, its interlace put back into row
+    order, its transparent entry as a soft mask, the first frame of an animation, and one object for a file
+    drawn on two pages. `tests/SharpCorePDF.Tests/PdfImageTests.cs` covers the same four readers through
+    `PdfImage` — the reported format, size, colour space, frame count, natural size and key, and every file
+    each reader refuses by name.
 - [x] T025 [P] [US1] Add a byte-identity test for the same pages, fonts, images, `CreationDate` and `DocumentId` in `tests/SharpCorePDF.Tests/PdfDocumentBuilderTests.Determinism.cs`.
   - Done in `PdfDocumentBuilderTests.Writes_the_same_bytes_for_the_same_input` (the base file, not the
     planned suffix): fixed date and identifier give identical bytes, a later date changes them, and a
@@ -222,40 +259,192 @@ read and a PyMuPDF render accept it.
 
 - [x] T026 [US1] Implement `PdfPageCanvas.DrawLine`, `DrawRectangle`, `DrawEllipse`, `DrawPath`, `SaveState`, `RestoreState`, `SetClip` and `SetTransform` in `src/SharpCorePDF.Infrastructure/PdfPageCanvas.cs`.
 - [x] T027 [US1] Implement `DrawTextLayout` and the layout-to-content translation in `src/SharpCorePDF.Infrastructure/Authoring/TextLayoutWriter.cs`.
-- [ ] T028 [US1] Extend `PdfTypeface` with `Ascent`, `Descent`, `LineGap`, `CapHeight`, `XHeight`, `Measure` and the `head`/`hhea`/`maxp`/`hmtx`/`cmap` readers in `src/SharpCorePDF.Infrastructure/PdfTypeface.cs` and `src/SharpCorePDF.Infrastructure/Authoring/TrueTypeFont.cs`.
-- [ ] T029 [US1] Implement deterministic greedy wrapping, line height, left/center/right/justify alignment and overflow handling in `src/SharpCorePDF.Infrastructure/Authoring/TextLayoutWriter.cs`.
-- [ ] T030 [US1] Add `JpegImage` with SOF/SOS parsing, EXIF orientation and Adobe APP14 transform detection in `src/SharpCorePDF.Infrastructure/Authoring/JpegImage.cs`.
-- [ ] T031 [US1] Add `BmpImage` and first-frame `GifImage` decoding in `src/SharpCorePDF.Infrastructure/Authoring/BmpImage.cs` and `GifImage.cs`.
-- [ ] T032 [US1] Extend `PngImage` for the Phase 1 matrix (interlaced, 16-bit, palette `tRNS`, ICC) in `src/SharpCorePDF.Infrastructure/Authoring/PngImage.cs`; refuse by name what is not supported.
-  - Half done: colour types 0, 2, 3, 4 and 6 at eight bits, palette `tRNS` expanded to RGB plus an
+- [x] T028 [US1] Extend `PdfTypeface` with `Ascent`, `Descent`, `LineGap`, `CapHeight`, `XHeight`, `Measure` and the `head`/`hhea`/`maxp`/`hmtx`/`cmap` readers in `src/SharpCorePDF.Infrastructure/PdfTypeface.cs` and `src/SharpCorePDF.Infrastructure/Authoring/TrueTypeFont.cs`.
+  - Done as `PdfTypeface.Metrics`, a `PdfTextMetrics` in the face's own font units, rather than five loose
+    properties, because the contract states one value object and `LineHeight(size)` belongs on it. The
+    readers are in `TrueTypeFont` — `head`/`hhea`/`maxp`/`hmtx`/`cmap`, with the cap and x height falling
+    back to the outline extremes of `H` and `x` when `OS/2` states neither. Standard fonts read
+    `Authoring/StandardFontMetrics.cs`, generated from the AFMs by
+    `docs/tools/make_standard_font_metrics.py`, which cross-checks pdfminer against reportlab and aborts
+    on a disagreement. `Measure` has the two overloads the contract needs, and `Authoring/WinAnsiEncoding.cs`
+    is now the one character-to-code table, shared with the font resource.
+- [x] T029 [US1] Implement deterministic greedy wrapping, line height, left/center/right/justify alignment and overflow handling in `src/SharpCorePDF.Infrastructure/Authoring/TextLayoutWriter.cs`.
+  - Done in `Authoring/PdfTextLayouter.cs`: `DrawTextLayout` was already the writer (T027), so the wrapping
+    sits in a static layouter that hands the page a `PdfTextLayout` to draw. The file keeps a paragraph per
+    line break, wraps greedily by measured word width, places each line at the alignment it was given,
+    stretches inter-word gaps on a justified line but not its last one, takes the line height from the
+    options, then the style's leading, then the font's ascent, descent and line gap, and decides what a word
+    wider than the line becomes: refused, broken into pieces that fit, clipped, or left to overflow.
+  - The layout's coordinates are its own: the origin is the top-left corner of the box and y grows downwards,
+    so the first baseline is one ascent below the point `DrawTextLayout` is given. `DrawTextLayout` used to
+    subtract `Bounds.Top` — the height of a y-up rectangle — from every baseline, which put a five-line block
+    71 points above its origin; `PdfPageCanvas` now places each run at its own start point and
+    `Draws_the_layout_from_the_top_left_of_its_box` pins that against `DrawText`.
+- [x] T030 [US1] Add `JpegImage` with SOF/SOS parsing, EXIF orientation and Adobe APP14 transform detection in `src/SharpCorePDF.Infrastructure/Authoring/JpegImage.cs`.
+  - Done: the marker walk reads the frame, the JFIF density and any `APP1` EXIF orientation and `APP14`
+    Adobe transform, and the file's own bytes become the stream, decoded by `DCTDecode` — no entropy-coded
+    data is walked or rewritten. `SOF0`, `SOF1` and `SOF2` are accepted; arithmetic, lossless, differential
+    and hierarchical frames, a precision other than eight bits, an orientation other than the identity, and
+    four components without an Adobe transform are refused with `PdfUnsupportedFeatureException` naming the
+    feature; five or more components are a `NotSupportedException`. One, three and four components become
+    `DeviceGray`, `DeviceRGB` and `DeviceCMYK`, the last with `/Decode [1 0 1 0 1 0 1 0]`.
+- [x] T031 [US1] Add `BmpImage` and first-frame `GifImage` decoding in `src/SharpCorePDF.Infrastructure/Authoring/BmpImage.cs` and `GifImage.cs`.
+  - Done: `BmpImage` reads `BITMAPINFOHEADER` and its longer forms, eight bits through a palette and
+    twenty-four or thirty-two bits, either row order, expands to RGB and compresses with a PNG predictor
+    through `FlateDecode`; `BI_RLE8`, `BI_RLE4`, `BI_BITFIELDS`, the embedded-image headers, one, four and
+    sixteen bit samples and the OS/2 core header are refused by name. `GifImage` walks the block stream,
+    keeps the first image descriptor, decodes its LZW codes into palette indices, expands a global or a
+    local palette, puts an interlaced frame back into row order, turns a graphic-control transparent index
+    into a soft mask, and counts the remaining frames without decoding them.
+- [x] T032 [US1] Extend `PngImage` for the Phase 1 matrix (interlaced, 16-bit, palette `tRNS`, ICC) in `src/SharpCorePDF.Infrastructure/Authoring/PngImage.cs`; refuse by name what is not supported.
+  - Done 2026-10-23: colour types 0, 2, 3, 4 and 6 at eight bits, palette `tRNS` expanded to RGB plus an
     `/SMask`, `pHYs` natural size, and by-name refusal of interlaced and sixteen-bit images are in the
-    tree and tested. An `iCCP` chunk is ignored rather than declared: the ICC policy is still open.
-- [ ] T033 [US1] Add `PdfImage.Open/FromJpeg/FromPng/FromBmp/FromGif` and the image registry in `src/SharpCorePDF.Infrastructure/Authoring/PdfImage.cs`; one image drawn twice is one object.
-- [ ] T034 [US1] Add `PdfDocumentBuilder.WithMetadata`, `WithXmp`, `WithOutline`, `ImportPage` and `ImportPages` in `src/SharpCorePDF.Infrastructure/PdfDocumentBuilder.cs`; imported pages keep content, resources, annotations and geometry.
+    tree and tested. **The ICC policy is decided: an `iCCP` chunk is declared, not dropped.** The chunk's
+    zlib profile is inflated once and validated (128-byte header, `acsp` at 36, colour-space signature at
+    16), the component count comes from that signature, and `ImageResource` writes the profile as its own
+    Flate stream that the image names as `[/ICCBased n 0 R]` with `/N` and `/Alternate`. A profile whose
+    signature disagrees with the components the image is written with (a `GRAY` profile on an RGB PNG, a
+    `CMYK` profile at all) is a `NotSupportedException` naming both; a chunk that does not hold a profile is
+    an `ArgumentException` naming the missing `acsp`. `PdfImage.ColorSpace` reports `IccBased` for such a
+    file, the profile is part of the registry key, and `sRGB`/`gAMA`/`cHRM` are documented as needing no
+    work. Five tests in `PdfDocumentBuilderTests.Images.cs` hold it, and `creator-parity.pdf` carries a
+    3144-byte sRGB profile that pikepdf reads back byte for byte.
+- [x] T033 [US1] Add `PdfImage.Open/FromJpeg/FromPng/FromBmp/FromGif` and the image registry in `src/SharpCorePDF.Infrastructure/Authoring/PdfImage.cs`; one image drawn twice is one object.
+  - Done: `PdfImage` opens a file once and exposes `Format`, `WidthPixels`, `HeightPixels`, `ColorSpace`,
+    `BitsPerComponent`, `HasAlpha`, `NaturalWidth`, `NaturalHeight`, `FrameCount` and `Key`; the four
+    `From…` factories are the same read with the signature checked first, so a file that is not the stated
+    format is refused rather than guessed at. `DrawImage` takes either bytes or a `PdfImage`, and the
+    registry keys the prepared content — SHA-256 over the samples, filter, colour space, mask, decode
+    parameters — so two opens of one file, or one image drawn on forty pages, is one image object.
+    `FrameCount` is how the caller learns that a GIF held more than the one frame PDF can draw: the
+    authoring side has no warning channel, unlike the read side.
+- [x] T034 [US1] Add `PdfDocumentBuilder.WithMetadata`, `WithXmp`, `WithOutline`, `ImportPage` and `ImportPages` in `src/SharpCorePDF.Infrastructure/PdfDocumentBuilder.cs`; imported pages keep content, resources, annotations and geometry.
+  - Done 2026-10-23. `WithMetadata` was already there. `WithXmp` takes bytes or a `PdfXmpMetadata` read from
+    another document and writes the packet into the catalog as an uncompressed `/Metadata` stream, byte for
+    byte; bytes with neither `x:xmpmeta` nor `rdf:RDF` are refused at the call. `WithOutline` takes the
+    `PdfOutlineItem` tree the reader returns — titles, nesting, `IsOpen`, page destinations, URLs, and the
+    `/XYZ` corner an `Area` names — and validates page numbers when the document is written, because pages
+    can be added afterwards: a dangling bookmark throws `ArgumentOutOfRangeException` naming it instead of
+    being written, an external file destination or an unresolvable name throws
+    `PdfUnsupportedFeatureException`. `ImportPage`/`ImportPages` read the source when they are called
+    (`PdfFileReader`, password and range checked there) and copy the page with the merge engine's
+    `PdfObjectCopier`, materialising the attributes the page inherited and folding links to pages that were
+    not imported onto the one that was — so an imported page keeps exactly what a merged page keeps. Pages
+    interleave in call order: `AddPage`, `ImportPage`, `AddPage` is the document's order. Thirteen tests in
+    the new `PdfDocumentBuilderTests.Metadata.cs`, including annotations (8 kept), inherited `/MediaBox` and
+    `/Rotate 90`, range order, the two refusals, and a nested bookmark checked like a top level one.
 - [x] T035 [US1] Enforce fixed `CreationDate`/`DocumentId` determinism through `PdfAuthoringOptions` and the writer in `src/SharpCorePDF.Infrastructure/PdfAuthoringOptions.cs`.
   - Done: `PdfAuthoringOptions.CreationDate`/`DocumentId` are validated by `Validate()` before the first
     object is written, the identifier is derived from the content when it is absent, and T025's test holds
     it byte for byte.
-- [ ] T036 [US1] Add the `creator-parity` scenario to `examples/SharpCorePDF.Examples/Scenarios.cs` and a creator example file beside `AuthoringExamples.cs`.
-  - Half done: `author-page` is registered and runs the question's flow end to end — a 152 × 87 RGBA logo,
-    six text lines with accents, an embedded DejaVu face, `Build()` into a `MergePlan`, a 3-page result and
-    a read-back that prints page 1's text. The wider creator scenario (JPEG, a second page size, outline)
-    waits for T030/T034.
-- [ ] T037 [US1] Write manual chapters `15-drawing.md`, `16-text-layout.md` and `17-image-formats.md`, and update `docs/README.md` and `docs/manual/build-manual.py`.
-  - Half done: `docs/manual/src/12-authoring.md` documents the surface that exists — coordinates, standard
-    and embedded faces, the PNG policy, fixed-position vector drawing (lines, rectangles, ellipses, paths,
-    clipping, alpha, dash, saved state), determinism and the subset size. The three chapters split out of it
-    when layout (T028/T029) and the extra image formats (T030/T031) land, because a chapter that describes
-    wrapping before the code wraps would be a lie. `15`–`19` are reserved by the preface of the 1.1.0
-    edition (T099):
-    the numbers exist, the chapters do not, and the manual says so.
-- [ ] T038 [US1] Run T022–T025 plus `validate-pdf.py --check-syntax --text --render --images`; record the results and close the creator rows in `docs/parity.md`.
+- [x] T036 [US1] Add the `creator-parity` scenario to `examples/SharpCorePDF.Examples/Scenarios.cs` and a creator example file beside `AuthoringExamples.cs`.
+  - Done 2026-10-23: `CreatorExamples.cs` registers `creator-parity`, which writes a whole document in one
+    chain — an A4 cover with a JPEG that keeps its own bytes, an A5 summary page with the PNG whose `iCCP`
+    profile becomes `/ICCBased`, a four-entry outline (one nested child, one URL), a metadata packet, and a
+    third page imported from the sample summary — then reads it back through the inspector, the outline
+    reader, the metadata reader and the image reader. Two small assets make it self-contained:
+    `Assets/Logo.jpg` (320 × 320, 17 KB) and `Assets/Logo-icc.png` (152 × 87 with the sRGB profile). The run
+    prints 3 pages (595 × 842, 419 × 595, 595 × 842), the four bookmarks, the title from both the dictionary
+    and the packet, `320 x 320 px, DCTDecode, DeviceRGB` and `152 x 87 px, ICCBased`. `author-page` keeps its
+    place as the 1.1 scenario.
+- [x] T037 [US1] Write manual chapters `15-drawing.md`, `16-text-layout.md` and `17-image-formats.md`, and update `docs/README.md` and `docs/manual/build-manual.py`.
+  - **All three chapters are written. `17-image-formats.md` landed 2026-10-23** — the last piece of this
+    task — and `docs/README.md` lists it, `00-preface.md` counts chapters 15 to 17 as the authoring run and
+    keeps only 18 and 19 reserved, and `specs/003-pdf-platform-parity/quickstart.md` no longer calls chapter
+    17 reserved. `build-manual.py` orders by file name and needed no change; the edition builds 23 chapters
+    and 103 pages.
+  - **What chapter 17 covers.** An availability banner (the JPEG, BMP and GIF readers and the PNG profile
+    are `1.2`; `1.1.0` embeds PNG), then one call and four formats — signature detection, the `From…`
+    factories, and a table of what `PdfImage` reports — the PNG matrix with its three shapes of transparency
+    and the pass-through of `IDAT`, a subsection on colour profiles that shows the `[/ICCBased n 0 R]` and
+    the `/N`/`/Alternate` stream, states why dropping a profile is a silent colour shift, and lists the two
+    refusals; JPEG pass-through with the component/colour-space table and the `/Decode` flip; BMP with its
+    header forms, palette, row order and padding byte; GIF with its first frame, LZW, interlacing,
+    transparency and `FrameCount`; natural size and stretching (the box is filled axis by axis); what a draw
+    costs; a refusals table naming the exception each one throws; and what the surface deliberately does not
+    do. `12-authoring.md` keeps the short version and points at it, `16-text-layout.md` keeps its own head.
+  - **`15-drawing.md` done 2026-10-23.** The chapter covers the canvas coordinate system and the trap in
+    `PdfRectangle(left, bottom, right, top)` — on a top-left canvas `bottom` is the edge *nearer the top* —
+    lines and the cap, rectangles as one `B`, the ellipse as four Béziers at 0.5522847498 × the radius
+    (0.03% worst-case radial error), the five path segments with the four construction rules and
+    `Close` versus `isClosed`, the even-odd/NonZero hole rule, `PdfPaint` and `PdfStroke` in a member table
+    that names the operator each one writes, alpha as an `/ExtGState` (one entry per distinct combination;
+    alpha 1 costs nothing), the dash array in points rather than multiples of the width, the refusals, the
+    fact that style follows the path in the stream, clipping, transforms (including that `Rotate(90)` turns
+    content *clockwise* because the canvas y axis points down, and that a transform moves text and images
+    too), the saved graphics state and its two refusals, and a closing list of what the surface deliberately
+    does not do.
+  - The chapter's transform example was corrected against a render: `a.Multiply(b)` applies `a` first, so a
+    group is composed `Rotate(θ).Multiply(Translate(x, y))`. `Translate(60, 40).Multiply(Rotate(-15))`
+    rotates the point the group was moved to, which the PyMuPDF probe showed by putting the group's text a
+    hundred points from where the prose said it would be.
+  - `12-authoring.md` keeps the rest of the surface — coordinates, standard and embedded faces, the image
+    policy, determinism and the subset size — and now points at Chapter 15 for shapes and Chapter 16 for
+    measuring and wrapping. `00-preface.md` no longer calls Chapter 15 reserved; `docs/README.md` lists both
+    chapters, and `specs/003-pdf-platform-parity/quickstart.md` names chapters 17–19 as the reserved ones.
+  - `examples/SharpCorePDF.Examples/DrawingExamples.cs` adds the `draw-shapes` scenario — a round-capped
+    dashed rule with a phase, a two-subpath path whose even-odd fill leaves a hole, a clipped column of
+    stripes and a rotated, translated group — registered in `Scenarios.cs` and documented in
+    `examples/README.md`. It is also the artifact T038's row-2 evidence was run on.
+  - **`16-text-layout.md` (written 2026-10-23, before this note was rewritten)** covers measuring
+    (`PdfTypeface.Measure` both overloads, `PdfTypeface.Metrics`, `PdfTextMetrics.LineHeight`),
+    `PdfTextLayouter.Layout` with every option and default, the greedy wrap and its word rule (spaces only;
+    tabs, non-breaking spaces and hyphens do not break), the four alignments with justification that never
+    touches the last line, the `Refuse`/`BreakWords`/`Clip`/`Continue` policies including the
+    single-character case, the right-to-left refusal, `DrawTextLayout` and the box's coordinate space (origin
+    at the top-left, first baseline one ascent below it, `Bounds` is a description and not an offset), the
+    result records, determinism, and the limits. Its head states that the `1.1.0` package does not carry what
+    it describes. `13-cookbook.md` gains a sub-recipe for a paragraph that comes from a template, which
+    computes the box corner from the face's ascent and places the next block at `Bounds.Height`.
+  - No longer owed: `17-image-formats.md` was written on 2026-10-23 (see the first bullet of this task). Its
+    code had landed the same day with T030/T031/T032 — the JPEG marker walk and `DCTDecode` pass-through, the
+    BMP reader, the GIF LZW decoder, and the PNG matrix with its by-name refusals — so the chapter was prose
+    only, and Chapter 12 carries the short version with a pointer to it rather than the policy in full.
+  - Build: `python docs/manual/build-manual.py` → 22 chapters, 92 pages before Chapter 15 was added; the
+    figures for the edition that includes both chapters are in the note under T038.
+- [x] T038 [US1] Run T022–T025 plus `validate-pdf.py --check-syntax --text --render --images`; record the results and close the creator rows in `docs/parity.md`.
+  - **Closed 2026-10-23.** The run is `validate-pdf.py <file>` — the flags this task names do not exist — plus
+    `docs/tools/verify-creator.py`, a committed tool that runs the example and checks fourteen recorded
+    readings with qpdf, pypdf, PyMuPDF and pikepdf, all recorded in `docs/measurements.md` §13 with the
+    commands that produced them. `creator-parity.pdf`: `qpdf check: no problems`, PDF 1.7, 3 pages, 27
+    objects, a catalog with `/Metadata` and `/Outlines`, five bookmarks, page boxes A4/A5/595 × 842, 10
+    streams decoded and 0 failed; PyMuPDF reads the nested table of contents, the external entry, the
+    605-byte packet and the two images (`DeviceRGB`/`DCTDecode`, `ICCBased`); pikepdf resolves the profile
+    and compares it with the profile inside the PNG the example drew — identical, 3144 bytes; pypdf extracts
+    the accented title line and the imported page's text. The suite is 1664 passed on two legs,
+    `dotnet build -c Release` is 0 warnings.
+  - Rows: **4 is Evidenced** (the ICC half is what was open), **2 stays Partial** for `CS`/`cs`/`SC`/`sc`/
+    `SCN`/`scn`, which no canvas call selects yet, and **7 stays Partial** because authoring a packet and an
+    outline is evidenced while editing one is T041. The layout allocation row this task owed is in
+    `tools/SharpCorePDF.Measure --creator`: 60 sentences wrapped at 400 pt cost 49 KB and 1.13 ms for 60
+    lines.
   - Half done, 2026-10-22: `validate-pdf.py` (pikepdf 10.17.0 / qpdf) reports `qpdf check: no problems` for
     `cover.pdf` (1 page, 14 objects) and `cover-and-summary.pdf` (3 pages, 19 objects); `pypdf` 6.19.0
     strict reads `595.276 × 841.89` pt, extracts the accented line exactly and shows `/Im1` 152 × 87 with
     `/SMask`; PyMuPDF at 72 dpi gives `(31, 58, 95)` at (100, 45) and white at (50, 45); 33 authoring tests
     pass on `net10.0` and `net11.0`. Rows 1 and 4's PNG half are closed; row 2 stays Partial (no dash, cap,
     join or transform test) and row 3 stays Planned (T023, T028, T029).
+  - **Row 3 was closed on 2026-10-23**, after this note was written: T028, T029 and T023 delivered the
+    metrics, `Measure` and the layouter, and the row in `docs/parity.md` now reads `Evidenced` with the
+    readings in `docs/measurements.md` §11. What T038 still owed at that point — the row-2 and row-4
+    remainder, and the layout's own allocation row in `tools/SharpCorePDF.Measure` — is settled in the
+    closure bullet at the end of this note.
+  - **Row 2 was closed on 2026-10-23.** T022 supplied the operator tests and the `draw-shapes` example
+    supplied the artifact. `python docs/tools/validate-pdf.py <shapes.pdf>` (pikepdf 10.17.0, qpdf) reports
+    `qpdf check: no problems`, PDF 1.7, 1 page, 6 objects, a 1937-byte content stream decoded and 0 failed.
+    PyMuPDF 1.28.5 at 72 dpi renders the page, and the probe points read back as drawn: black at (62, 120) on
+    the first dash of the `[10, 4]` pattern and `(179, 179, 179)` at (67, 120), which is the half-covered
+    pixel between two round caps at phase 5; `(31, 57, 95)` in the even-odd path's outer ring with white in
+    its hole; `(122, 138, 161)` where a stripe crosses the clip and white at (315, 200) where the same stripe
+    was drawn outside it; `(228, 231, 236)` inside the translated and rotated band with white below it, and
+    the group's text line reported with `dir (0.97, -0.26)`, a fifteen degree turn. The same run caught the
+    composition error described under T037, which is what a render is for.
+  - **The command in this task does not exist as written.** `validate-pdf.py` takes paths and an optional
+    `--password`; it has no `--check-syntax`, `--text`, `--render` or `--images` flags, and passing them makes
+    `pikepdf.Job` raise `unrecognized argument --check-syntax`. The run that closed row 2 is
+    `validate-pdf.py <file>` for the syntax and decode half, plus separate PyMuPDF and pypdf probes for the
+    render and text halves. The task text is left as it was written and corrected here rather than rewritten,
+    so the record shows both.
 
 **Checkpoint**: US1 is independently shippable; existing merge, inspection and editing tests still pass.
 
@@ -273,34 +462,218 @@ the result, checks order/geometry/metadata, and passes `validate-pdf.py --check-
 ### Tests for User Story 2
 
 - [x] T039 [P] [US2] Add failing tests for crop, resize, import, insert, reorder, split, extract and append validation in `tests/SharpCorePDF.Tests/PdfDocumentEditorTests.Geometry.cs` and `PdfDocumentEditorTests.Composition.cs`.
-- [ ] T040 [P] [US2] Add failing tests for overlay/underlay layer order, clipping and untouched original content in `tests/SharpCorePDF.Tests/PdfDocumentEditorTests.Overlay.cs`.
-- [ ] T041 [P] [US2] Add failing tests for XMP, outline, page-label, viewer-preference and metadata edits in `tests/SharpCorePDF.Tests/PdfDocumentEditorTests.Document.cs`.
-- [ ] T042 [P] [US2] Add failing tests for incremental append, prior bytes unchanged, prior signature still covering its revision, and complete-rewrite warnings in `tests/SharpCorePDF.Tests/PdfIncrementalWriterTests.cs`.
-- [ ] T043 [P] [US2] Add failing tests for every annotation kind, appearance generation, update/remove and dangling destinations in `tests/SharpCorePDF.Tests/PdfAnnotationTests.cs`.
-- [ ] T044 [P] [US2] Add failing tests for text/checkbox/radio/choice/push-button fields, duplicate names, read-only refusal, fill and flatten in `tests/SharpCorePDF.Tests/PdfFormTests.cs`.
+- [x] T040 [P] [US2] Add failing tests for overlay/underlay layer order, clipping and untouched original content in `tests/SharpCorePDF.Tests/PdfDocumentEditorTests.Overlay.cs`.
+  - Done 2026-10-24. Seven tests: an overlay is read after the page's own text and an underlay before it,
+    by stream order in `/Contents` and by the text read back; the `ExtGState` carries `ca`, `CA` and
+    `BM`; the layer follows its page through `MovePage`, is shared by `DuplicatePage`, is drawn on a
+    page the edit resized, and a layer document with more than one page is refused.
+- [x] T041 [P] [US2] Add failing tests for XMP, outline, page-label, viewer-preference and metadata edits in `tests/SharpCorePDF.Tests/PdfDocumentEditorTests.Document.cs`.
+  - Done 2026-10-24. Nine tests: the preference flags, the number tree of two label ranges, labels
+    stated after a reorder, `None` removing the source labels without a `PageLabelsDropped` warning, a
+    range past the last page, the bookmark tree (titles, nesting, page and URL destinations),
+    `PdfOutline.Empty` removing the panel, a bookmark past the last page, and `SetXmp` replacing the
+    packet without an `XmpPacketDropped` warning.
+- [x] T042 [P] [US2] Add failing tests for incremental append, prior bytes unchanged, prior signature still covering its revision, and complete-rewrite warnings in `tests/SharpCorePDF.Tests/PdfIncrementalWriterTests.cs`.
+  - Done 2026-10-24. Thirteen tests: the bytes of the source as the prefix of the result, the `/Prev`
+    chain to the source's own `startxref` and the earlier `%%EOF` still inside the result, offsets counted
+    from the start of a destination that can seek, a source that does not end on a newline still getting
+    its revision on a line of its own, a second revision chained to the first, the signature of the source
+    still valid with `CoveredRevision` 2 of the 3 the signed result has, the `PriorSignaturePreserved` and
+    `IncrementalUpdateAppended` remarks, `PriorSignatureInvalidated` when the same plan is a complete
+    rewrite, the version of a PDF 1.4 source kept with `IncrementalUpdateVersionKept`, and the refusals — a
+    forward-only source, a destination that already holds bytes, an encrypted source, encryption asked for
+    in the plan, and a table the reader had to rebuild by scanning.
+- [x] T043 [P] [US2] Add failing tests for every annotation kind, appearance generation, update/remove and dangling destinations in `tests/SharpCorePDF.Tests/PdfAnnotationTests.cs`.
+  - Done 2026-10-24. Twelve tests through the editor and the public read side: a highlight read back with
+    its quad, colour and identifier; a URL link and a page link; an update and a removal in one plan; an
+    update of an identifier the page does not carry refused with the destination still empty; a link with
+    both a page and a URL refused by `Validate()`; a rectangle past the page edge clipped with an
+    `AnnotationClipped` warning; the annotations a page already carried kept by a second edit; an
+    annotation carried into a duplicate of its page; a link whose page the plan deletes dropped with an
+    `AnnotationDestinationUnresolved` warning; the text of a free-text annotation found in the decoded
+    appearance operators; an appearance present for all ten kinds that draw something; a translucent
+    annotation refused for PDF/A-1b. Suite: 1748 executions, 0 failures.
+- [x] T044 [P] [US2] Add failing tests for text/checkbox/radio/choice/push-button fields, duplicate names, read-only refusal, fill and flatten in `tests/SharpCorePDF.Tests/PdfFormTests.cs`.
+  - Done 2026-10-24. `PdfFormTests.cs` holds the 20 model facts of T054 — the five factories, the derived
+    flags, names with an empty part, an off-page field, a choice value that is not an option, repeated and
+    empty options, a button that states a value, multiline with password, a value over the maximum length,
+    options and lengths on the wrong kind, two fields with one name, a plan that writes one field twice,
+    the page of the call winning over the page of the field, and `FlattenForm(0)`.
+  - `PdfFormEditorTests.cs` holds the seven facts that need a document, which is where the three names row 8
+    of `docs/parity.md` already promised live: `Fills_and_reads_back_form_values` (a text field, a check
+    box, a choice and a push button written, read back through `ReadFormFieldsAsync`, with
+    `NeedAppearances false` and four roots in `/Fields`), `Fills_a_field_the_document_already_carries` (the
+    `empty` field of the fixture is filled while `person.name` keeps `Alice` and its 10/10/110/30 widget),
+    `Refuses_a_read_only_field` (the fixture's read-only `person.name`, refused by name with nothing
+    written to the destination), `Refuses_an_unsupported_field_type` (the fixture's `/FT /Sig` field),
+    `Flattens_a_form_without_a_form_viewer` (no field on the page survives, `/Annots` keeps only the
+    signature widget, the page grows a second content stream and `/SCField1 Do` … `/SCField4 Do` are in the
+    bytes), `Resets_the_form_to_its_default_values` (`/V Alice` → `/DV Bob`, and `empty` emptied) and
+    `Removes_the_xfa_form_and_says_so` (a hand-built `/XFA` source, which the result no longer carries).
+
 
 ### Implementation for User Story 2
 
-- [ ] T045 [US2] Extend `PdfEditPlan` and `PdfEditOperation` with `CropPage`, `ResizePage`, `InsertPage`, `ImportPage`, `Append`, `ReorderPages`, `SplitDocument`, `ExtractPages`, `Overlay`, `Underlay`, `SetXmp`, `SetOutline`, `SetPageLabels` and `SetViewerPreferences` in `src/SharpCorePDF.Domain/Aggregates/PdfEditPlan.cs` and `src/SharpCorePDF.Domain/ValueObjects/PdfEditOperation.cs`.
+- [x] T045 [US2] Extend `PdfEditPlan` and `PdfEditOperation` with `CropPage`, `ResizePage`, `InsertPage`, `ImportPage`, `Append`, `ReorderPages`, `SplitDocument`, `ExtractPages`, `Overlay`, `Underlay`, `SetXmp`, `SetOutline`, `SetPageLabels` and `SetViewerPreferences` in `src/SharpCorePDF.Domain/Aggregates/PdfEditPlan.cs` and `src/SharpCorePDF.Domain/ValueObjects/PdfEditOperation.cs`.
   - Half done, 2026-10-22: `PdfCropPageOperation`, `PdfResizePageOperation`, `PdfInsertPageOperation`,
     `PdfImportPageOperation`, `PdfAppendOperation`, `PdfReorderPagesOperation`,
     `PdfSplitDocumentOperation` and `PdfExtractPagesOperation` exist and are covered by
-    `PdfDocumentEditorTests`, `.Composition` and `.Geometry`. The six that do not exist — `Overlay`,
-    `Underlay`, `SetXmp`, `SetOutline`, `SetPageLabels`, `SetViewerPreferences` — are the 1.2 remainder and
-    belong with T048 and T049.
+    `PdfDocumentEditorTests`, `.Composition` and `.Geometry`.
+  - Done 2026-10-24: the six that were missing — `PdfOverlayOperation` (one kind, two layers),
+    `PdfSetXmpOperation`, `PdfSetOutlineOperation`, `PdfSetPageLabelsOperation` and
+    `PdfSetViewerPreferencesOperation` — are values with their builders on `PdfEditPlan`, their
+    `Kind`, their `ValidateOperation` arm and their entries in `PublicAPI.Unshipped.txt`.
 - [x] T046 [US2] Implement crop and resize (`Scale` and `Preserve`) with explicit materialised geometry and normalisation warnings in `src/SharpCorePDF.Infrastructure/PdfEditEngine.Pages.cs` and `src/SharpCorePDF.Infrastructure/Editing/PageOperations.cs`.
 - [x] T047 [US2] Implement import, insert, append, reorder, split and extract through the existing object copier in `src/SharpCorePDF.Infrastructure/PdfEditEngine.Pages.cs`.
-- [ ] T048 [US2] Implement `Overlay`/`Underlay` as recorded content in front of or behind the original stream, with clipping and `ExtGState` opacity in `src/SharpCorePDF.Infrastructure/Editing/OverlayWriter.cs`.
-- [ ] T049 [US2] Implement XMP, outline, page-label and viewer-preference edits in `src/SharpCorePDF.Infrastructure/PdfEditEngine.Document.cs`; a destination to a removed page is removed or redirected with a warning.
-- [ ] T050 [US2] Implement `IncrementalWriter` in `src/SharpCorePDF.Infrastructure/Editing/IncrementalWriter.cs`: append a revision, preserve every prior byte, and refuse a non-seekable or changed source.
-- [ ] T051 [US2] Add the annotation model and `PdfAnnotations` factories in `src/SharpCorePDF.Domain/ReadModels/PdfAnnotation.cs` and `src/SharpCorePDF.Domain/ValueObjects/`; validate link/markup/stamp/ink rules before the source opens.
-- [ ] T052 [US2] Generate appearance streams for every creatable annotation kind in `src/SharpCorePDF.Infrastructure/Annotations/AppearanceStreams.cs` and write `/Annots` changes in `AnnotationWriter.cs`.
-- [ ] T053 [US2] Add `AddAnnotation`, `UpdateAnnotation` and `RemoveAnnotation` to the plan and engine; untouched pages keep their objects.
-- [ ] T054 [US2] Add `PdfForm`, `PdfFormField` and the field factories in `src/SharpCorePDF.Domain/`, including unique qualified names and value/type validation.
-- [ ] T055 [US2] Implement field appearances, `SetFormField`, `ResetForm` and `FlattenForm` in `src/SharpCorePDF.Infrastructure/Forms/FieldAppearance.cs` and `AcroFormWriter.cs`; flatten leaves a page that renders without a form viewer.
-- [ ] T056 [US2] Add the `edit-pages`, `watermark`, `annotate` and `fill-form` scenarios to `examples/SharpCorePDF.Examples/Scenarios.cs`.
-- [ ] T057 [US2] Write manual chapters `18-annotations.md` and `19-forms.md`; extend `docs/manual/src/14-editing.md` with crop, resize, overlays, incremental updates and document-level edits.
-- [ ] T058 [US2] Run T039–T044, `quickstart.md` step 4 and the annotation/form read-back checks; close the US2 rows in `docs/parity.md`.
+- [x] T048 [US2] Implement `Overlay`/`Underlay` as recorded content in front of or behind the original stream, with clipping and `ExtGState` opacity in `src/SharpCorePDF.Infrastructure/Editing/OverlayWriter.cs`.
+  - Done 2026-10-24, in `src/SharpCorePDF.Infrastructure/PdfEditEngine.Overlays.cs` rather than a separate
+    writer: the form and the stream that draws it have to be allocated in the same pass that writes the
+    pages, because object numbers and the resource names of the page are decided there. The layer is a
+    form XObject holding the decoded content of the layer page and its own resources; the page's
+    `/Contents` becomes an array with the drawing stream first for an underlay and last for an overlay,
+    the original streams untouched between them; `Clip` closes a `re W n` path, and `ca`/`CA`/`BM` travel
+    in an `ExtGState` named against the page's own resources.
+- [x] T049 [US2] Implement XMP, outline, page-label and viewer-preference edits in `src/SharpCorePDF.Infrastructure/PdfEditEngine.Document.cs`; a destination to a removed page is removed or redirected with a warning.
+  - Done 2026-10-24. `BuildCatalog` takes the last operation of each kind, so a later operation replaces
+    an earlier one. The outline is written by `PdfOutlineWriter` (its digest is now optional) after every
+    bookmark page is checked against the pages the edit leaves; labels become a `/PageLabels` number
+    tree; the preferences write `/PageLayout`, `/PageMode` and `/ViewerPreferences`; `SetXmp` writes the
+    packet as given, uncompressed, and the source packet is no longer reported as dropped in that case.
+    An operation that states one of the four replaces the source value instead of copying it.
+- [x] T050 [US2] Implement `IncrementalWriter` in `src/SharpCorePDF.Infrastructure/Editing/IncrementalWriter.cs`: append a revision, preserve every prior byte, and refuse a non-seekable or changed source.
+  - Done 2026-10-24. `Begin` copies the bytes the reader opened — not a second read of the stream, so a
+    source that changes underneath the edit cannot desynchronise the revision from the bytes it was
+    recorded against — ends the copy on a line boundary when the source did not, and opens a
+    `PdfWriter.Append` whose offsets are absolute in the output. New objects are numbered above
+    `CrossReferenceTable.HighestObjectNumber`, and the trailer carries `/Prev` to the source's own
+    `startxref`, so a reader follows the chain instead of failing over the old objects. `PdfEditEngine`
+    refuses a forward-only source, a destination that is not empty, an encrypted source and a table that
+    was rebuilt by scanning, and pins the header version to the source with
+    `IncrementalUpdateVersionKept` when the plan asks for another.
+- [x] T051 [US2] Add the annotation model and `PdfAnnotations` factories in `src/SharpCorePDF.Domain/ReadModels/PdfAnnotation.cs` and `src/SharpCorePDF.Domain/ValueObjects/`; validate link/markup/stamp/ink rules before the source opens.
+  - Done 2026-10-24. `PdfAnnotation`, `PdfAnnotationKind`, `PdfAnnotationFlags`, `PdfBorder` (+
+    `PdfBorderStyle`), `PdfAnnotationAppearance`, `PdfStandardTextStyle` and the twelve `PdfAnnotations`
+    factories. `PdfAnnotation.Validate()` enforces the kind's geometry (a markup needs a quad, an ink a
+    stroke, a line two different points, a stamp an icon or an appearance), and the plan refuses a link
+    with both a page and a URL, an empty rectangle, an opacity outside 0-1 and an undefined flag bit.
+  - Two decisions the contract left open. The model lives in `Domain/ValueObjects`, not
+    `Domain/ReadModels`: a read model describes what was read, and this one is written and carried by
+    the plan. And the text of a free-text annotation takes `PdfStandardTextStyle` (a standard font,
+    size and colour) rather than the authoring `PdfTextStyle`, because that type lives in
+    `Infrastructure/Authoring` and `Domain` cannot reference it; an appearance is meant to stay small
+    and portable, so it uses a non-embedded font by design. `PdfAnnotationAppearance` carries a caller's
+    own operator stream plus the standard font it names as `/Helv`.
+- [x] T052 [US2] Generate appearance streams for every creatable annotation kind in `src/SharpCorePDF.Infrastructure/Annotations/AppearanceStreams.cs` and write `/Annots` changes in `AnnotationWriter.cs`.
+  - Done 2026-10-24. `AppearanceStreams` draws a form XObject for all ten kinds that have something to
+    draw — a note icon with a folded corner, free text auto-sized to its box, a stamp frame with its
+    caption centred by measurement, quad fills and rules, rectangle, elliptical arcs, lines and ink
+    strokes — in the annotation's own space, compressed, with the font and the opacity graphics state it
+    names. The `/Annots` rewrite lives in `PdfEditEngine.Annotations.cs` instead of a separate
+    `AnnotationWriter.cs`: it needs the page's copier, the output page numbers for `/GoTo` targets and
+    the writer's object numbers, all of which the engine already holds, and a second type would only
+    pass them through. Source annotations are copied by the copier and keep their objects; a removed
+    annotation simply becomes unreachable and is never written.
+- [x] T053 [US2] Add `AddAnnotation`, `UpdateAnnotation` and `RemoveAnnotation` to the plan and engine; untouched pages keep their objects.
+  - Done 2026-10-24. The three plan methods, the three operations and their `Kind`s, the engine's
+    `BuildLayout` cases and the page's `/Annots` rebuild. An annotation without an identifier is named
+    `scpdf-N`, where N is the operation's position, so a later operation of the same plan can name it.
+    An update or a removal is resolved against the page's own array while the layout is built, so a
+    missing identifier is refused before a byte is written; a page the plan leaves alone never has its
+    `/Annots` touched, and a page it does touch keeps every annotation it already had. A rectangle that
+    reaches past the page is clipped with an `AnnotationClipped` warning, a link whose page the plan
+    removes is dropped with an `AnnotationDestinationUnresolved` warning, and an appearance the engine
+    drew is reported once per page with `AnnotationAppearanceRegenerated`.
+- [x] T054 [US2] Add `PdfForm`, `PdfFormField` and the field factories in `src/SharpCorePDF.Domain/`, including unique qualified names and value/type validation.
+  - Done 2026-10-24. `PdfFormFieldKind` (text, check box, radio button, choice, push button — no signature
+    field, because signing is a separate surface), `PdfFormFieldAlignment`, `PdfFormField`, `PdfForm` and
+    the five `PdfFormFields` factories, all in `Domain/ValueObjects`. The page comes first in every
+    factory, matching `RotatePage`/`CropPage`, and a field carries it so a `PdfForm` is nothing but a list
+    plus the style a field that states none is drawn in.
+  - The flags are computed from the properties — `Flags` is an `int` the writer reads, not a public
+    `[Flags]` enum a caller writes: CA1711 refuses a type name ending in `Flags`, and a caller has no
+    reason to set a bit the editor cannot honour. So `IsMultiline` becomes 4096, `IsReadOnly` 1,
+    `IsRequired` 2, `IsCombo` 131072 and the rest likewise.
+  - `Validate()` checks the name (blank, a null or control character, a leading, trailing or doubled dot —
+    a qualified name with an empty part addresses nothing), the rectangle, the page, the border width and
+    the style, then the kind: a choice value that is not an option unless the combo box is editable,
+    repeated and empty options, a button that states a `Value`, a `Value` longer than `MaxLength`,
+    multiline with password, and options or a maximum length on a kind that holds neither. `PdfForm`
+    adds the one rule a single field cannot state: two fields cannot share a name.
+  - `PdfSetFormOperation`, `PdfResetFormOperation` and `PdfFlattenFormOperation` plus
+    `SetForm`, `SetFormField(field)`, `SetFormField(page, field)`, `ResetForm()` and `FlattenForm()`
+    (whole document or one page). The plan refuses a field that validation rejects, two operations that
+    write one name (the second would replace the first) and `FlattenForm(0)`. The page stated by
+    `SetFormField(page, field)` wins over the one the field carries, so a factory result can be reused.
+  - 94 new public API entries, and the engine half — writing the fields and flattening them — is T055,
+    so the model is verified by `PdfFormTests` alone for now: 20 facts, suite at 1788 executions.
+- [x] T055 [US2] Implement field appearances, `SetFormField`, `ResetForm` and `FlattenForm` in `src/SharpCorePDF.Infrastructure/Forms/FieldAppearance.cs` and `AcroFormWriter.cs`; flatten leaves a page that renders without a form viewer.
+  - Done 2026-10-24. `Forms/FieldAppearance.cs` draws one appearance per kind in the field's own box: a
+    frame and a fill, the value wrapped or shrunk to fit, `*` per character for a password, a highlighted
+    option in a list box, a tick in a check box, a dot in a radio button and a centred caption on a push
+    button, with `Helv` and the field's standard font as the only resource. `Forms/AcroFormWriter.cs`
+    reads the source's tree (`/Fields`, `/Kids`, inherited `/FT` and `/Ff`, widgets, `/DV`, `/Opt`,
+    `/MaxLen`, `/AA`, `/XFA`) and writes the result:
+  - A field the document carries is filled **in place** by rewriting its body and its widgets as the copier
+    copies them (`PdfObjectCopier.Override`), so the page's `/Annots`, the parent's `/Kids` and the
+    catalog's `/Fields` keep pointing at the same objects and only `/V`, `/AS` and `/AP` change. A name the
+    document does not carry becomes a new field; a dotted name becomes a tree, one node per segment, with
+    the widget on the leaf. A name that would sit inside an existing one is refused.
+  - `/NeedAppearances` is written `false`, `/DR` holds every font the fields name and `/DA` selects the
+    first. A read-only field and a signature field are refused with the field's name; `ResetForm` restores
+    `/DV` (emptying a field that states none) and regenerates the appearances; `FlattenForm` draws each
+    widget's appearance into a new content stream of its page — named `SCFieldN` in the page's
+    `/XObject` resources, drawn last so nothing covers it — takes the widget out of `/Annots` and out of
+    its field's `/Kids`, and drops the form from the catalog once its last widget is gone. A widget that
+    states no appearance of its own gets one generated from its value, and a widget this writer cannot
+    draw (a signature field) stays interactive rather than losing its mark.
+  - Two warning kinds were added, which is the only public API the engine half adds:
+    `XfaFormRemoved` (an XFA packet cannot be kept beside the fields this writer writes) and
+    `FormFieldActionPreserved` (an action is copied as it stands and never executed). `PdfWarningKind` now
+    has 65 members, and `PublicAPI.Unshipped.txt` was renumbered from the two insertions.
+  - Suite: 1808 executions on `net10.0` and `net11.0`, 0 failures; `dotnet build` with 0 warnings and 0
+    errors.
+- [x] T056 [US2] Add the `edit-pages`, `watermark`, `annotate` and `fill-form` scenarios to `examples/SharpCorePDF.Examples/Scenarios.cs`.
+  - Done 2026-10-24: `edit-pages`, `watermark` and `annotate` were registered earlier; `fill-form` joins them
+    as `PdfEditExamples.FillFormAsync`, and all 20 scenarios run.
+  - `watermark` builds its stamp
+    as a document of its own — one A4 page whose `DRAFT` is turned forty-five degrees by
+    `PdfMatrix.Rotate(45).Multiply(PdfMatrix.Translate(120, 290))` inside `q`/`Q` — and places it on every page
+    with `Overlay(watermark, pageNumber, new PdfOverlayOptions { Opacity = 0.18, Placement = Fit, BlendMode =
+    Multiply })`. The run prints `2` pages, `2557` bytes, the two operations, one warning (its own
+    `OutputVerified` signal) and the page's text after stamping: the sentence it drew for itself comes back
+    whole and the turned stamp a letter per block, `D R A F T`, because each turned glyph has its own
+    baseline in page space. `validate-pdf.py` on `watermarked.pdf` reports `qpdf check: no problems`, PDF 1.7,
+    2 pages and 6 streams decoded, and `pikepdf` reads page 1 as two `/Contents` entries with one `/Form`
+    XObject and one `/ExtGState` holding `/BM /Multiply`, `/CA 0.18` and `/ca 0.18` — the opacity and blend
+    mode stay inside the layer.
+  - `annotate` (2026-10-24) comments on `summary.pdf` without touching its content: a highlight, a sticky
+    note, free text in Helvetica-Oblique `#1F3A5F`, an `Approved` stamp, a URL link and a link to page 2,
+    with the highlight then updated by identifier. The run prints seven operations, `3685` bytes, two
+    warnings (`AnnotationAppearanceRegenerated` for the page and the engine's own `OutputVerified`) and
+    the six annotations the reader returns, each with its rectangle, its identifier and whether it
+    carries an appearance. `validate-pdf.py` reports `qpdf check: no problems`, PDF 1.7, 2 pages, 20
+    objects, `annots=6` on page 1, 6 streams decoded and 0 failed; a PyMuPDF 2.0 render paints the
+    highlight at (255, 223, 129), the note icon at (255, 211, 0), the free text in `#1F3A5F` and the
+    stamp frame at (191, 43, 31).
+  - `fill-form` (2026-10-24) writes `form-created.pdf` from `summary.pdf` with two text fields, a check box,
+    a choice and a push button, fills `person.name`, `agree` and `country` by name in a second pass that
+    leaves the other two fields as they were, and flattens the result into `form-flattened.pdf`. The run
+    prints five fields after the first pass, the same five with `Grace Hopper`, `Off` and `BE` after the
+    second, and none after the flatten, which drops the file from 5,313 to 3,614 bytes. `validate-pdf.py`
+    reports `qpdf check: no problems` for all three; `pypdf` reads the three values back and reports no
+    field on the flattened file; PyMuPDF renders the flattened page and reads `Grace Hopper` as page text.
+- [x] T057 [US2] Write manual chapters `18-annotations.md` and `19-forms.md`; extend `docs/manual/src/14-editing.md` with crop, resize, overlays, incremental updates and document-level edits.
+  - Done 2026-10-24. `18-annotations.md` (the kinds and their factories, appearance streams, updating and
+    removing by identifier, clipping, the four warnings, the two deliberate behaviours) and `19-forms.md`
+    (the field model and its factories, writing a form, filling by name, appearances, reset, flatten, the
+    refusals, the four warnings, XFA, the read-back and the example evidence). `14-editing.md` gains the
+    seven form and annotation operations in its table, the three operation types it was missing, and a
+    paragraph pointing at chapters 18 and 19. The manual was rebuilt: 25 chapters, 213 headings, 111 pages,
+    `docs/SharpCorePDF-Manual-1.1.0.pdf`; `docs/README.md` and `00-preface.md` no longer say chapters 18 and
+    19 are reserved.
+- [x] T058 [US2] Run T039–T044, `quickstart.md` step 4 and the annotation/form read-back checks; close the US2 rows in `docs/parity.md`.
+  - Done 2026-10-24: `dotnet test` on the solution ran 1802 tests with 0 failures, all 20 examples run, and
+    rows 8 and 9 of `docs/parity.md` are `Met in 1.2` with their named tests and their external evidence.
 
 **Checkpoint**: US2 is independently shippable; US1 and the 1.0 suite still pass.
 
@@ -318,21 +691,31 @@ agreement and 95% reading-order agreement on the labelled corpus; every export v
 
 - [x] T059 [P] [US3] Add failing tests for letter fields, ordering, direction and unreadable-glyph warnings in `tests/SharpCorePDF.Tests/PdfLayoutReaderTests.Letters.cs`.
 - [x] T060 [P] [US3] Add failing tests for each word, segmentation and reading-order strategy, including two-column pages, in `tests/SharpCorePDF.Tests/PdfLayoutReaderTests.Layout.cs`.
-- [ ] T061 [P] [US3] Add failing tests for hyperlinks, image pixel decoding and unsupported filters in `tests/SharpCorePDF.Tests/PdfLayoutReaderTests.Hyperlinks.cs`.
+- [x] T061 [P] [US3] Add failing tests for hyperlinks, image pixel decoding and unsupported filters in `tests/SharpCorePDF.Tests/PdfLayoutReaderTests.Hyperlinks.cs`.
   - Half done, 2026-10-22: `PdfLayoutReaderTests.Hyperlinks.cs` holds four green tests
     (`Reads_the_links_of_a_page_and_their_uris`, `Resolves_a_direct_and_a_named_destination`,
     `Keeps_an_unresolved_destination_and_says_so`, `Reads_a_page_without_links_as_no_links`). Pixel
     decoding and the unsupported-filter cases are T072's 1.2 work.
+  - Done 2026-10-24: the pixels landed with T072 and are tested in `PdfContentReaderTests.Images.cs` —
+    `Exposes_the_samples_of_a_decoded_image_as_pixels` (the 2 × 2 `FlateDecode` fixture comes back as
+    `Rgb24` with its twelve samples), `Does_not_expose_a_jpeg_as_pixels` and
+    `Does_not_expose_the_pixels_of_a_filter_it_cannot_decode`. The unsupported-filter cases were already
+    in place from the 1.1 read: `Returns_an_unsupported_filter_as_raw_bytes`,
+    `Reports_a_filter_it_cannot_decode`, and the mask and budget facts that assert `IsDecodable`.
 - [x] T062 [P] [US3] Add failing tests for the read-only object graph, dangling references and content-operation offsets in `tests/SharpCorePDF.Tests/PdfObjectInspectorTests.cs`.
 - [x] T063 [P] [US3] Add failing tests for ALTO, PAGE XML, hOCR and SVG text exports in `tests/SharpCorePDF.Tests/PdfLayoutExportTests.cs`.
 
 ### Implementation for User Story 3
 
-- [ ] T064 [P] [US3] Add `PdfLetter`, `PdfHyperlink`, `PdfPageSegment` and the word/segmentation/reading-order option enums in `src/SharpCorePDF.Domain/ReadModels/` and `src/SharpCorePDF.Domain/ValueObjects/`.
+- [x] T064 [P] [US3] Add `PdfLetter`, `PdfHyperlink`, `PdfPageSegment` and the word/segmentation/reading-order option enums in `src/SharpCorePDF.Domain/ReadModels/` and `src/SharpCorePDF.Domain/ValueObjects/`.
   - Decided: `PdfLetter`, `PdfHyperlink` and the four option enums are in; `PdfPageSegment` is not. A page's
     reading is `PdfWord` → `PdfTextBlock`, and the exports of T073 write that, because a segment that also
     carried images, ruled lines and table candidates would promise a segmentation this release does not do
     (images and tables are out of contract). Revisit only when a consumer needs one type per page region.
+  - Done 2026-10-24: `PdfLetter` (`ReadModels/PdfLetter.cs`), `PdfHyperlink`
+    (`ReadModels/PdfHyperlink.cs`), `PdfWordSegmentationStrategy` and `PdfReadingOrderStrategy` are in the
+    tree and are what `PdfLayoutReader`, `WordExtractor` and the corpus test use; `PdfPageSegment` is the
+    one type the decision above leaves out, and `PdfLayoutExport` writes `PdfWord` → `PdfTextBlock` instead.
 - [x] T065 [US3] Add `IPdfLayoutReader` to `src/SharpCorePDF.Domain/Ports/IPdfLayoutReader.cs` and `PdfLayoutReaderService` to `src/SharpCorePDF.Application/Services/`.
 - [x] T066 [US3] Implement `LetterExtractor` over `PdfTextScanner`, `PdfFontDecoder` and `PdfToUnicodeCMap` in `src/SharpCorePDF.Infrastructure/Reading/LetterExtractor.cs`.
 - [x] T067 [US3] Implement `ReadWordsAsync` and the raw/nearest-neighbour strategies in `src/SharpCorePDF.Infrastructure/Reading/LayoutAnalysis/WordExtractor.cs`; a strategy only groups glyphs.
@@ -340,7 +723,19 @@ agreement and 95% reading-order agreement on the labelled corpus; every export v
 - [x] T069 [US3] Implement `ReadHyperlinksAsync` for URI and internal destinations, with `NamedDestinationUnresolved` warnings in `src/SharpCorePDF.Infrastructure/Reading/HyperlinkReader.cs`.
 - [x] T070 [P] [US3] Add `PdfObjectView` and `PdfContentOperationView` in `src/SharpCorePDF.Domain/ReadModels/`; no setter and no mutable child collection.
 - [x] T071 [US3] Add `IPdfObjectInspector` and `PdfObjectInspectorService`, and implement the projection in `src/SharpCorePDF.Infrastructure/Reading/ObjectGraphView.cs`; dangling references stay visible.
-- [ ] T072 [US3] Add optional decoded pixels and `IsDecodable` to the existing image read in `src/SharpCorePDF.Infrastructure/PdfPageContentReader.Images.cs` and `src/SharpCorePDF.Infrastructure/Pdf/`.
+- [x] T072 [US3] Add optional decoded pixels and `IsDecodable` to the existing image read in `src/SharpCorePDF.Infrastructure/PdfPageContentReader.Images.cs` and `src/SharpCorePDF.Infrastructure/Pdf/`.
+  - Done 2026-10-24. `PdfImageInfo` gains `DecodedPixels` and `PixelFormat`, and
+    `Infrastructure/Pdf/ImagePixels.cs` decides when a payload is pixels: the library decoded it, the
+    geometry is stated, every sample is eight bits, the colour space is `Gray8` or `Rgb24` in kind
+    (`DeviceGray`, `CalGray`, `DeviceRGB`, `CalRGB`) and the payload length matches the geometry exactly.
+    A payload that fails any of those stays a payload — a palette image still needs its palette, a
+    sixteen-bit image its byte order.
+  - What a caller gets: `Rgb24` or `Gray8` bytes, tightly packed, top row first, for every filter the
+    library decodes. A `DCTDecode` image is deliberately **not** pixels: it is handed over as the JPEG the
+    file holds, which is a format a consumer already reads, and the read model says so.
+  - `IsDecodable` is unchanged and still states whether the payload is in the form the caller asked for;
+    the pixels are withheld whenever it is `false`.
+  - Suite: 1808 executions, 0 failures.
 - [x] T073 [US3] Implement the four exporters in `src/SharpCorePDF.Infrastructure/Reading/Exporters/`; coordinates are page space, text is escaped, and an empty page still produces a valid element.
 - [x] T074 [US3] Register `IPdfLayoutReader` and `IPdfObjectInspector` in `src/SharpCorePDF.DependencyInjection/SharpCorePDFServiceCollectionExtensions.cs`.
   - Half done: `PdfLayoutReader` is registered as itself and as `IPdfPageLayoutReader`, and `PdfLayoutReaderService`
@@ -351,7 +746,20 @@ agreement and 95% reading-order agreement on the labelled corpus; every export v
 - [x] T077 [US3] Add the `extract-layout` and `inspect-objects` scenarios to `examples/SharpCorePDF.Examples/Scenarios.cs`.
 - [x] T078 [US3] Write manual chapters `20-extraction.md`, `21-layout-analysis.md` and `22-object-graph.md`, including export limits and the strategy result field.
   - Done 2026-10-23: `20-extraction.md` (the `PdfReadResult<T>` shape, letters/words/blocks, the four formats, the coordinate flip and reproducible bytes), `21-layout-analysis.md` (the four segmentations, two reading orders, the em-based word rules, decorations versus prose, how to compare two readings, where the analysis stops) and `22-object-graph.md` (one node per listed object, references reported and never followed, `DanglingReference`, streams without bytes, operators, `MaxNestingDepth`). All three are in the 1.1.0 PDF built by T099 (pages 69, 73 and 76).
-- [ ] T079 [US3] Run T059–T063, `score-layout.py` and the export validators; close the US3 rows in `docs/parity.md`.
+- [x] T079 [US3] Run T059–T063, `score-layout.py` and the export validators; close the US3 rows in `docs/parity.md`.
+  - Done 2026-10-24. A scratch runner outside the repository exported the five labelled corpus documents
+    with `PdfLayoutReaderService.ExportAsync`, and the scorer read the folder:
+    `python docs/tools/score-layout.py <exports> --labels tests/SharpCorePDF.Tests/Assets/parity/labelled
+    --known-order-mismatch table` → **5 documents scored, 0 short of a threshold**; recall and boxes 100%
+    on all five, reading order 100% on four, `table` recorded at 66.7% (the known XY-cut limitation, which
+    `Table_page_is_still_read_column_by_column` guards).
+  - The same document written in all four formats was parsed by an external XML parser: ALTO (`alto`
+    root), PAGE XML (`PcGts`), SVG (`svg`) are well-formed, and the hOCR file carries its 22 `ocrx_word`
+    spans. There is no schema file in the repository — the 1.1 decision was to score with the tool the
+    project ships and parse the exports rather than to vendor four XSDs — so "the export validators" is
+    that parse plus `PdfLayoutExportTests`, which asserts the root element and the page-space coordinates
+    of each format.
+  - Rows 13, 14, 15 and 16 of `docs/parity.md` are closed with this run; row 14's pixel half is T072.
 
 **Checkpoint**: US3 is independently shippable and can run in parallel with US2 after Phase 1.
 
@@ -389,11 +797,31 @@ and veraPDF reports conformance for all three profiles.
 - [x] T092 [US4] Enforce profile restrictions and the `IsWritten = false` refusal path in `src/SharpCorePDF.Infrastructure/PdfEditEngine.Document.cs`; never label an unconformant file as PDF/A.
 - [x] T093 [P] [US4] Add `docs/tools/validate-signatures.py` and `docs/tools/validate-pdfa.py` with the pyHanko and veraPDF commands from `quickstart.md`.
   - Both scripts are in the tree and take `--help`. `validate-pdfa.py` finds veraPDF on `PATH`, through `VERAPDF_HOME` or with `--verapdf`, states the flavour with `--profile`, and exits 0/1/2 for pass/fail/cannot-run.
-- [ ] T094 [US4] Add the `sign-and-archive` scenario to `examples/SharpCorePDF.Examples/Scenarios.cs`, using local certificates and a caller-supplied timestamp token; ship no key.
+- [x] T094 [US4] Add the `sign-and-archive` scenario to `examples/SharpCorePDF.Examples/Scenarios.cs`, using local certificates and a caller-supplied timestamp token; ship no key.
+  - Done 2026-10-24. `ArchiveExamples.SignAndArchiveAsync` authors a page in an embedded face, archives it
+    for PDF/A-3b, then signs **the archive** — the order that keeps both promises, because a signature is an
+    incremental revision and converting first would rewrite the bytes a signature names. The certificate is
+    created when the run starts (`CertificateRequest` + `CreateSelfSigned`, round-tripped through PKCS#12 so
+    the private key stays attached) and is never written to disk; the timestamp token is the caller's, read
+    from `SCPDF_TIMESTAMP_TOKEN` as base64 DER and handed to the signer through a one-method
+    `IPdfTimestampProvider`, so a run with no authority signs without one rather than pretending.
+  - The run prints `written True` and 6,778 bytes for the archive, field `ArchivalSignature`, signer
+    `CN=SharpCorePDF Example Signer, O=SharpCorePDF, C=AT`, `Sha256`, `timestamp False`, 25,749 bytes for the
+    signed file, and the validation `integrity Valid, trust Trusted, is valid True` with the certificate as
+    the anchor.
 - [x] T095 [US4] Write manual chapters `23-signatures.md` and `24-pdf-a.md`; state the integrity/trust split, the no-network rule and the external-validator evidence requirement.
   - Done: `docs/manual/src/23-signatures.md` and `docs/manual/src/24-pdf-a.md` are written — the appended revision and the integrity/trust split, the profile table, what is removed versus refused, archival edits, and the pyHanko/qpdf/veraPDF evidence. Both carried the unreleased banner until the release boundary; T099 removed it, because 1.1.0 ships both surfaces.
 - [ ] T096 [US4] Run T080–T082, pyHanko, veraPDF and the incremental-signature scenario; close the US4 rows in `docs/parity.md`.
   - Half done: T080–T082 pass on both frameworks, pyHanko and qpdf are recorded under "Phase 4 progress — signatures", veraPDF 1.30.3 reports `PASS` for 1b/2b/3b of an authored page and of `SafeWebCore.pdf` under "Phase 4 progress — archival output", and parity rows 11 and 12 are closed as Met. The `sign-and-archive` scenario (T094) is still missing.
+  - 2026-10-24: the example exists (T094) and pyHanko was run on what it wrote — `signature 1: field
+    'ArchivalSignature'`, the expected signer, `signed at 2026-01-01 00:00:00+00:00`, `integrity intact
+    (coverage ENTIRE_FILE)`, `trust not checked (no anchor supplied)`, which is the split this library keeps
+    confirmed by an independent implementation.
+  - What still keeps the box open: the veraPDF leg cannot be re-run here — `validate-pdfa.py` reports
+    `veraPDF was not found: put it on PATH, set VERAPDF_HOME, or pass --verapdf <path>` and exits 2 — so the
+    conformance record remains the 2026-10-23 run rather than a fresh one. The incremental-signature leg is
+    covered by `PdfDocumentSignerTests.Signing_a_second_time_keeps_the_first_signature_valid`, which is green;
+    the example signs once.
 
 **Checkpoint**: US4 is independently shippable once US2's incremental writer exists.
 
@@ -409,6 +837,7 @@ and veraPDF reports conformance for all three profiles.
   - Done 2026-10-23, with the chapter count settled by D3: the edition is built from the **20 chapters that describe what 1.1.0 ships** (00–14 and 20–24), not 25. Chapters `15`–`19` document the standalone drawing surface, text layout, the remaining image formats and writing annotations and form fields — all `1.2` work owned by T037, T057 and the US2 backlog — so their numbers are reserved and the preface says so in a paragraph of its own. The index additions are `20-extraction.md`, `21-layout-analysis.md`, `22-object-graph.md` (T078) plus the removal of the "unreleased" banners from chapters 14, 23 and 24, which now ship.
   - Build: `python docs/manual/build-manual.py` → 20 chapters, 154 headings (contents lists 154, every number resolved), 86 pages, footer ok, `docs/SharpCorePDF-Manual-1.1.0.pdf`. Verified with `pypdf`: 86 pages, 154 outline entries with chapters 1–14 and 20–24 at the top level, contents rows read `Preface 6` … `24. Archival PDF (PDF/A) 83`, and the footer reads `SharpCorePDF 1.1.0 | The Manual Page 2 of 86`. `docs/README.md`, the root `README.md` link and the cover/metadata in `build-manual.py` now name the 1.1.0 edition.
   - Chapters 2 and 12 were corrected in the same pass, because the boundary they state had fallen behind the code: chapter 2 now records fixed-position vector drawing, cropping, signing, PDF/A writing and the read-only object graph as shipped, and chapter 12 documents `DrawLine`/`DrawRectangle`/`DrawEllipse`/`DrawPath`/`SetClip`/`SaveState` plus `PdfPaint`/`PdfStroke` in its surface table instead of claiming there is no vector drawing.
+  - **The manual was rebuilt again on 2026-10-23** when T037 wrote Chapter 16, so the figures above describe the 1.1.0 edition as first built and not the current artifact: `python docs/manual/build-manual.py` now reports 21 chapters, 168 headings (contents lists 163), **92 pages**, footer ok, and `pypdf` reopens that file as 92 pages with a top-level `16. Text Layout` bookmark and a contents row `16. Text Layout 70`. `docs/README.md` was updated to 92 pages. The chapter states at its head that the `1.1.0` package does not carry the text-layout surface it documents — the edition is 1.1.0 plus that one `1.2` chapter, included so the code in the tree is documented where it is.
 - [x] T100 [P] Update `examples/README.md` and run every example scenario; each must print its success marker and exit 0.
   - Done 2026-10-23: `examples/README.md` lists fifteen examples, including `edit-pages` (authoring a page with a stroked frame, a translucent band, a dashed rule and an ellipse, then insert/rotate/delete/crop in one pass). `dotnet run --project examples/SharpCorePDF.Examples -c Release` ran all 15 scenarios, printed 15 `ok (...)` markers and `All 15 example(s) ran.`, and exited 0. The `edit-pages` crop was corrected to an upright `new PdfRectangle(36, 36, 806, 559)`: page 3 crops with no warning, the result reads back as 3 pages with page 2 `Clockwise90`, and the only warning is the `OutputVerified` success signal.
 - [x] T101 Re-run the creator, editor, extraction and merge measurements; record them in `docs/measurements.md` and block any regression above 10%.

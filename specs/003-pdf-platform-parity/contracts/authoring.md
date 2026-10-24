@@ -140,7 +140,8 @@ public sealed record PdfTextLayoutOptions(
     PdfTextAlignment Alignment = PdfTextAlignment.Left,
     double? LineHeight = null,
     bool BreakWords = false,
-    PdfTextOverflow Overflow = PdfTextOverflow.Refuse);
+    PdfTextOverflow Overflow = PdfTextOverflow.Refuse,
+    PdfTextDirection Direction = PdfTextDirection.LeftToRight);
 
 public sealed class PdfTextLayout
 {
@@ -156,6 +157,9 @@ public sealed class PdfTextLayout
   word is wider and `BreakWords` is false, in which case the call is refused.
 - `LineHeight` defaults to the font’s ascent + descent + line gap at the requested size.
 - Alignment is applied within `MaxWidth`; justification only adjusts inter-word space.
+- `Bounds` and every line start are stated in the layout's own space: its origin is the top-left corner of
+  the box and y grows downwards, so the first baseline is one ascent below that corner.
+  `DrawTextLayout` adds the point it is given to each run's start and takes no offset from `Bounds`.
 - Text extraction returns the same characters that were drawn, including accents and spaces.
 
 ## Diagnostics

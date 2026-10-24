@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using SharpCorePDF.Domain.ReadModels;
 using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure.Pdf;
 
@@ -19,19 +20,24 @@ namespace SharpCorePDF.Infrastructure.Authoring;
 internal static class PdfAuthoringWriter
 {
     /// <summary>Writes an authored document.</summary>
-    /// <param name="pages">The pages, in order.</param>
+    /// <param name="pages">The pages, in order: the ones the caller drew and the ones it imported.</param>
     /// <param name="metadata">The document information.</param>
     /// <param name="options">The options that control identity and reproducibility.</param>
+    /// <param name="xmp">The XMP packet the catalog carries, or <see langword="null"/> for none.</param>
+    /// <param name="bookmarks">The outline of the document, empty when it has none.</param>
     /// <returns>The bytes of the document.</returns>
     /// <exception cref="InvalidOperationException">There is no page, or the options are not usable.</exception>
     public static byte[] Write(
-        IReadOnlyList<PdfPageCanvas> pages,
+        IReadOnlyList<IAuthoredPage> pages,
         PdfMetadata metadata,
-        PdfAuthoringOptions options)
+        PdfAuthoringOptions options,
+        ReadOnlyMemory<byte>? xmp,
+        IReadOnlyList<PdfOutlineItem> bookmarks)
     {
         ArgumentNullException.ThrowIfNull(pages);
         ArgumentNullException.ThrowIfNull(metadata);
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(bookmarks);
 
         var problems = options.Validate();
 
@@ -63,35 +69,20 @@ internal static class PdfAuthoringWriter
 
         foreach (var page in pages)
         {
-            BinaryPrimitives.WriteDoubleBigEndian(size, page.Width);
-            BinaryPrimitives.WriteDoubleBigEndian(size[8..], page.Height);
-            hash.AppendData(size);
+            switch (page)
+            {
+                case DrawnPage drawn:
+                    pageNumbers.Add(WriteDrawnPage(writer, resources, drawn.Canvas, pagesNumber, hash, size));
+                    break;
 
-            var pageResources = resources.BeginPage();
-            var content = PageContentWriter.Write(page, pageResources, hash);
-            var contentNumber = writer.AllocateObject();
+                case ImportedPage imported:
+                    pageNumbers.Add(WriteImportedPage(writer, imported, pagesNumber, hash));
+                    break;
 
-            writer.WriteObject(contentNumber, new PdfStream(new PdfDictionary(), content));
-
-            var pageNumber = writer.AllocateObject();
-            pageNumbers.Add(pageNumber);
-
-            writer.WriteObject(
-                pageNumber,
-                new PdfDictionary()
-                    .SetName("Type", "Page")
-                    .Set("Parent", new PdfReference(pagesNumber, 0))
-                    .Set(
-                        "MediaBox",
-                        new PdfArray(
-                        [
-                            new PdfInteger(0),
-                            new PdfInteger(0),
-                            new PdfReal(page.Width),
-                            new PdfReal(page.Height),
-                        ]))
-                    .Set("Resources", pageResources.ToDictionary())
-                    .Set("Contents", new PdfReference(contentNumber, 0)));
+                default:
+                    throw new InvalidOperationException(
+                        $"The page type '{page.GetType().Name}' is not one the authoring writer knows.");
+            }
         }
 
         resources.WriteObjects(hash);
@@ -106,11 +97,34 @@ internal static class PdfAuthoringWriter
                 .Set("Kids", new PdfArray(pageNumbers.Select(number => (PdfObject)new PdfReference(number, 0))))
                 .SetInteger("Count", pageNumbers.Count));
 
-        writer.WriteObject(
-            catalogNumber,
-            new PdfDictionary()
-                .SetName("Type", "Catalog")
-                .Set("Pages", new PdfReference(pagesNumber, 0)));
+        var catalog = new PdfDictionary()
+            .SetName("Type", "Catalog")
+            .Set("Pages", new PdfReference(pagesNumber, 0));
+
+        if (xmp is { Length: > 0 } packet)
+        {
+            // The packet is written as the caller stated it, uncompressed: a validator compares the
+            // bytes it reads with the ones a producer signed, and PDF/A-1 forbids compressing them.
+            var metadataNumber = writer.AllocateObject();
+
+            writer.WriteObject(
+                metadataNumber,
+                new PdfStream(
+                    new PdfDictionary().SetName("Type", "Metadata").SetName("Subtype", "XML"),
+                    packet.ToArray()));
+
+            catalog.Set("Metadata", new PdfReference(metadataNumber, 0));
+            hash.AppendData(packet.Span);
+        }
+
+        if (bookmarks.Count > 0)
+        {
+            catalog.Set("Outlines", new PdfReference(
+                PdfOutlineWriter.Write(writer, bookmarks, pageNumbers, hash),
+                0));
+        }
+
+        writer.WriteObject(catalogNumber, catalog);
 
         var informationNumber = WriteInformation(writer, metadata, options, creation);
         var identifier = BuildIdentifier(hash, options);
@@ -122,6 +136,136 @@ internal static class PdfAuthoringWriter
                 .Set("ID", new PdfArray([identifier, identifier])));
 
         return buffer.ToArray();
+    }
+
+    /// <summary>Writes a page the caller drew, and returns the object number it was given.</summary>
+    /// <param name="writer">The writer of the document.</param>
+    /// <param name="resources">The fonts and images of the document.</param>
+    /// <param name="canvas">The canvas the page was drawn with.</param>
+    /// <param name="pagesNumber">The object number of the page tree node.</param>
+    /// <param name="hash">The digest that identifies the document.</param>
+    /// <param name="size">Scratch space for the page size, which the digest receives.</param>
+    /// <returns>The object number of the page.</returns>
+    private static int WriteDrawnPage(
+        PdfWriter writer,
+        AuthoringResources resources,
+        PdfPageCanvas canvas,
+        int pagesNumber,
+        IncrementalHash hash,
+        Span<byte> size)
+    {
+        BinaryPrimitives.WriteDoubleBigEndian(size, canvas.Width);
+        BinaryPrimitives.WriteDoubleBigEndian(size[8..], canvas.Height);
+        hash.AppendData(size);
+
+        var pageResources = resources.BeginPage();
+        var content = PageContentWriter.Write(canvas, pageResources, hash);
+        var contentNumber = writer.AllocateObject();
+
+        writer.WriteObject(contentNumber, new PdfStream(new PdfDictionary(), content));
+
+        var pageNumber = writer.AllocateObject();
+
+        writer.WriteObject(
+            pageNumber,
+            new PdfDictionary()
+                .SetName("Type", "Page")
+                .Set("Parent", new PdfReference(pagesNumber, 0))
+                .Set(
+                    "MediaBox",
+                    new PdfArray(
+                    [
+                        new PdfInteger(0),
+                        new PdfInteger(0),
+                        new PdfReal(canvas.Width),
+                        new PdfReal(canvas.Height),
+                    ]))
+                .Set("Resources", pageResources.ToDictionary())
+                .Set("Contents", new PdfReference(contentNumber, 0)));
+
+        return pageNumber;
+    }
+
+    /// <summary>
+    /// Copies one page of another document into this one and returns the object number it was given.
+    /// </summary>
+    /// <param name="writer">The writer of the document.</param>
+    /// <param name="page">The page to copy, with the reader of its document.</param>
+    /// <param name="pagesNumber">The object number of the page tree node of this document.</param>
+    /// <param name="hash">The digest that identifies the document.</param>
+    /// <returns>The object number of the copied page.</returns>
+    /// <remarks>
+    /// The page, its content streams, its resources, its annotations, its rotation and everything else
+    /// it refers to are copied as they are; the copier in the merge engine does the work, so an imported
+    /// page keeps exactly what a merged page keeps. Attributes the page inherited from its own page tree
+    /// are stated on the copy, because this document has a single flat page tree.
+    /// </remarks>
+    private static int WriteImportedPage(
+        PdfWriter writer,
+        ImportedPage page,
+        int pagesNumber,
+        IncrementalHash hash)
+    {
+        var reader = page.Reader;
+        var sourcePages = reader.Pages;
+        var source = sourcePages[page.PageNumber - 1];
+        var copier = new PdfObjectCopier(reader, writer);
+        var target = copier.Reserve(source.ObjectNumber);
+
+        copier.Override(
+            source.ObjectNumber,
+            body => MaterialiseImportedPage(copier, body, source, pagesNumber));
+
+        // A link or a bookmark that points at a page this document does not have would dangle, so every
+        // other page of the source is folded onto the one that was imported, as a merge does.
+        foreach (var other in sourcePages
+            .Select(other => other.ObjectNumber)
+            .Where(number => number != source.ObjectNumber))
+        {
+            copier.Redirect(other, target);
+        }
+
+        foreach (var node in reader.PageTree.NodeObjectNumbers)
+        {
+            copier.Redirect(node, pagesNumber);
+        }
+
+        hash.AppendData(reader.Data);
+        copier.Flush();
+
+        return target;
+    }
+
+    /// <summary>Turns the copied body of a source page into a page of this document.</summary>
+    /// <param name="copier">The copier that maps the source onto this document.</param>
+    /// <param name="body">The copied page dictionary.</param>
+    /// <param name="page">The page as the source stated it, with what it inherited.</param>
+    /// <param name="pagesNumber">The object number of the page tree node of this document.</param>
+    /// <returns>The page dictionary of this document.</returns>
+    private static PdfDictionary MaterialiseImportedPage(
+        PdfObjectCopier copier,
+        PdfObject body,
+        SourcePage page,
+        int pagesNumber)
+    {
+        var copy = body as PdfDictionary ?? new PdfDictionary();
+        var imported = new PdfDictionary();
+
+        foreach (var entry in page.Inherited.Entries.Where(entry => !copy.ContainsKey(entry.Key)))
+        {
+            imported.Set(entry.Key, copier.Clone(entry.Value));
+        }
+
+        foreach (var entry in copy.Entries)
+        {
+            imported.Set(entry.Key, entry.Value);
+        }
+
+        imported
+            .Set("Type", new PdfName("Page"))
+            .Set("Parent", new PdfReference(pagesNumber, 0));
+
+        return imported;
     }
 
     /// <summary>Writes the document information dictionary.</summary>

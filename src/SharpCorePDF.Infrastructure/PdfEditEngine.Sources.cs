@@ -12,14 +12,14 @@ namespace SharpCorePDF.Infrastructure;
 /// </summary>
 public sealed partial class PdfEditEngine
 {
-    /// <summary>Reads every document the plan copies pages from.</summary>
+    /// <summary>Reads every document the plan copies a page from.</summary>
     /// <param name="document">The document being edited.</param>
     /// <param name="plan">The plan being applied.</param>
     /// <param name="warnings">The list that receives the remarks of the documents that were read.</param>
     /// <param name="cancellationToken">A token to cancel the edit.</param>
     /// <returns>The documents of the edit, the one being edited first.</returns>
     /// <exception cref="PdfEncryptionException">A source is encrypted and could not be opened.</exception>
-    /// <exception cref="PdfEditPlanValidationException">A source has no page, or the page to insert does not come from a one-page document.</exception>
+    /// <exception cref="PdfEditPlanValidationException">A source has no page, or a page that is inserted or layered does not come from a one-page document.</exception>
     private async Task<EditSources> OpenSourcesAsync(
         PdfFileReader document,
         PdfEditPlan plan,
@@ -38,6 +38,7 @@ public sealed partial class PdfEditEngine
                 PdfImportPageOperation import => (import.Source, import.Password, false),
                 PdfInsertPageOperation insert => (insert.Page, null, true),
                 PdfAppendOperation append => (append.Source, append.Password, false),
+                PdfOverlayOperation overlay => (overlay.Overlay, overlay.Password, true),
                 _ => ((IPdfContentSource?)null, (string?)null, false),
             };
 

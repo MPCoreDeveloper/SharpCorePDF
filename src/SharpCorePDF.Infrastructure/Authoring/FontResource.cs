@@ -12,8 +12,6 @@ namespace SharpCorePDF.Infrastructure.Authoring;
 /// </summary>
 internal sealed class FontResource
 {
-    private static readonly Lazy<Dictionary<char, byte>> WinAnsiCodes = new(BuildWinAnsi);
-
     private readonly TrueTypeFont? trueType;
     private readonly int descendantNumber;
     private readonly int descriptorNumber;
@@ -154,7 +152,7 @@ internal sealed class FontResource
 
         for (var index = 0; index < text.Length; index++)
         {
-            if (!WinAnsiCodes.Value.TryGetValue(text[index], out var code))
+            if (!WinAnsiEncoding.TryGetCode(text[index], out var code))
             {
                 throw new ArgumentException(
                     $"The standard font {BaseFontOf(Family!.Value)} is written with WinAnsiEncoding, which has no code for '{text[index]}' (U+{(int)text[index]:X4}). Use an embedded TrueType font for text outside that encoding.",
@@ -369,27 +367,5 @@ internal sealed class FontResource
         }
 
         return output.ToArray();
-    }
-
-    /// <summary>Builds the reverse table of <c>WinAnsiEncoding</c>, from character to code.</summary>
-    /// <returns>The table.</returns>
-    private static Dictionary<char, byte> BuildWinAnsi()
-    {
-        if (!PdfGlyphEncodings.TryGetBaseEncoding("WinAnsiEncoding", out var table))
-        {
-            throw new InvalidOperationException("The engine states that it knows WinAnsiEncoding but cannot build its table.");
-        }
-
-        var codes = new Dictionary<char, byte>(256);
-
-        for (var code = 0; code < table.Length; code++)
-        {
-            if (table[code] is { Length: 1 } text)
-            {
-                codes.TryAdd(text[0], (byte)code);
-            }
-        }
-
-        return codes;
     }
 }

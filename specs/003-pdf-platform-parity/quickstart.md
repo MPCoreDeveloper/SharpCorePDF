@@ -85,10 +85,10 @@ original byte range unchanged.
 
 ## 5. Phase 3: annotations and forms
 
-**Nothing to run on `1.1.0`.** Annotations and form fields are 1.2 work — the manual's chapters 15–19 are
-reserved for them and the tree carries no annotation or form API — so `PdfAnnotationTests`,
-`PdfFormTests` and the `annotate-and-fill` scenario are the names 1.2 will create. The block below is that
-phase's acceptance run and T104 records it as not runnable on the release commit.
+**Nothing to run on `1.1.0`.** Annotations and form fields are 1.2 work — the manual's chapters 18 and 19 are
+reserved for annotations and forms, and the tree carries no annotation or form API — so
+`PdfAnnotationTests`, `PdfFormTests` and the `annotate-and-fill` scenario are the names 1.2 will create. The
+block below is that phase's acceptance run and T104 records it as not runnable on the release commit.
 
 ```powershell
 dotnet test .\tests\SharpCorePDF.Tests\SharpCorePDF.Tests.csproj -p:TargetFramework=net10.0 `

@@ -97,6 +97,31 @@ public sealed record PdfImageInfo
     /// </summary>
     public ReadOnlyMemory<byte>? Data { get; init; }
 
+    /// <summary>
+    /// Gets the pixels of the image — the samples themselves, one byte per sample — or
+    /// <see langword="null"/> when the payload is not exposed as pixels.
+    /// </summary>
+    /// <remarks>
+    /// The pixels are the same bytes <see cref="Data"/> carries, stated in a form that needs no second
+    /// interpretation: tightly packed, top row first, eight bits per sample, and exactly
+    /// <see cref="Width"/> times <see cref="Height"/> times the channel count of the colour space long.
+    /// They are present when the library decoded the payload, the geometry is stated, every sample is
+    /// eight bits, and the colour space is one whose samples are the channels — <c>DeviceGray</c>,
+    /// <c>CalGray</c> or <c>G</c> for one, <c>DeviceRGB</c>, <c>CalRGB</c> or <c>RGB</c> for three.
+    /// Anything else stays a payload, and <see cref="Filter"/>, <see cref="ColorSpace"/> and
+    /// <see cref="IsDecodable"/> state why: a palette image needs its palette, an <c>ICCBased</c> space
+    /// states its components inside the profile it points at rather than beside them, and a
+    /// <c>DCTDecode</c> image is the JPEG it is — a format the caller can already read, so its
+    /// <see cref="PixelFormat"/> is <see langword="null"/> rather than a decoder being shipped for it.
+    /// </remarks>
+    public ReadOnlyMemory<byte>? DecodedPixels { get; init; }
+
+    /// <summary>
+    /// Gets the layout of <see cref="DecodedPixels"/> — <c>"Gray8"</c>, one channel, or <c>"Rgb24"</c>,
+    /// three channels interleaved — or <see langword="null"/> when no pixels are exposed.
+    /// </summary>
+    public string? PixelFormat { get; init; }
+
     /// <summary>Gets the mask of the image, or <see langword="null"/> when it has none.</summary>
     public PdfImageMask? Mask { get; init; }
 

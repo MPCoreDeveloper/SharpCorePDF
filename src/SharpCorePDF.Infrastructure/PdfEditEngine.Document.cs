@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using SharpCorePDF.Domain.Aggregates;
+using SharpCorePDF.Domain.Exceptions;
+using SharpCorePDF.Domain.ReadModels;
 using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure.Authoring;
 using SharpCorePDF.Infrastructure.Pdf;
@@ -29,14 +31,19 @@ public sealed partial class PdfEditEngine
     /// <param name="profile">The archival profile the result is written for, or <see langword="null"/>.</param>
     /// <param name="metadata">The document information the XMP packet mirrors.</param>
     /// <param name="layoutChanged">Whether an operation changed the order or number of pages.</param>
+    /// <param name="pageNumbers">The object number of each page of the result, in output order.</param>
+    /// <param name="acroFormNumber">The object number of the form the edit wrote, or zero for none.</param>
+    /// <param name="formTouched">Whether the plan wrote the form itself, which decides whether the source's is copied.</param>
     /// <param name="warnings">The list that receives remarks about features an edit could not keep.</param>
     /// <returns>The catalog.</returns>
     /// <remarks>
     /// Page-independent features are carried over as they are. Features that name pages — bookmarks,
     /// named destinations, a form — are carried over too, with every reference to a source page
     /// redirected to the first page that survived. Page labels and XMP are the two features that
-    /// cannot be carried over truthfully after an edit, so they are dropped and reported. A profile
-    /// replaces the XMP packet and the output intent with the ones it requires.
+    /// cannot be carried over truthfully after an edit, so they are dropped and reported. An operation
+    /// that states the bookmarks, the labels, the viewer preferences or the XMP packet replaces what
+    /// the source carried; a profile replaces the XMP packet and the output intent with the ones it
+    /// requires.
     /// </remarks>
     private static PdfDictionary BuildCatalog(
         PdfFileReader reader,
@@ -47,6 +54,9 @@ public sealed partial class PdfEditEngine
         PdfAProfile? profile,
         PdfMetadata metadata,
         bool layoutChanged,
+        IReadOnlyList<int> pageNumbers,
+        int acroFormNumber,
+        bool formTouched,
         List<PdfWarning> warnings)
     {
         var source = reader.Catalog;
@@ -54,17 +64,53 @@ public sealed partial class PdfEditEngine
         catalog.Set("Type", new PdfName("Catalog"));
         catalog.Set("Pages", new PdfReference(pagesNodeNumber, 0));
 
-        CopyFromSource(copier, source, catalog, "ViewerPreferences");
-        CopyFromSource(copier, source, catalog, "PageLayout");
-        CopyFromSource(copier, source, catalog, "PageMode");
+        var viewer = LastOperation<PdfSetViewerPreferencesOperation>(plan)?.Preferences;
+        var labels = LastOperation<PdfSetPageLabelsOperation>(plan)?.Labels;
+        var outline = LastOperation<PdfSetOutlineOperation>(plan)?.Outline;
+        var xmp = LastOperation<PdfSetXmpOperation>(plan)?.Xmp;
+
+        if (viewer is { } preferences)
+        {
+            WriteViewerPreferences(catalog, preferences);
+        }
+        else
+        {
+            CopyFromSource(copier, source, catalog, "ViewerPreferences");
+            CopyFromSource(copier, source, catalog, "PageLayout");
+            CopyFromSource(copier, source, catalog, "PageMode");
+        }
+
         CopyFromSource(copier, source, catalog, "Lang");
         CopyFromSource(copier, source, catalog, "MarkInfo");
-        CopyFromSource(copier, source, catalog, "Outlines");
+
+        if (outline is { } bookmarks)
+        {
+            WriteOutline(writer, catalog, bookmarks, pageNumbers);
+        }
+        else
+        {
+            CopyFromSource(copier, source, catalog, "Outlines");
+        }
+
         CopyNameTrees(reader, copier, source, catalog);
 
         if (profile is null)
         {
             CopyFromSource(copier, source, catalog, "OutputIntents");
+        }
+
+        if (formTouched)
+        {
+            // The edit wrote the form itself, so the source's is not copied: either this is the
+            // dictionary the fields were written into, or the last widget was flattened away and the
+            // document keeps no form at all.
+            if (acroFormNumber != 0)
+            {
+                catalog.Set("AcroForm", new PdfReference(acroFormNumber, 0));
+            }
+        }
+        else if (profile is null)
+        {
             CopyFromSource(copier, source, catalog, "AcroForm");
         }
         else if (source is not null && reader.ResolveDictionary(source.Get("AcroForm")) is { } sourceForm)
@@ -76,7 +122,15 @@ public sealed partial class PdfEditEngine
             catalog.Set("AcroForm", form);
         }
 
-        if (source?.Get("PageLabels") is not null)
+        if (labels is { } labeling)
+        {
+            if (labeling.Ranges.Count > 0)
+            {
+                EnsureLabelsFit(labeling, pageNumbers.Count);
+                catalog.Set("PageLabels", BuildPageLabels(labeling));
+            }
+        }
+        else if (source?.Get("PageLabels") is not null)
         {
             if (layoutChanged)
             {
@@ -90,7 +144,11 @@ public sealed partial class PdfEditEngine
             }
         }
 
-        if (profile is null && source?.Get("Metadata") is not null)
+        if (xmp is { } packet)
+        {
+            WriteXmp(writer, catalog, packet);
+        }
+        else if (profile is null && source?.Get("Metadata") is not null)
         {
             var informationOverridden = plan.Output.Metadata is not null
                 || plan.Operations.Any(operation => operation is PdfSetMetadataOperation);
@@ -217,7 +275,213 @@ public sealed partial class PdfEditEngine
         }
     }
 
+    /// <summary>Finds the last operation of a kind, when the plan states one.</summary>
+    /// <typeparam name="TOperation">The kind of operation to look for.</typeparam>
+    /// <param name="plan">The plan being applied.</param>
+    /// <returns>The last operation of that kind, or <see langword="null"/>.</returns>
+    /// <remarks>
+    /// An operation that states a document-level value replaces the one a preceding operation of the
+    /// same kind stated, so the plan reads the same way for a caller as it does here.
+    /// </remarks>
+    private static TOperation? LastOperation<TOperation>(PdfEditPlan plan)
+        where TOperation : PdfEditOperation =>
+        plan.Operations.OfType<TOperation>().LastOrDefault();
+
+    /// <summary>Writes the bookmarks an operation states, in place of the ones the source carried.</summary>
+    /// <param name="writer">The writer of the result.</param>
+    /// <param name="catalog">The catalog being built.</param>
+    /// <param name="outline">The bookmarks to write.</param>
+    /// <param name="pageNumbers">The object number of each page of the result, in output order.</param>
+    private static void WriteOutline(
+        PdfWriter writer,
+        PdfDictionary catalog,
+        PdfOutline outline,
+        IReadOnlyList<int> pageNumbers)
+    {
+        if (outline.Items.Count == 0)
+        {
+            // An outline with no bookmark is how an edit removes the panel: no /Outlines entry is
+            // written, so a viewer shows none.
+            return;
+        }
+
+        EnsureOutlinePages(outline, pageNumbers.Count);
+        catalog.Set("Outlines", new PdfReference(PdfOutlineWriter.Write(writer, outline.Items, pageNumbers), 0));
+    }
+
+    /// <summary>Checks that every bookmark names a page the edited document has.</summary>
+    /// <param name="outline">The bookmarks to write.</param>
+    /// <param name="pageCount">The number of pages the edited document has.</param>
+    /// <exception cref="PdfEditPlanValidationException">A bookmark names a page beyond the last page.</exception>
+    private static void EnsureOutlinePages(PdfOutline outline, int pageCount)
+    {
+        var pending = new Stack<PdfOutlineItem>(outline.Items);
+
+        while (pending.Count > 0)
+        {
+            var item = pending.Pop();
+
+            if (item.Destination?.PageNumber is { } page && page > pageCount)
+            {
+                throw new PdfEditPlanValidationException(string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"the bookmark '{item.Title}' points at page {page}, but the edited document has {pageCount} page(s)."));
+            }
+
+            foreach (var child in item.Children)
+            {
+                pending.Push(child);
+            }
+        }
+    }
+
+    /// <summary>Checks that every label range starts on a page the edited document has.</summary>
+    /// <param name="labeling">The labels to write.</param>
+    /// <param name="pageCount">The number of pages the edited document has.</param>
+    /// <exception cref="PdfEditPlanValidationException">A range starts beyond the last page.</exception>
+    private static void EnsureLabelsFit(PdfPageLabeling labeling, int pageCount)
+    {
+        var beyond = labeling.Ranges.FirstOrDefault(range => range.StartPage > pageCount);
+
+        if (beyond is not null)
+        {
+            throw new PdfEditPlanValidationException(string.Create(
+                CultureInfo.InvariantCulture,
+                $"the page labels start a range at page {beyond.StartPage}, but the edited document has {pageCount} page(s)."));
+        }
+    }
+
+    /// <summary>Builds the number tree that states the page labels.</summary>
+    /// <param name="labeling">The labels to write.</param>
+    /// <returns>The <c>/PageLabels</c> dictionary.</returns>
+    private static PdfDictionary BuildPageLabels(PdfPageLabeling labeling)
+    {
+        var nums = new PdfArray();
+
+        foreach (var range in labeling.Ranges)
+        {
+            // The number tree is keyed by the zero-based index of the first page of the range, which
+            // is the only place in the file format where a page is numbered from zero this way.
+            nums.Add(new PdfInteger(range.StartPage - 1));
+            nums.Add(LabelDictionary(range));
+        }
+
+        return new PdfDictionary().Set("Nums", nums);
+    }
+
+    /// <summary>Builds the label of one range of pages.</summary>
+    /// <param name="range">The range.</param>
+    /// <returns>The label dictionary.</returns>
+    private static PdfDictionary LabelDictionary(PdfPageLabelRange range)
+    {
+        var label = new PdfDictionary();
+
+        if (range.Style is not PageLabelStyle.NoNumber)
+        {
+            label.SetName("S", StyleName(range.Style));
+
+            // The default is 1, so it is stated only when the range says something else.
+            if (range.StartNumber != 1)
+            {
+                label.SetInteger("St", range.StartNumber);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(range.Prefix))
+        {
+            label.Set("P", PdfString.FromText(range.Prefix));
+        }
+
+        return label;
+    }
+
+    /// <summary>Gets the name of a numbering style as PDF writes it.</summary>
+    /// <param name="style">The style.</param>
+    /// <returns>The PDF name.</returns>
+    private static string StyleName(PageLabelStyle style) => style switch
+    {
+        PageLabelStyle.Decimal => "D",
+        PageLabelStyle.UpperRoman => "R",
+        PageLabelStyle.LowerRoman => "r",
+        PageLabelStyle.UpperLetters => "A",
+        PageLabelStyle.LowerLetters => "a",
+        _ => throw new ArgumentOutOfRangeException(nameof(style), style, "The numbering style is not one the engine writes."),
+    };
+
+    /// <summary>Writes the viewer preferences an operation states, in place of the ones of the source.</summary>
+    /// <param name="catalog">The catalog being built.</param>
+    /// <param name="preferences">The preferences to write.</param>
+    /// <remarks>
+    /// The page layout and the page mode are catalog entries rather than entries of the preference
+    /// dictionary, so they are written beside it; the rest is written where a viewer looks for it.
+    /// </remarks>
+    private static void WriteViewerPreferences(PdfDictionary catalog, PdfViewerPreferences preferences)
+    {
+        catalog.SetName("PageLayout", PageLayoutName(preferences.PageLayout));
+        catalog.SetName("PageMode", PageModeName(preferences.PageMode));
+
+        var viewer = new PdfDictionary()
+            .Set("HideToolbar", PdfBoolean.From(preferences.HideToolbar))
+            .Set("HideMenubar", PdfBoolean.From(preferences.HideMenubar))
+            .Set("HideWindowUI", PdfBoolean.From(preferences.HideWindowUi))
+            .Set("FitWindow", PdfBoolean.From(preferences.FitWindow))
+            .Set("CenterWindow", PdfBoolean.From(preferences.CenterWindow))
+            .Set("DisplayDocTitle", PdfBoolean.From(preferences.DisplayDocTitle))
+            .SetName("Direction", preferences.ReadingDirection is PdfReadingDirection.RightToLeft ? "R2L" : "L2R")
+            .SetName("PrintScaling", preferences.PrintScaling is PdfPrintScaling.None ? "None" : "AppDefault");
+
+        catalog.Set("ViewerPreferences", viewer);
+    }
+
+    /// <summary>Gets the name of a page layout as PDF writes it.</summary>
+    /// <param name="layout">The layout.</param>
+    /// <returns>The PDF name.</returns>
+    private static string PageLayoutName(PdfPageLayout layout) => layout switch
+    {
+        PdfPageLayout.OneColumn => "OneColumn",
+        PdfPageLayout.TwoColumnLeft => "TwoColumnLeft",
+        PdfPageLayout.TwoColumnRight => "TwoColumnRight",
+        PdfPageLayout.TwoPageLeft => "TwoPageLeft",
+        PdfPageLayout.TwoPageRight => "TwoPageRight",
+        _ => "SinglePage",
+    };
+
+    /// <summary>Gets the name of a page mode as PDF writes it.</summary>
+    /// <param name="mode">The page mode.</param>
+    /// <returns>The PDF name.</returns>
+    private static string PageModeName(PdfPageMode mode) => mode switch
+    {
+        PdfPageMode.UseOutlines => "UseOutlines",
+        PdfPageMode.UseThumbnails => "UseThumbnails",
+        PdfPageMode.FullScreen => "FullScreen",
+        PdfPageMode.UseOptionalContent => "UseOC",
+        PdfPageMode.UseAttachments => "UseAttachments",
+        _ => "UseNone",
+    };
+
+    /// <summary>Writes the XMP packet an operation states, in place of the one of the source.</summary>
+    /// <param name="writer">The writer of the result.</param>
+    /// <param name="catalog">The catalog being built.</param>
+    /// <param name="packet">The packet, as UTF-8 XML.</param>
+    /// <remarks>
+    /// The packet is written exactly as the caller handed it over and is never compressed, which
+    /// PDF/A-1 requires and the later parts of the standard allow.
+    /// </remarks>
+    private static void WriteXmp(PdfWriter writer, PdfDictionary catalog, ReadOnlyMemory<byte> packet)
+    {
+        var number = writer.AllocateObject();
+
+        writer.WriteObject(
+            number,
+            new PdfStream(
+                new PdfDictionary().SetName("Type", "Metadata").SetName("Subtype", "XML"),
+                packet));
+
+        catalog.Set("Metadata", new PdfReference(number, 0));
+    }
+
     /// <summary>Resolves the document information the result is written with.</summary>
+
     /// <param name="reader">The source document.</param>
     /// <param name="plan">The plan being applied.</param>
     /// <param name="modificationDate">The moment written as the modification date.</param>
@@ -288,17 +552,26 @@ public sealed partial class PdfEditEngine
     /// <param name="infoNumber">The object number of the document information dictionary.</param>
     /// <param name="identifier">The identifier written as both elements of the <c>ID</c> entry.</param>
     /// <param name="security">The encryption of the result, or <see langword="null"/> when it is written in the clear.</param>
+    /// <param name="previousXref">The cross-reference section this revision chains to, or <see langword="null"/> for a complete document.</param>
     private static void WriteTrailer(
         PdfWriter writer,
         int catalogNumber,
         int infoNumber,
         PdfString identifier,
-        PdfSecurityWriter? security)
+        PdfSecurityWriter? security,
+        long? previousXref)
     {
         var trailer = new PdfDictionary();
         trailer.Set("Root", new PdfReference(catalogNumber, 0));
         trailer.Set("Info", new PdfReference(infoNumber, 0));
         trailer.Set("ID", new PdfArray(new PdfObject[] { identifier, identifier }));
+
+        if (previousXref is { } previous)
+        {
+            // The chain is what makes the earlier revisions part of the document: a reader that follows
+            // /Prev reaches every object it did not find in this section.
+            trailer.SetInteger("Prev", previous);
+        }
 
         if (security is not null)
         {

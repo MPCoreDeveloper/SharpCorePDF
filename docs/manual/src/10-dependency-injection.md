@@ -214,7 +214,7 @@ the exception-handling shape, and Chapter 8 explains the warning kinds.
 ## The producer string
 
 When `MergeOutputOptions.Producer` is not set, the writer stamps the document with the product name and
-the assembly version of the SharpCorePDF domain assembly, for example `SharpCorePDF 1.0.0`. Override it
+the assembly version of the SharpCorePDF domain assembly, for example `SharpCorePDF 1.2.0`. Override it
 with your own product name if the PDF is produced by your application rather than offered as a library
 feature:
 

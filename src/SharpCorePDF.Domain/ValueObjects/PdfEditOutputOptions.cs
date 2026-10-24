@@ -38,6 +38,27 @@ public sealed record PdfEditOutputOptions
     public string? DocumentId { get; init; }
 
     /// <summary>
+    /// Gets a value indicating whether the result is appended to the bytes of the source as a new
+    /// revision, or written as a complete document.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// An incremental update leaves every byte of every earlier revision exactly where it was, so a
+    /// signature that covers one of them still covers it in the result. The cost is that nothing the
+    /// earlier revisions wrote can be removed: the file grows by the objects the edit adds, and a reader
+    /// resolves the newest revision of each object through the chained cross-reference sections.
+    /// </para>
+    /// <para>
+    /// It requires a source that can be read from its start and whose bytes are copied through
+    /// unchanged, which is why the engine refuses a stream that cannot seek and a document whose
+    /// cross-reference table had to be rebuilt by scanning. It cannot be combined with
+    /// <see cref="Encryption"/> or <see cref="PdfAProfile"/>: an appended revision keeps the encryption
+    /// and the header version of the revision it follows.
+    /// </para>
+    /// </remarks>
+    public bool UseIncrementalUpdate { get; init; }
+
+    /// <summary>
     /// Gets the encryption the result is written with, or <see langword="null"/> — the default — for a
     /// document that anyone can read.
     /// </summary>
@@ -90,6 +111,18 @@ public sealed record PdfEditOutputOptions
         if (DocumentId is not null && string.IsNullOrWhiteSpace(DocumentId))
         {
             errors.Add("the document identifier must be a non-empty string when it is set.");
+        }
+
+        if (UseIncrementalUpdate && Encryption is not null)
+        {
+            errors.Add(
+                "an incremental update cannot be combined with encryption: the appended revision is read with the encryption of the revision it follows, and re-encrypting the earlier bytes would invalidate their signatures.");
+        }
+
+        if (UseIncrementalUpdate && PdfAProfile is not null)
+        {
+            errors.Add(
+                "an incremental update cannot be written for a PDF/A profile: the profile fixes the header version and the metadata of the whole document, which a revision appended to an earlier one cannot change.");
         }
 
         if (Encryption is { } encryption)

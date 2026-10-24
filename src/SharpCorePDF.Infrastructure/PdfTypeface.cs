@@ -1,3 +1,4 @@
+using System.Text;
 using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure.Authoring;
 
@@ -44,6 +45,83 @@ public sealed class PdfTypeface
     /// <summary>Gets the bytes of the embedded font program, or <see langword="null"/> for a standard font.</summary>
     public ReadOnlyMemory<byte>? FontProgram { get; }
 
+    /// <summary>Gets the vertical metrics of the face, in font units.</summary>
+    /// <remarks>
+    /// A standard font states its metrics in units of 1/1000 em, which is the <c>UnitsPerEm</c> this
+    /// property reports for it; an embedded program states its own. Nothing is read from the machine
+    /// the code runs on: the numbers come from the font program or from the AFM data of the standard
+    /// font, so the same text measures the same on every platform.
+    /// </remarks>
+    public PdfTextMetrics Metrics =>
+        embedded is not null
+            ? new PdfTextMetrics(
+                embedded.Ascender,
+                embedded.Descender,
+                embedded.LineGap,
+                embedded.CapHeight,
+                embedded.XHeight,
+                embedded.UnitsPerEm)
+            : StandardMetrics(Family!.Value);
+
+    /// <summary>Measures a line of text set in this face.</summary>
+    /// <param name="text">The text to measure; it must not contain a line break.</param>
+    /// <param name="fontSize">The size the text would be set at, in points.</param>
+    /// <returns>The advance width of the text, in points.</returns>
+    /// <remarks>
+    /// The width is the sum of the advance widths of the characters, which is where a rendered line
+    /// ends before any character spacing, word spacing or horizontal scaling is applied: those are
+    /// text state a caller states once and the writer sets, not part of the face.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="fontSize"/> is not finite or not greater than zero.</exception>
+    /// <exception cref="ArgumentException">The face has no glyph or code for a character of the text.</exception>
+    public double Measure(string text, double fontSize)
+    {
+        ValidateFontSize(fontSize);
+
+        return MeasureInEms(text) * fontSize;
+    }
+
+    /// <summary>Measures a line of text, including the spacing it would be drawn with.</summary>
+    /// <param name="text">The text to measure; it must not contain a line break.</param>
+    /// <param name="fontSize">The size the text would be set at, in points.</param>
+    /// <param name="characterSpacing">Extra space after every glyph, in points.</param>
+    /// <param name="wordSpacing">Extra space after every space character, in points.</param>
+    /// <returns>The advance width of the text, in points, as the writer sets it.</returns>
+    /// <remarks>
+    /// This is the width a reader sees, not the width of the glyphs: PDF adds the character spacing
+    /// after every glyph and the word spacing after every space code, so a caller that sets either
+    /// has to ask for the same numbers it draws with.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The size or a spacing is not finite, or the size is not greater than zero.</exception>
+    /// <exception cref="ArgumentException">The face has no glyph or code for a character of the text.</exception>
+    public double Measure(string text, double fontSize, double characterSpacing, double wordSpacing)
+    {
+        ValidateFontSize(fontSize);
+
+        if (!double.IsFinite(characterSpacing))
+        {
+            throw new ArgumentOutOfRangeException(nameof(characterSpacing), characterSpacing, "A character spacing must be finite.");
+        }
+
+        if (!double.IsFinite(wordSpacing))
+        {
+            throw new ArgumentOutOfRangeException(nameof(wordSpacing), wordSpacing, "A word spacing must be finite.");
+        }
+
+        var glyphs = 0;
+        var spaces = 0;
+
+        foreach (var rune in text.EnumerateRunes())
+        {
+            glyphs++;
+            spaces += rune.Value == ' ' ? 1 : 0;
+        }
+
+        return (MeasureInEms(text) * fontSize) + (glyphs * characterSpacing) + (spaces * wordSpacing);
+    }
+
     /// <summary>Gets the parsed program of an embedded face.</summary>
     internal TrueTypeFont Embedded =>
         embedded ?? throw new InvalidOperationException("This typeface is a standard font and has no font program.");
@@ -82,6 +160,78 @@ public sealed class PdfTypeface
         var bytes = fontProgram.ToArray();
 
         return new PdfTypeface(TrueTypeFont.Parse(bytes));
+    }
+
+    /// <summary>Sums the advance widths of a line of text, as a fraction of the em.</summary>
+    /// <param name="text">The text.</param>
+    /// <returns>The width in ems.</returns>
+    /// <exception cref="ArgumentException">The face has no glyph or code for a character of the text.</exception>
+    private double MeasureInEms(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (text.Length == 0)
+        {
+            return 0d;
+        }
+
+        if (embedded is not null)
+        {
+            long units = 0;
+
+            foreach (var rune in text.EnumerateRunes())
+            {
+                if (!embedded.TryGetGlyph(rune.Value, out var glyph))
+                {
+                    throw new ArgumentException(
+                        $"The font '{embedded.Name}' has no glyph for '{rune}' (U+{rune.Value:X4}). Supply a font that covers it, or use a different character.",
+                        nameof(text));
+                }
+
+                units += embedded.GetAdvanceWidth(glyph);
+            }
+
+            return (double)units / embedded.UnitsPerEm;
+        }
+
+        var family = Family!.Value;
+        var widths = StandardFontMetrics.Widths(family);
+        long thousandths = 0;
+
+        foreach (var character in text)
+        {
+            if (!WinAnsiEncoding.TryGetCode(character, out var code))
+            {
+                throw new ArgumentException(
+                    $"The standard font {Name} is written with WinAnsiEncoding, which has no code for '{character}' (U+{(int)character:X4}). Use an embedded TrueType font for text outside that encoding.",
+                    nameof(text));
+            }
+
+            thousandths += widths[code];
+        }
+
+        return thousandths / 1000d;
+    }
+
+    /// <summary>Builds the metrics of a standard font, whose em is one thousand units.</summary>
+    /// <param name="family">The standard font.</param>
+    /// <returns>The metrics, in units of 1/1000 em.</returns>
+    private static PdfTextMetrics StandardMetrics(StandardFont family)
+    {
+        var (ascent, descent, capHeight, xHeight) = StandardFontMetrics.Get(family);
+
+        return new PdfTextMetrics(ascent, descent, 0d, capHeight, xHeight, 1000);
+    }
+
+    /// <summary>Refuses a size that cannot describe a line of text.</summary>
+    /// <param name="fontSize">The size in points.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The size is not finite or not greater than zero.</exception>
+    private static void ValidateFontSize(double fontSize)
+    {
+        if (!double.IsFinite(fontSize) || fontSize <= 0.0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(fontSize), fontSize, "A font size must be finite and greater than zero.");
+        }
     }
 
     /// <summary>Returns the name of the face.</summary>

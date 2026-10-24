@@ -57,12 +57,91 @@ between requests and applied concurrently without a lock.
 | `CropPage(pageNumber, cropBox)` | Sets the visible area of a page inside its media box. A box that reaches outside the media box is clamped to the part that overlaps it and reported as `PdfWarningKind.PageGeometryNormalized`; a box with no overlap is refused. |
 | `ResizePage(pageNumber, size, mode)` | Changes the page size and makes the content follow it. `PdfPageResizeMode.Scale` scales the content to the new size; `PdfPageResizeMode.Preserve` keeps it at its original size and centres it. The original content streams are wrapped, not rewritten. |
 | `SetMetadata(metadata)` | Merges document information into the source values. Fields left `null` keep their source value; fields set are replaced. Several metadata operations merge in plan order. |
+| `SetXmp(xmp)` | Replaces the XMP packet with the bytes given. The packet must be well-formed XML; nothing in it is rewritten. |
+| `SetOutline(outline)` | Replaces the bookmarks. Page numbers are the ones the edit leaves behind; `PdfOutline.Empty` removes the panel. |
+| `SetPageLabels(labels)` | Replaces the page labels with explicit ranges; `PdfPageLabeling.None` removes them. |
+| `SetViewerPreferences(preferences)` | Replaces what a viewer shows when it opens the document: window chrome, panel, page layout, binding side and print scaling. |
+| `Overlay(overlay, pageNumber, options)` | Records one page of another document over a page. |
+| `Underlay(underlay, pageNumber, options)` | Records one page of another document under a page. |
+| `AddAnnotation(pageNumber, annotation)` | Draws a comment, a stamp or a link over a page without touching its content (chapter 18). |
+| `UpdateAnnotation(pageNumber, id, annotation)` | Replaces the annotation that carries an identifier. |
+| `RemoveAnnotation(pageNumber, id)` | Removes the annotation that carries an identifier. |
+| `SetForm(form)` / `SetFormField(...)` | Writes a form, or fills the fields of the one the document carries, by name (chapter 19). |
+| `ResetForm()` | Puts every field back to the value the document states as its default. |
+| `FlattenForm()` / `FlattenForm(pageNumber)` | Draws the widgets into the page and removes the form. |
 
 The operation objects are public values (`PdfRotatePageOperation`, `PdfDeletePageOperation`,
 `PdfMovePageOperation`, `PdfDuplicatePageOperation`, `PdfCropPageOperation`,
-`PdfResizePageOperation`, `PdfSetMetadataOperation`), but the methods on `PdfEditPlan` are the
-intended construction route: they check the invariant that can be checked without a document, and
-they keep the plan immutable.
+`PdfResizePageOperation`, `PdfSetMetadataOperation`, `PdfOverlayOperation`, `PdfSetXmpOperation`,
+`PdfSetOutlineOperation`, `PdfSetPageLabelsOperation`, `PdfSetViewerPreferencesOperation`,
+`PdfAddAnnotationOperation`, `PdfUpdateAnnotationOperation`, `PdfRemoveAnnotationOperation`,
+`PdfSetFormOperation`, `PdfResetFormOperation`, `PdfFlattenFormOperation`), but the
+methods on `PdfEditPlan` are the intended construction route: they check the invariant that can be
+checked without a document, and they keep the plan immutable.
+
+The two surfaces that write over a page — annotations and forms — have chapters of their own, because each
+carries a model a caller has to understand before the plan makes sense: chapter 18 for the annotation kinds
+and their appearance streams, chapter 19 for the field kinds, the merge by name and the flatten.
+
+## Overlays and underlays
+
+An overlay or underlay records one page of another document on a page of the one being edited: a
+stamp, a watermark, a letterhead.
+
+```csharp
+var plan = PdfEditPlan.Create()
+    .Underlay(new PdfFileSource("letterhead.pdf"), 1)
+    .Overlay(new PdfFileSource("approved.pdf"), 2, new PdfOverlayOptions
+    {
+        Opacity = 0.5,
+        Placement = PdfOverlayPlacement.Fit,
+        BlendMode = PdfOverlayBlendMode.Multiply,
+    });
+```
+
+The layer is content, not an annotation. It is written as a form XObject that keeps the resources of
+the document it came from, so a name it uses for a font or an image can never collide with a name the
+page already means something else by. The page's own streams are copied unchanged: an overlay appends
+a stream that draws the form, an underlay prepends one, and the bytes the page carried stay in
+between, wrapped in the `q`/`Q` pair the contract states.
+
+| Option | Effect |
+| --- | --- |
+| `Placement` | `Fit` scales the layer until it fits the visible area and centres it, keeping the aspect ratio. `Stretch` fills the area in both directions, so the aspect ratio may change. `OriginalSize` scales nothing and anchors the layer at the lower-left corner. |
+| `Opacity` | From `0` (invisible) to `1` (opaque). It is written through an `ExtGState` of the layer's own, so it applies to the layer alone. |
+| `BlendMode` | `Normal`, `Multiply`, `Screen`, `Overlay`, `Darken` or `Lighten`; also written through that `ExtGState`. |
+| `Clip` | Clips the layer to the visible area of the page. Defaults to `true`; an overlay that reaches past the page would otherwise paint outside it. |
+
+The document a layer comes from must hold exactly one page. The visible area is the page's `CropBox`
+when it has one and its `MediaBox` otherwise, after any crop or resize that preceded the layer. The
+layer travels with the page it was applied to: `MovePage` carries it, `DeletePage` removes it with the
+page, and `DuplicatePage` makes both copies draw the same form.
+
+`PDF/A-1b` is built on a version of PDF that has no transparency, so a plan written for it refuses a
+layer with an opacity below `1` or a blend mode other than `Normal` rather than writing the layer
+opaque without saying so. The validation happens when the plan is checked, before the source is read.
+
+## Document-level edits
+
+Four operations state a value of the document rather than of a page. Each replaces what the source
+carried, a later operation of the same kind replaces an earlier one, and none of them changes the
+pages:
+
+- `SetOutline` writes the bookmark tree as stated. Page numbers are one-based in the order the edit
+  leaves the pages in; a bookmark that names a page the result does not have is refused with
+  `PdfEditPlanValidationException` before anything is written. `PdfOutline.Empty` writes no
+  `/Outlines` entry at all, which removes the panel the source carried.
+- `SetPageLabels` writes one range per numbering style — `Decimal`, `UpperRoman`, `LowerRoman`,
+  `UpperLetters`, `LowerLetters` or `NoNumber` — each with an optional prefix and a start number. A
+  range that starts past the last page of the result is refused. `PdfPageLabeling.None` removes the
+  labels, so the edit reports no `PageLabelsDropped` warning for a change the caller made itself.
+- `SetViewerPreferences` writes `HideToolbar`, `HideMenubar`, `HideWindowUi`, `FitWindow`,
+  `CenterWindow`, `DisplayDocTitle`, `PageLayout`, `PageMode`, `ReadingDirection` and `PrintScaling`.
+  The page layout and the page mode are catalog entries; the rest is written to
+  `/ViewerPreferences`.
+- `SetXmp` writes the packet as given, as UTF-8 XML, and never rewrites it. The plan refuses a packet
+  that is not well-formed, and one set on a document written for a PDF/A profile, whose own packet
+  declares conformance.
 
 ## Output options
 
@@ -104,15 +183,17 @@ so inherited `MediaBox`, `CropBox`, `Resources` and `Rotate` are materialised on
 
 Document-level features are carried over from the source. Two of them cannot be carried over
 truthfully after some edits, so they are dropped and reported rather than left to contradict the
-result:
+result — unless the plan states them itself, in which case the stated value is written:
 
 - **Page labels** are dropped when an operation changes the page order or count — delete, move or
   duplicate. A rotation alone does not change the labels, so they survive it. The result carries
-  `PdfWarningKind.PageLabelsDropped`.
+  `PdfWarningKind.PageLabelsDropped`; `SetPageLabels` states them instead, and `PdfPageLabeling.None`
+  removes them without the warning.
 - **The XMP packet** is dropped when the information dictionary is overridden, whether by
   `SetMetadata` or by `PdfEditOutputOptions.Metadata`. Keeping an old packet would leave two
   descriptions of the same document that disagree. The result carries
-  `PdfWarningKind.XmpPacketDropped`; the information dictionary holds the new values.
+  `PdfWarningKind.XmpPacketDropped`; the information dictionary holds the new values, and `SetXmp`
+  replaces the packet instead of dropping it.
 
 Bookmarks, named destinations and form widgets that name a page are copied with their references
 redirected to the first surviving occurrence of that page, or to the first page of the result when the

@@ -474,3 +474,32 @@ The text round-trips: `ReadTextAsync` gives back `Veuillez trouver ci-joint le d
 accents, because the embedded font carries a `ToUnicode` map. The standard font covers the address block
 because it is Windows-1252 text; a character outside that encoding would have been refused when the cover
 was written, and an embedded face is the answer for anything else.
+
+### When the paragraph comes from a template
+
+Two hand-placed lines are fine while the sentence is fixed. When the wording comes from a template, the
+lines have to be computed, and Chapter 16 is the surface for it (added in `1.2`; `1.1.0` drew one line per
+call). Put the first baseline where the hand-placed line was, so the cover does not have to be re-measured:
+
+```csharp
+// bodyText is the paragraph the template produced; body is the embedded face from above.
+var style = new PdfTextStyle(body, 12, leading: 15);
+var paragraph = PdfTextLayouter.Layout(bodyText, style, new PdfTextLayoutOptions(maxWidth: 295));
+
+var metrics = body.Metrics;
+var firstBaseline = metrics.Ascent * style.FontSize / metrics.UnitsPerEm;
+var top = 400 - firstBaseline;          // the box corner that puts the first baseline back at 400
+```
+
+`295` is the A4 width minus a 150-point margin on each side. The block is drawn with one call, and the
+next block is placed at `top + paragraph.Bounds.Height`:
+
+```csharp
+page.DrawTextLayout(paragraph, new PdfPoint(150, top));
+page.DrawText("Sending 1/3", 150, top + paragraph.Bounds.Height + 20, body, 12);
+```
+
+`Bounds.Height` runs from the top of the box to the descender of the last line, so it is the space the
+paragraph actually needs — not the number of lines times the leading. A template that overflows the column
+throws at `Layout`, naming the word that did not fit, unless `BreakWords` or a `Clip`/`Continue` policy is
+stated.

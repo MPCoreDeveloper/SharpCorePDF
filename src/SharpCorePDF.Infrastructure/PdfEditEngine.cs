@@ -73,6 +73,22 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
                 "the plan asks for a split, which produces several documents; apply it with SplitAsync instead of writing one destination.");
         }
 
+        // An incremental update copies the bytes of the source into the result, so the source has to be
+        // a byte sequence that can be read from its start: a forward-only stream cannot be replayed. The
+        // destination has to be empty for the same reason in reverse — the result begins with the source,
+        // and an offset recorded for the revision counts from the first byte of the file.
+        if (plan.Output.UseIncrementalUpdate && !content.CanSeek)
+        {
+            throw new PdfEditPlanValidationException(
+                "an incremental update requires a source that can seek, because the bytes of its earlier revisions are copied into the result unchanged.");
+        }
+
+        if (plan.Output.UseIncrementalUpdate && destination.CanSeek && (destination.Length != 0 || destination.Position != 0))
+        {
+            throw new PdfEditPlanValidationException(
+                "an incremental update writes the whole document to the destination, beginning with the bytes of its source, so the destination has to be an empty stream.");
+        }
+
         var started = Stopwatch.GetTimestamp();
         var bytes = await PdfByteReader
             .ReadAllAsync(content, options.MaxSourceBytes, sourceName, cancellationToken)
@@ -85,6 +101,13 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
             throw new PdfEncryptionException(sourceName, reader.RequiresPassword);
         }
 
+        var incremental = plan.Output.UseIncrementalUpdate;
+
+        if (incremental)
+        {
+            EnsureIncrementalSource(reader, sourceName);
+        }
+
         if (reader.Pages.Count == 0)
         {
             throw new PdfSourceFormatException(
@@ -94,6 +117,20 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
 
         var warnings = new List<PdfWarning>(reader.Warnings);
         var profile = plan.Output.PdfAProfile;
+
+        // A rewrite of a signed document leaves the signature behind: it names a byte range that no
+        // longer exists in the result. Saying so is part of the outcome, because the caller may be
+        // about to hand the result on as a signed document.
+        if (CarriesSignature(reader))
+        {
+            warnings.Add(incremental
+                ? new(
+                    PdfWarningKind.PriorSignaturePreserved,
+                    $"{sourceName} is signed, and the signature still covers the revision it was made over because the edit appended a revision instead of rewriting the bytes.")
+                : new(
+                    PdfWarningKind.PriorSignatureInvalidated,
+                    $"{sourceName} is signed, and the signature cannot be valid in the result: a complete rewrite changes the bytes it covers. Write the edit with UseIncrementalUpdate to keep it."));
+        }
 
         if (profile is { } archival)
         {
@@ -119,7 +156,8 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
         }
 
         var sources = await OpenSourcesAsync(reader, plan, warnings, cancellationToken).ConfigureAwait(false);
-        var layout = BuildLayout(sources, plan, warnings, out var layoutChanged);
+        var form = new FormPlan();
+        var layout = BuildLayout(sources, plan, form, warnings, out var layoutChanged);
 
         if (layout.Count == 0)
         {
@@ -128,7 +166,26 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
         }
 
         var modificationDate = plan.Output.ModificationDate ?? DateTimeOffset.UtcNow;
-        var version = profile is { } target ? PdfAProfileRules.Version(target) : plan.Output.TargetVersion;
+
+        // A revision appended to a document cannot change the header of the first revision, so an
+        // incremental update keeps the version of its source whatever the options ask for.
+        var version = plan.Output.TargetVersion;
+
+        if (incremental)
+        {
+            version = reader.Version;
+        }
+        else if (profile is { } target)
+        {
+            version = PdfAProfileRules.Version(target);
+        }
+
+        if (incremental && version.CompareTo(plan.Output.TargetVersion) != 0)
+        {
+            warnings.Add(new(
+                PdfWarningKind.IncrementalUpdateVersionKept,
+                $"{sourceName} is PDF {reader.Version} and the edit keeps that version: an appended revision cannot change the header of the revision it follows."));
+        }
         var identifier = BuildFileIdentifier(plan, version, layout.Count, modificationDate);
         var metadata = ResolveMetadata(reader, plan, modificationDate);
 
@@ -152,7 +209,13 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
             ? PdfSecurityWriter.Create(encryption, identifier.Bytes)
             : null;
 
-        var writer = new PdfWriter(capture ?? destination, version, options, security);
+        // An incremental update writes the source through first: its bytes are the earlier revisions of
+        // the result, and the writer numbers its objects above every object they used.
+        var revision = incremental
+            ? AppendRevision(capture ?? destination, reader, warnings, sourceName)
+            : null;
+
+        var writer = revision?.Writer ?? new PdfWriter(capture ?? destination, version, options, security);
         var catalogNumber = writer.AllocateObject();
         var pagesNodeNumber = writer.AllocateObject();
 
@@ -180,9 +243,25 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
             RedirectSourcePages(source, contributed, copier);
         }
 
-        WritePages(sources, writer, pagesNodeNumber, layout);
+        // The form is written before the pages: a page names the widgets that stand on it, and a
+        // flattened field adds a stream and a resource the page dictionary has to carry.
+        var acroForm = WriteForm(reader, sources.CopierOf(reader), writer, layout, form, warnings);
 
-        var catalog = BuildCatalog(reader, sources.CopierOf(reader), writer, pagesNodeNumber, plan, profile, metadata, layoutChanged, warnings);
+        WritePages(sources, writer, pagesNodeNumber, layout, new AnnotationContext(writer, modificationDate), warnings);
+
+        var catalog = BuildCatalog(
+            reader,
+            sources.CopierOf(reader),
+            writer,
+            pagesNodeNumber,
+            plan,
+            profile,
+            metadata,
+            layoutChanged,
+            [.. layout.Select(page => page.TargetNumber)],
+            acroForm,
+            form.Touched,
+            warnings);
 
         if (profile is { } written)
         {
@@ -199,7 +278,7 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
         sources.Flush();
 
         var infoNumber = WriteInformation(writer, metadata);
-        WriteTrailer(writer, catalogNumber, infoNumber, identifier, security);
+        WriteTrailer(writer, catalogNumber, infoNumber, identifier, security, revision?.PreviousXref);
 
         Verify(capture, layout, plan.Output.Encryption?.UserPassword, warnings);
 

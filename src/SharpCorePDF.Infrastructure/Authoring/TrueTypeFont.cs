@@ -82,27 +82,54 @@ internal sealed class TrueTypeFont
     /// <summary>Gets the descender in font units, which is negative.</summary>
     public int Descender => BinaryPrimitives.ReadInt16BigEndian(Data.AsSpan(hheaOffset + 6));
 
+    /// <summary>Gets the line gap in font units, the space a font asks for between two lines.</summary>
+    public int LineGap => BinaryPrimitives.ReadInt16BigEndian(Data.AsSpan(hheaOffset + 8));
+
     /// <summary>Gets the italic angle of the face in degrees.</summary>
     public double ItalicAngle =>
         tables.TryGetValue("post", out var post) && post.Length >= 8
             ? BinaryPrimitives.ReadInt32BigEndian(Data.AsSpan(post.Offset + 4)) / 65536d
             : 0d;
 
-    /// <summary>Gets the cap height in font units, falling back on the ascender.</summary>
+    /// <summary>Gets the cap height in font units, falling back on the height of an <c>H</c>.</summary>
     public int CapHeight
     {
         get
         {
             if (!tables.TryGetValue("OS/2", out var os2) || os2.Length < 90)
             {
-                return (int)(Ascender * 0.7d);
+                return GlyphTop('H') ?? (int)(Ascender * 0.7d);
             }
 
             var version = BinaryPrimitives.ReadUInt16BigEndian(Data.AsSpan(os2.Offset));
 
             return version >= 2
                 ? BinaryPrimitives.ReadInt16BigEndian(Data.AsSpan(os2.Offset + 88))
-                : (int)(Ascender * 0.7d);
+                : GlyphTop('H') ?? (int)(Ascender * 0.7d);
+        }
+    }
+
+    /// <summary>Gets the x height in font units, falling back on the height of an <c>x</c>.</summary>
+    public int XHeight
+    {
+        get
+        {
+            if (tables.TryGetValue("OS/2", out var os2) && os2.Length >= 88)
+            {
+                var version = BinaryPrimitives.ReadUInt16BigEndian(Data.AsSpan(os2.Offset));
+
+                if (version >= 2)
+                {
+                    var stated = BinaryPrimitives.ReadInt16BigEndian(Data.AsSpan(os2.Offset + 86));
+
+                    if (stated > 0)
+                    {
+                        return stated;
+                    }
+                }
+            }
+
+            return GlyphTop('x') ?? (int)(Ascender * 0.5d);
         }
     }
 
@@ -244,6 +271,24 @@ internal sealed class TrueTypeFont
         var end = LocaOffset((ushort)(glyph + 1));
 
         return end > start ? Data.AsSpan(glyfOffset + start, end - start) : [];
+    }
+
+    /// <summary>Gets the top of the outline of the glyph a character is mapped to.</summary>
+    /// <param name="character">The character.</param>
+    /// <returns>
+    /// The y coordinate of the top of the outline, in font units, or <see langword="null"/> when
+    /// the font does not map the character or the glyph has no outline.
+    /// </returns>
+    private int? GlyphTop(char character)
+    {
+        if (!TryGetGlyph(character, out var glyph))
+        {
+            return null;
+        }
+
+        var outline = GetGlyph(glyph);
+
+        return outline.Length >= 10 ? BinaryPrimitives.ReadInt16BigEndian(outline[8..]) : null;
     }
 
     /// <summary>Enumerates the glyphs a composite glyph is built from.</summary>

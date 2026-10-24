@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure.Pdf;
 
 namespace SharpCorePDF.Infrastructure.Authoring;
@@ -21,8 +22,14 @@ namespace SharpCorePDF.Infrastructure.Authoring;
 /// chunk makes entries transparent — is decoded, because PDF stores transparency in a separate
 /// <c>/SMask</c> stream and the samples have to be split.
 /// </para>
+/// <para>
+/// An <c>iCCP</c> chunk is declared rather than dropped: the profile travels with the image and its
+/// colour space becomes <c>/ICCBased</c>, so a reader converts the samples with the same profile the
+/// file was written against. A profile that does not describe the samples the image is written with is
+/// refused by name, because writing it would describe them wrongly.
+/// </para>
 /// </remarks>
-internal sealed class PngImage
+internal sealed class PngImage : IEmbeddedImage
 {
     private const int SignatureLength = 8;
     private const int MaximumPaletteEntries = 256;
@@ -33,24 +40,27 @@ internal sealed class PngImage
         int width,
         int height,
         PdfObject colorSpace,
+        PdfImageColorSpace sourceColorSpace,
         int colors,
         byte[] colorData,
-        bool usesPngPredictor,
         byte[]? alphaData,
         IReadOnlyList<int>? colorKey,
         double? widthPoints,
-        double? heightPoints)
+        double? heightPoints,
+        IccColorProfile? iccProfile)
     {
         Width = width;
         Height = height;
         ColorSpace = colorSpace;
+        SourceColorSpace = sourceColorSpace;
         Colors = colors;
         ColorData = colorData;
-        UsesPngPredictor = usesPngPredictor;
         AlphaData = alphaData;
         ColorKey = colorKey;
+        DecodeParms = EmbeddedImage.Predictor(colors, width);
         NaturalWidthPoints = widthPoints;
         NaturalHeightPoints = heightPoints;
+        IccProfile = iccProfile;
     }
 
     /// <summary>Gets the width in samples.</summary>
@@ -62,23 +72,38 @@ internal sealed class PngImage
     /// <summary>Gets the colour space of the colour stream.</summary>
     public PdfObject ColorSpace { get; }
 
+    /// <summary>Gets the colour space the IHDR chunk and palette state.</summary>
+    public PdfImageColorSpace SourceColorSpace { get; }
+
     /// <summary>Gets the number of colour components per sample: one for grey, three for RGB.</summary>
     public int Colors { get; }
+
+    /// <summary>Gets the number of bits per sample, which is eight: other depths are refused.</summary>
+    public int BitsPerComponent => 8;
+
+    /// <summary>Gets the filter that decodes <see cref="ColorData"/>.</summary>
+    public string Filter => "FlateDecode";
 
     /// <summary>Gets the compressed colour samples.</summary>
     public byte[] ColorData { get; }
 
-    /// <summary>
-    /// Gets a value indicating whether <see cref="ColorData"/> is the original, still filtered
-    /// <c>IDAT</c> data, which the PDF predictor parameters describe.
-    /// </summary>
-    public bool UsesPngPredictor { get; }
+    /// <summary>Gets the predictor parameters that describe the filtered rows of <see cref="ColorData"/>.</summary>
+    public PdfDictionary DecodeParms { get; }
 
     /// <summary>Gets the compressed alpha samples, or <see langword="null"/> when the image is opaque.</summary>
     public byte[]? AlphaData { get; }
 
     /// <summary>Gets the colour key of an image whose <c>tRNS</c> chunk names one transparent colour.</summary>
     public IReadOnlyList<int>? ColorKey { get; }
+
+    /// <summary>Gets the <c>/Decode</c> array, which a PNG never states: it is <see langword="null"/>.</summary>
+    public IReadOnlyList<int>? Decode => null;
+
+    /// <summary>
+    /// Gets the profile an <c>iCCP</c> chunk states, which colour-corrects the samples, or
+    /// <see langword="null"/> when the file states none and the samples are device values.
+    /// </summary>
+    public IccColorProfile? IccProfile { get; }
 
     /// <summary>Gets the width the <c>pHYs</c> chunk implies, in points, or <see langword="null"/>.</summary>
     public double? NaturalWidthPoints { get; }
@@ -104,6 +129,7 @@ internal sealed class PngImage
         var header = ReadHeader(data);
         var palette = default(byte[]);
         var transparency = default(byte[]);
+        var compressedProfile = default(byte[]);
         var idat = new MemoryStream();
         var pixelsPerMeterX = 0;
         var pixelsPerMeterY = 0;
@@ -136,6 +162,10 @@ internal sealed class PngImage
 
                 case "tRNS":
                     transparency = body.ToArray();
+                    break;
+
+                case "iCCP":
+                    compressedProfile = body.ToArray();
                     break;
 
                 case "pHYs":
@@ -177,14 +207,20 @@ internal sealed class PngImage
         }
 
         var colorSpace = BuildColorSpace(header.ColorType, palette, out var colors);
+        var sourceColorSpace = header.ColorType switch
+        {
+            0 or 4 => PdfImageColorSpace.Gray,
+            3 => PdfImageColorSpace.Indexed,
+            _ => PdfImageColorSpace.Rgb,
+        };
+
         var colorData = idat.ToArray();
-        var usesPngPredictor = true;
         var alphaData = default(byte[]);
         IReadOnlyList<int>? colorKey = null;
 
         if (header.ColorType is 4 or 6)
         {
-            var samples = Decode(colorData, header);
+            var samples = UnfilterRows(colorData, header);
             var channels = header.ColorType == 6 ? 4 : 2;
             var pixelCount = header.Width * header.Height;
             var colorChannels = channels - 1;
@@ -201,20 +237,19 @@ internal sealed class PngImage
                 alpha[pixel] = samples[(pixel * channels) + colorChannels];
             }
 
-            colorData = CompressWithPredictor(rgb, header.Width, colorChannels);
-            alphaData = CompressWithPredictor(alpha, header.Width, 1);
+            colorData = EmbeddedImage.CompressWithPredictor(rgb, header.Width, colorChannels);
+            alphaData = EmbeddedImage.CompressWithPredictor(alpha, header.Width, 1);
             colors = colorChannels;
-            usesPngPredictor = false;
         }
         else if (header.ColorType == 3 && transparency is not null)
         {
-            var samples = Decode(colorData, header);
+            var samples = UnfilterRows(colorData, header);
             ExpandPalette(samples, palette!, transparency, header.Width, out colorData, out alphaData);
 
             // The palette has been expanded to RGB, so the stream is no longer indexed.
             colorSpace = new PdfName("DeviceRGB");
             colors = 3;
-            usesPngPredictor = false;
+            sourceColorSpace = PdfImageColorSpace.Rgb;
         }
         else if (header.ColorType is 0 or 2 && transparency is not null)
         {
@@ -224,20 +259,32 @@ internal sealed class PngImage
         }
 
         var scale = pixelsPerMeterUnit == 1 && pixelsPerMeterX > 0 && pixelsPerMeterY > 0
-            ? 72d * 39.37007874015748d
+            ? EmbeddedImage.PointsPerInch * 39.37007874015748d
             : 0d;
+
+        // The profile is read last, because a palette is expanded to RGB before it is written: the
+        // profile has to describe the samples the document will hold, not the indices the file holds.
+        var iccProfile = compressedProfile is null ? null : ReadProfile(compressedProfile, colors);
+
+        if (iccProfile is not null)
+        {
+            // A file that states a profile does not leave its samples as device values: that is what
+            // PdfImage reports, and what the image dictionary says.
+            sourceColorSpace = PdfImageColorSpace.IccBased;
+        }
 
         return new PngImage(
             header.Width,
             header.Height,
             colorSpace,
+            sourceColorSpace,
             colors,
             colorData,
-            usesPngPredictor,
             alphaData,
             colorKey,
             scale > 0d ? header.Width * scale / pixelsPerMeterX : null,
-            scale > 0d ? header.Height * scale / pixelsPerMeterY : null);
+            scale > 0d ? header.Height * scale / pixelsPerMeterY : null,
+            iccProfile);
     }
 
     /// <summary>Reads and validates the IHDR chunk, which must be the first one.</summary>
@@ -325,7 +372,7 @@ internal sealed class PngImage
     /// <param name="compressed">The concatenated IDAT bytes.</param>
     /// <param name="header">The image header.</param>
     /// <returns>The unfiltered samples, without row filter bytes.</returns>
-    private static byte[] Decode(byte[] compressed, PngHeader header)
+    private static byte[] UnfilterRows(byte[] compressed, PngHeader header)
     {
         var channels = header.ColorType switch
         {
@@ -372,7 +419,7 @@ internal sealed class PngImage
         {
             var offset = row * (rowLength + 1);
             Buffer.BlockCopy(inflated, offset + 1, current, 0, rowLength);
-            Unfilter(inflated[offset], current, previous, channels, row);
+            UnfilterRow(inflated[offset], current, previous, channels, row);
             Buffer.BlockCopy(current, 0, samples, row * rowLength, rowLength);
             (previous, current) = (current, previous);
         }
@@ -386,7 +433,7 @@ internal sealed class PngImage
     /// <param name="previous">The unfiltered row above.</param>
     /// <param name="bytesPerPixel">The number of bytes one pixel takes.</param>
     /// <param name="rowNumber">The zero-based row number, used in diagnostics.</param>
-    private static void Unfilter(byte filter, byte[] row, byte[] previous, int bytesPerPixel, int rowNumber)
+    private static void UnfilterRow(byte filter, byte[] row, byte[] previous, int bytesPerPixel, int rowNumber)
     {
         for (var index = 0; index < row.Length; index++)
         {
@@ -426,39 +473,74 @@ internal sealed class PngImage
 
         return upDistance <= upperLeftDistance ? up : upperLeft;
     }
-    /// <summary>Compresses samples with one filter byte per row, which is what the PDF predictor expects.</summary>
-    /// <param name="samples">The unfiltered samples, row by row.</param>
-    /// <param name="width">The width in pixels.</param>
-    /// <param name="colors">The number of components per pixel.</param>
-    /// <returns>The compressed bytes.</returns>
-    private static byte[] CompressWithPredictor(byte[] samples, int width, int colors)
-    {
-        var rowLength = width * colors;
-        var rows = samples.Length / rowLength;
-        var filtered = new byte[(rowLength + 1) * rows];
+    /// <summary>The smallest ICC profile the specification allows, which is its 128 byte header.</summary>
+    private const int ProfileHeaderLength = 128;
 
-        for (var row = 0; row < rows; row++)
+    /// <summary>
+    /// Reads the profile an <c>iCCP</c> chunk carries: a Latin-1 name that ends in a null, the
+    /// compression method, and the profile itself, deflated.
+    /// </summary>
+    /// <param name="chunk">The bytes of the chunk.</param>
+    /// <param name="colors">The number of components the image is written with.</param>
+    /// <returns>The profile, with the device colour space a reader falls back to.</returns>
+    /// <exception cref="ArgumentException"><paramref name="chunk"/> does not hold a compressed ICC profile.</exception>
+    /// <exception cref="NotSupportedException">The profile describes a colour space the samples cannot use.</exception>
+    private static IccColorProfile ReadProfile(byte[] chunk, int colors)
+    {
+        var terminator = Array.IndexOf(chunk, (byte)0);
+
+        if (terminator < 1 || terminator + 2 > chunk.Length)
         {
-            filtered[row * (rowLength + 1)] = 0;
-            Buffer.BlockCopy(samples, row * rowLength, filtered, (row * (rowLength + 1)) + 1, rowLength);
+            throw new ArgumentException(
+                "The PNG iCCP chunk does not state a profile name followed by a compression method.");
         }
 
-        return Compress(filtered);
-    }
-
-    /// <summary>Compresses bytes with the zlib wrapper a PDF Flate stream uses.</summary>
-    /// <param name="data">The bytes to compress.</param>
-    /// <returns>The compressed bytes.</returns>
-    private static byte[] Compress(byte[] data)
-    {
-        using var output = new MemoryStream();
-
-        using (var compressor = new ZLibStream(output, CompressionLevel.Optimal, leaveOpen: true))
+        if (chunk[terminator + 1] != 0)
         {
-            compressor.Write(data);
+            throw new NotSupportedException(
+                $"The PNG states ICC compression method {chunk[terminator + 1]}; PNG defines method 0, deflate, only.");
         }
 
-        return output.ToArray();
+        byte[] profile;
+
+        try
+        {
+            using var input = new MemoryStream(chunk, terminator + 2, chunk.Length - terminator - 2, writable: false);
+            using var decompressor = new ZLibStream(input, CompressionMode.Decompress);
+            using var output = new MemoryStream();
+
+            decompressor.CopyTo(output);
+            profile = output.ToArray();
+        }
+        catch (InvalidDataException exception)
+        {
+            throw new ArgumentException("The PNG iCCP chunk could not be decompressed.", exception);
+        }
+
+        if (profile.Length < ProfileHeaderLength || !profile.AsSpan(36, 4).SequenceEqual("acsp"u8))
+        {
+            throw new ArgumentException(
+                "The PNG iCCP chunk does not hold an ICC profile: the acsp signature is missing from its header.");
+        }
+
+        var signature = System.Text.Encoding.ASCII.GetString(profile, 16, 4);
+        var (components, alternate) = signature switch
+        {
+            "RGB " => (3, "DeviceRGB"),
+            "GRAY" => (1, "DeviceGray"),
+            "CMYK" => (4, "DeviceCMYK"),
+            _ => throw new NotSupportedException(
+                $"The PNG states an ICC profile for the colour space '{signature}', which PDF has no device colour space for."),
+        };
+
+        if (components != colors)
+        {
+            throw new NotSupportedException(string.Create(
+                System.Globalization.CultureInfo.InvariantCulture,
+                $"The PNG states a '{signature}' ICC profile but writes {colors} component(s) per pixel."));
+        }
+
+        return new IccColorProfile(profile, components, alternate);
     }
 
     /// <summary>Reads the colour key a <c>tRNS</c> chunk states for a grey or RGB image.</summary>
@@ -527,8 +609,8 @@ internal sealed class PngImage
             alpha[pixel] = index < transparency.Length ? transparency[index] : (byte)255;
         }
 
-        colorData = CompressWithPredictor(rgb, width, 3);
-        alphaData = CompressWithPredictor(alpha, width, 1);
+        colorData = EmbeddedImage.CompressWithPredictor(rgb, width, 3);
+        alphaData = EmbeddedImage.CompressWithPredictor(alpha, width, 1);
     }
 
     /// <summary>Reads a big-endian 32 bit value.</summary>

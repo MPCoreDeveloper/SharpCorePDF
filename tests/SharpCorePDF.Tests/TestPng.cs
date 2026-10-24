@@ -47,12 +47,14 @@ internal static class TestPng
     /// <param name="height">The height in pixels.</param>
     /// <param name="pixel">The colour of a pixel.</param>
     /// <param name="pixelsPerMeter">The resolution written to <c>pHYs</c>, when one is wanted.</param>
+    /// <param name="iccChunk">The body of an <c>iCCP</c> chunk, when the image states a profile.</param>
     /// <returns>The bytes of the PNG.</returns>
     public static byte[] Rgb(
         int width,
         int height,
         Func<int, int, (byte Red, byte Green, byte Blue)> pixel,
-        int? pixelsPerMeter = null)
+        int? pixelsPerMeter = null,
+        byte[]? iccChunk = null)
     {
         var samples = new byte[width * height * 3];
 
@@ -68,15 +70,16 @@ internal static class TestPng
             }
         }
 
-        return Encode(width, height, 2, samples, pixelsPerMeter);
+        return Encode(width, height, 2, samples, pixelsPerMeter, iccChunk: iccChunk);
     }
 
     /// <summary>Builds an eight bit greyscale image.</summary>
     /// <param name="width">The width in pixels.</param>
     /// <param name="height">The height in pixels.</param>
     /// <param name="pixel">The sample of a pixel.</param>
+    /// <param name="iccChunk">The body of an <c>iCCP</c> chunk, when the image states a profile.</param>
     /// <returns>The bytes of the PNG.</returns>
-    public static byte[] Gray(int width, int height, Func<int, int, byte> pixel)
+    public static byte[] Gray(int width, int height, Func<int, int, byte> pixel, byte[]? iccChunk = null)
     {
         var samples = new byte[width * height];
 
@@ -88,7 +91,7 @@ internal static class TestPng
             }
         }
 
-        return Encode(width, height, 0, samples, null);
+        return Encode(width, height, 0, samples, null, iccChunk: iccChunk);
     }
 
     /// <summary>Builds an indexed image whose first entry is transparent.</summary>
@@ -167,6 +170,46 @@ internal static class TestPng
         return Encode(width, height, 2, samples, null, transparency: [0, 0, 0, 255, 0, 0]);
     }
 
+    /// <summary>Builds the header of an ICC profile, which is everything a reader of the chunk needs.</summary>
+    /// <param name="colorSpace">
+    /// The four byte colour space signature: <c>RGB </c>, <c>GRAY</c> or <c>CMYK</c>.
+    /// </param>
+    /// <returns>The bytes of the profile.</returns>
+    public static byte[] Profile(string colorSpace = "RGB ")
+    {
+        var profile = new byte[132];
+
+        BinaryPrimitives.WriteInt32BigEndian(profile, profile.Length);
+        Encoding.ASCII.GetBytes("mntr").CopyTo(profile, 12);
+        Encoding.ASCII.GetBytes(colorSpace).CopyTo(profile, 16);
+        Encoding.ASCII.GetBytes("acsp").CopyTo(profile, 36);
+
+        for (var index = 128; index < profile.Length; index++)
+        {
+            profile[index] = (byte)(index - 128);
+        }
+
+        return profile;
+    }
+
+    /// <summary>Builds the body of an <c>iCCP</c> chunk around a compressed profile.</summary>
+    /// <param name="profile">The profile bytes.</param>
+    /// <param name="name">The profile name the chunk states.</param>
+    /// <returns>The bytes of the chunk, without its length and CRC.</returns>
+    public static byte[] IccChunk(byte[] profile, string name = "Profil")
+    {
+        var label = Encoding.ASCII.GetBytes(name);
+        var compressed = Compress(profile);
+        var chunk = new byte[label.Length + 2 + compressed.Length];
+
+        label.CopyTo(chunk, 0);
+        chunk[label.Length] = 0;
+        chunk[label.Length + 1] = 0;
+        compressed.CopyTo(chunk, label.Length + 2);
+
+        return chunk;
+    }
+
     /// <summary>Builds a PNG from raw samples.</summary>
     private static byte[] Encode(
         int width,
@@ -177,7 +220,8 @@ internal static class TestPng
         byte[]? palette = null,
         byte[]? transparency = null,
         int bitDepth = 8,
-        int interlace = 0)
+        int interlace = 0,
+        byte[]? iccChunk = null)
     {
         var channels = colorType switch
         {
@@ -224,6 +268,11 @@ internal static class TestPng
             BinaryPrimitives.WriteInt32BigEndian(physical.AsSpan(4), resolution);
             physical[8] = 1;
             WriteChunk(png, "pHYs", physical);
+        }
+
+        if (iccChunk is not null)
+        {
+            WriteChunk(png, "iCCP", iccChunk);
         }
 
         WriteChunk(png, "IDAT", Compress(filtered));

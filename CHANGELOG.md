@@ -18,6 +18,233 @@ feed ever served.
 contents of the layers, and the entry below is written against the published `preview.1` rather than
 against an empty feed.
 
+## [1.2.0] - 2026-10-24
+
+### Added
+
+- **A document is annotated without touching its content.** `PdfAnnotations` creates the ten kinds a
+  viewer draws — a link to a URL or to a page, a sticky note, free text, a stamp, a highlight, an
+  underline, a strike-out, a square, a circle, a line and ink — and `PdfEditPlan.AddAnnotation`,
+  `UpdateAnnotation` and `RemoveAnnotation` write them through the same immutable plan as every other
+  edit. The page's `/Annots` array is rebuilt and the page's content streams are never rewritten, so a
+  page the plan does not name keeps every object it had; an annotation removed stops being reachable and
+  is therefore not written at all. Every annotation the engine creates carries an appearance stream of
+  its own — a note with a folded corner, free text auto-sized to its box, a centred stamp caption, filled
+  quads, elliptical arcs, lines and ink — drawn in the annotation's own space and compressed, so a
+  viewer that does not synthesise appearances and a printer, which never does, still show it; a caller
+  that wants its own operators supplies `PdfAnnotationAppearance`. An annotation without an identifier
+  is named `scpdf-N`, which is what a later operation of the same plan names it by. The refusals happen
+  before a byte is written: a link with both a page and a URL, a markup without a quad, a line with the
+  same point at both ends, an unknown flag bit, an opacity outside 0–1, a translucent annotation for
+  PDF/A-1b and an identifier the page does not carry. A rectangle that reaches past the page is clipped
+  with an `AnnotationClipped` warning, and a link to a page the same plan deletes is dropped with an
+  `AnnotationDestinationUnresolved` warning.
+- **A form is described, filled and flattened through the same plan.** `PdfFormFields` creates the five
+  fields a form is built from — text, check box, radio button, choice (list box or combo box) and push
+  button — and `PdfForm` groups them with the style a field that states none is drawn in.
+  `PdfEditPlan.SetForm`, `SetFormField`, `ResetForm` and `FlattenForm` (whole document or one page) carry
+  them, and a field is addressed by its name, dotted when it is a leaf of a tree: writing a name the
+  document already has fills that field in place and leaves every other field alone. The flags a document
+  stores are derived from the properties (`IsReadOnly`, `IsRequired`, `IsMultiline`, `IsCombo` and the
+  rest), so no bit the editor cannot honour can be asked for. The refusals happen before a byte is
+  written: a name with an empty part, a choice value that is not an option unless the combo box is
+  editable, repeated or empty options, a button that states a value, a value longer than the maximum
+  length, a text field that is multiline and a password field at once, options or a length on a kind that
+  holds neither, two fields that share a name, and a plan that writes one name twice.
+- **The form writer fills, resets and flattens.** `PdfEditEngine` now writes the fields a plan states, so
+  `SetFormField` on a document that already carries the name fills that field where it stands — its
+  rectangle, its ancestors and its widgets survive, and only `/V`, `/AS` and `/AP` change — while a name it
+  does not carry becomes a new field, a dotted name written as a tree. Every widget gets an appearance the
+  engine draws (a wrapped or shrunk value, a masked password, a highlighted list selection, a tick, a dot,
+  a caption), `NeedAppearances` is written `false`, and the form carries a `/DR` with the fonts it names.
+  `ResetForm` restores each field's `/DV`; `FlattenForm` draws the widgets into the page content so a reader
+  without form support still shows the values, then takes them off the page and drops the form. A read-only
+  field and a signature field are refused with the field's name, an XFA packet is removed with the new
+  `XfaFormRemoved` warning, and an action on a field is copied inert with `FormFieldActionPreserved`. The
+  `fill-form` example writes, fills and flattens a form, and the three files pass qpdf, pypdf and PyMuPDF.
+- **An authored page draws a PNG, a JPEG, a BMP or a GIF image.** `PdfImage.Open` reads a file once —
+  `FromPng`, `FromJpeg`, `FromBmp` and `FromGif` are the same read with the format stated, and refuse a
+  file whose signature disagrees — and reports `Format`, `WidthPixels`, `HeightPixels`, `ColorSpace`,
+  `BitsPerComponent`, `HasAlpha`, `NaturalWidth`, `NaturalHeight`, `FrameCount` and a `Key` that makes two
+  opens of one file a single image object. `PdfPageCanvas.DrawImage` takes either the bytes or the
+  `PdfImage`, at an explicit size or at the size the file's resolution states. A JPEG is passed through
+  untouched under `DCTDecode`, with `DeviceGray`, `DeviceRGB` or — when an Adobe `APP14` segment states the
+  transform — `DeviceCMYK` and the `/Decode` array that flips its inverted samples, and a file it cannot
+  read (an EXIF orientation, arithmetic coding, a precision other than eight bits, four components with no
+  transform) is refused by name. A BMP is decoded from its palette or its twenty-four and thirty-two bit
+  pixels in either row order, and a GIF's first frame is LZW-decoded, de-interlaced, and given a soft mask
+  from its transparent palette entry; the frames after the first are counted by `FrameCount` and not drawn,
+  because PDF has no animation.
+- **A PNG that states its own colour profile keeps it.** An `iCCP` chunk becomes an `/ICCBased` colour
+  space with the profile in its own Flate stream — `/N` from the profile's signature, `/Alternate` the
+  device space to fall back to — instead of being dropped, which would show the picture through whatever
+  profile the viewer happens to use. `PdfImage.ColorSpace` reports `IccBased` for such a file, and a
+  profile that does not describe the samples (a `GRAY` profile on an RGB image) is refused by name.
+- **An authored document carries an XMP packet, bookmarks, and pages copied from another file.**
+  `PdfDocumentBuilder.WithXmp` writes an XMP packet into the catalog exactly as it was given and
+  uncompressed, from bytes or from the `PdfXmpMetadata` a reader returned. `WithOutline` writes the
+  bookmark tree — nesting, open or closed state, page destinations, URLs, and the `/XYZ` corner a stated
+  area names — and refuses a bookmark that points at a page the document does not have rather than writing
+  a dangling one. `ImportPage` and `ImportPages` copy pages out of another document with the merge engine's
+  own copier, so an imported page keeps its content, resources, annotations, rotation and geometry, and the
+  attributes it inherited from its own page tree are stated on the copy.
+- **A typeface says what its metrics are, and measures text without a page.** `PdfTypeface.Metrics` returns
+  a `PdfTextMetrics` in the face's own font units — em size, ascent, descent, cap height, x-height and the
+  line height `LineHeight(size)` derives from them — for a standard font out of metrics generated from the
+  AFMs, and for an embedded TrueType face out of its `head`, `hhea`, `maxp`, `hmtx` and `cmap` tables, with
+  the cap and x height falling back to the outline of `H` and `x` when `OS/2` states neither.
+  `PdfTypeface.Measure(text, size)` returns the advance width of a string, with optional character and word
+  spacing, so a caller can centre a title or size a column before anything is built. A standard font
+  measures through WinAnsi and refuses with `ArgumentException` a character it cannot encode rather than
+  guessing a width; an embedded face refuses a character its `cmap` does not map, and a size that is not a
+  positive finite number is refused by both.
+- **Text wraps into a box and is drawn line by line.** `PdfTextLayouter.Layout` takes a string, a
+  `PdfTextStyle` and a `PdfTextLayoutOptions` — width, alignment, line height, `BreakWords`, `Overflow` and
+  direction — and returns the `PdfTextLayout` that `PdfPageCanvas.DrawTextLayout` draws: a paragraph per
+  line break, greedy wrapping at spaces by measured word width, `Left`, `Center`, `Right` and `Justify`
+  placement (a justified line stretches the gaps between its words, not the words themselves), a leading
+  that is the option, then the style's, then the typeface's own line height, and `Refuse`, `BreakWords`,
+  `Clip` or `Continue` for a word that does not fit the width. The layout's coordinates are its own: the
+  origin is the top-left corner of the box and y grows downwards, so the first baseline is one ascent below
+  the point the layout is drawn at. A right-to-left paragraph is refused with
+  `PdfUnsupportedFeatureException` rather than drawn backwards.
+- **An edit records one page of another document over or under a page of the source.**
+  `PdfEditPlan.Overlay` and `Underlay` take a one-page document, a page number and a `PdfOverlayOptions` —
+  placement (`Fit`, `Stretch`, `OriginalSize`), opacity, `Clip` and the six separable blend modes — and write
+  the layer as a form XObject that keeps the resources of the document it came from, so a font or image name
+  in the layer cannot collide with a name the page already means something else by. The page's own streams
+  are copied unchanged: an overlay appends a stream that draws the form, an underlay prepends one, and the
+  opacity and blend mode of the layer travel in an `ExtGState` of its own. The layer follows its page through
+  a move, a duplicate shares it, and a deletion removes it with the page. A translucent layer is refused on a
+  PDF/A-1b output, whose format has no transparency.
+- **An edit replaces the bookmarks, the page labels, the viewer preferences and the XMP packet.**
+  `PdfEditPlan.SetOutline` writes the bookmark tree as stated, with page destinations numbered in the order
+  the edit leaves the pages in, and `PdfOutline.Empty` removes the panel the source carried; `SetPageLabels`
+  writes ranges in any of the six styles the standard names, and `PdfPageLabeling.None` removes the labels
+  instead of reporting them as dropped; `SetViewerPreferences` writes the window, panel, layout, binding and
+  print-scaling preferences in place of the ones the source had; and `SetXmp` writes the packet as given,
+  uncompressed. A bookmark or a label range that names a page the result does not have is refused before the
+  source is opened, and a later operation of the same kind replaces an earlier one.
+- **An edit appends a revision to the source instead of rewriting it.** `PdfEditOutputOptions.UseIncrementalUpdate`
+  copies the bytes of the source into the result unchanged and writes the edited objects, the pages and the
+  catalog after them as one more revision, whose cross-reference section chains back to the one the source
+  ended with through `/Prev`. That is what keeps a signature: the bytes it covers are still the bytes it
+  covered, so the outcome reports `PriorSignaturePreserved` for the signature and `IncrementalUpdateAppended`
+  for the revision, while the same edit as a complete rewrite reports `PriorSignatureInvalidated`. New objects
+  are numbered above every object the source used, because a reused number would make an earlier revision
+  ambiguous to a reader that resolves through the newest section first. The version of the source is kept —
+  an appended revision cannot change the header it follows — and a plan that asks for another one is written
+  anyway, with `IncrementalUpdateVersionKept`. The path refuses what it cannot honour: a source that cannot
+  seek, an encrypted source, whose appended objects would need the file key of the revision they follow, a
+  cross-reference table the reader had to rebuild by scanning, a destination that already holds bytes, and a
+  plan that also asks for encryption or a PDF/A profile.
+- **The examples draw a page of shapes.** The `draw-shapes` scenario
+  (`examples/SharpCorePDF.Examples/DrawingExamples.cs`) writes one page of vector content with the authoring
+  surface: a round-capped dashed rule with a dash phase, a two-subpath path whose even-odd fill leaves a hole,
+  a clipped column of stripes drawn past its own clip, and a group of shapes turned and moved by a single
+  `SetTransform`. It is the artifact the drawing row of `docs/parity.md` is validated against.
+- **The examples watermark a document.** A new `watermark` scenario in
+  `examples/SharpCorePDF.Examples/PdfEditExamples.cs` builds a stamp as a document of its own — one A4 page
+  whose `DRAFT` is turned forty-five degrees — and places it on every page of an existing document as an
+  overlay at 18 % opacity in `Multiply`, then prints the operations and the warnings the edit reports and
+  reads its own output back, the page's sentence whole and the stamp a letter per block because each turned
+  glyph has its own baseline. It is the artifact the overlay row of `docs/parity.md` is validated against,
+  beside `edit-pages`, which `specs/003-pdf-platform-parity/quickstart.md` step 4 names.
+- **An image read states its pixels, not only its bytes.** `PdfImageInfo` carries `DecodedPixels` and
+  `PixelFormat`, so a caller that wants to look at a picture no longer writes a decoder first: the samples
+  arrive tightly packed, top row first, one byte per sample, as `Gray8` or `Rgb24`, and their length is
+  exactly the geometry times the channels. They are present only when nothing is left to interpret — the
+  library decoded the payload itself, the width, height and bit depth are stated, every sample is eight bits,
+  and the colour space is one whose samples are its channels (`DeviceGray`, `CalGray`, `G`, `DeviceRGB`,
+  `CalRGB`, `RGB`) — so a palette image, a sixteen-bit image, a `CMYK` or `ICCBased` one, and any payload the
+  reader passed through keep `null` and are described by `Filter`, `ColorSpace` and `IsDecodable` instead. A
+  JPEG stays a JPEG: its bytes are already a format the caller can read, so `PixelFormat` is `null` for a
+  `DCTDecode` image rather than a second decoder being shipped for it.
+- **The examples archive a page and then sign it.** The `sign-and-archive` scenario
+  (`examples/SharpCorePDF.Examples/ArchiveExamples.cs`) writes one authored page as PDF/A-3b, signs that file
+  with a certificate it makes for the run and never writes down, and reports the integrity and the trust of
+  what it produced as two separate verdicts — `integrity Valid, trust Trusted` with the run's own certificate
+  as the anchor — with a timestamp token only when `SCPDF_TIMESTAMP_TOKEN` supplies one. The order is the
+  promise: the conversion writes the archival bytes and the signer appends a revision, so the signature covers
+  the whole file (coverage `ENTIRE_FILE`, as pyHanko reports it) while the structures the conversion wrote are
+  still the ones a validator reads. Converting a signed file would be the reverse and is not offered, because
+  it rewrites the bytes the signature covers.
+
+### Fixed
+
+- **A drawn text layout landed a box height above its origin.** `PdfPageCanvas.DrawTextLayout` took the top
+  of `PdfTextLayout.Bounds` off every baseline, and that top is the height of the box, so a five-line block
+  asked for at 100 points from the top of an A4 page was drawn at 37.5 — 71 points too high, with its first
+  line almost off the page. Each run is now placed at its own start point added to the origin, and
+  `PdfDocumentBuilderTests.Draws_the_layout_from_the_top_left_of_its_box` pins the result against the same
+  baselines drawn one at a time with `DrawText`.
+- **A caller-supplied annotation appearance is written, with the face it names.** `PdfAnnotationAppearance`
+  was validated, its bounding box became the `/BBox` of the form XObject, its font decided that a `/Helv`
+  resource was written — and its `Content`, the operator stream the record exists for, was dropped: the
+  writer drew its own appearance and a caller who stated one got the engine's drawing instead. The operators
+  are now the appearance, verbatim, wrapped in the same form XObject; and the face written as `/Helv` is the
+  one the record names rather than the annotation's text style, which is what the record's own documentation
+  promised. `PdfDocumentEditorTests.Writes_the_operators_of_a_supplied_annotation_appearance` writes a square
+  with its own stream in `Courier-Bold` and asserts both.
+
+### Changed
+
+- **The manual is the `1.2.0` edition.** `docs/SharpCorePDF-Manual-1.2.0.pdf` is rebuilt from the sources —
+  25 chapters, 113 pages, bookmarks and contents page numbers measured — and it is the first edition whose
+  chapters describe the surface without dating it: the availability notes on chapters 16 to 19 used to say
+  which part of their subject the `1.1.0` package did not carry, and they now say what `1.2` adds instead.
+  The preface and the version note name `1.2.0`, the installation chapter installs `1.2.0`, and the
+  `1.1.0` edition stays beside the new one as the record of what that release shipped. `docs/README.md` and
+  the repository README point at the new file.
+- **The manual documents the layers and the document-level edits.** `docs/manual/src/14-editing.md` gains
+  the six operation rows, a section on overlays and underlays with every option they take, and a section on
+  the four edits that state a value of the document; it now also states that a value the plan states
+  replaces the one an edit would otherwise drop or report, and that PDF/A-1b refuses a translucent layer.
+- **The manual documents text layout.** `docs/manual/src/16-text-layout.md` is new: measuring with
+  `PdfTypeface.Measure` and the metrics in font units, `PdfTextLayouter.Layout` and every option it takes,
+  the wrap rules, alignment and justification, the overflow policies, the `DrawTextLayout` coordinate space,
+  the result records, determinism and what a layout deliberately does not do. Chapter 12 now points at it
+  instead of stating that nothing measures or wraps, the cookbook gains a sub-recipe for a paragraph that
+  comes from a template, and the preface explains why chapter 16 is no longer reserved.
+  `docs/SharpCorePDF-Manual-1.1.0.pdf` was rebuilt from the sources — 21 chapters, 92 pages, bookmarks and
+  contents page numbers measured. The chapter states at its head that the `1.1.0` package does not carry the
+  surface it describes.
+- **The manual documents drawing.** `docs/manual/src/15-drawing.md` is new and chapter 15 is no longer
+  reserved: coordinates and the trap in `PdfRectangle`'s edge names, lines, rectangles, ellipses, paths and
+  the two fill rules, `PdfPaint` and `PdfStroke` with the operator each member writes, alpha as an
+  `/ExtGState`, dashes in points, clipping, transforms (including that a positive `Rotate` turns content
+  clockwise on a canvas whose y axis points down, and how to compose a group so the rotation does not turn the
+  placement), the saved graphics state, and what the surface deliberately does not do. Chapter 12 points at it
+  for shapes, the preface reserves only chapters 17–19, and `docs/README.md` lists it.
+- **Every `dotnet add package` line names the version that exists.** The installation chapter and the README
+  asked for `1.1.0`'s predecessor — `--version 1.0.0` in three places — and the producer examples said a merged
+  document is stamped `SharpCorePDF 1.0.0`. Both now say `1.1.0`, which is what the feed serves and what the
+  domain assembly's version produces.
+
+### Known limits at 1.2.0
+
+- **PDF/A conformance is what a validator says it is, not what this library says.** `PdfAConversionResult`
+  reports what a conversion could or could not meet; the verdict comes from running veraPDF against the
+  output (chapter 24, `docs/tools/validate-pdfa.py`). The archival files this release is evidenced on were
+  validated before the signature was appended, so a validator run on the signed copy is the caller's step —
+  chapter 23 says why the order cannot be the other way round.
+- **A timestamp is only as good as the token the caller supplies.** There is no network call: `PdfSignatureOptions.TimestampToken`
+  signs what the caller hands over, and without one the signature states its own `signingTime` and nothing
+  more. Revocation checking, trust lists and certificate chain building are a verifier's job here, which is
+  why `PdfSignatureTrust` reports what the file carries rather than what a PKI would decide.
+- **`PdfImageInfo.DecodedPixels` is present for the images whose samples need no interpretation.** A JPEG is
+  a payload, a palette or sixteen-bit image is described but not expanded, and a `CMYK` or `ICCBased`
+  image keeps its declared colour space — the reader states `Filter`, `ColorSpace` and `IsDecodable` for
+  those rather than guessing at a conversion (chapter 8).
+- **Layout analysis reports what it measured, not a guarantee.** Blocks, reading order and the extracted
+  text are scored against `docs/tools/score-layout.py` and the fixture in `docs/measurements.md`; a table is
+  a block of text with the rows the heuristics found, not a parsed table.
+- **The remaining gates are the ones the release checklist still calls open.** There is no symbol package
+  yet, so a debugger shows no source for a stack trace, and nothing is code-signed. The 90% new-code floor
+  of G9 is enforced by `ci.yml` and read again by `publish.yml` for the tagged commit; the measurement for
+  this version's code is in `docs/measurements.md`. Rendering, format conversion, OCR and conformance
+  validation stay outside the product, as [ADR-001](docs/adr/0001-pdf-platform-boundary.md) states.
+
 ## [1.1.0] - 2026-10-23
 
 ### Added

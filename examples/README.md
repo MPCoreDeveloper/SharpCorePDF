@@ -8,7 +8,7 @@
 
 # SharpCorePDF examples
 
-Fifteen runnable examples that show how the library is used, and the console app that runs them. Everything
+Nineteen runnable examples that show how the library is used, and the console app that runs them. Everything
 here is code that compiles and executes against the package, so nothing in the documentation is a
 snippet that was never run.
 
@@ -36,7 +36,12 @@ when every example ran, `1` when one failed, and `2` when a name on the command 
 | `select-pages` | The page selection notation (`3,1`, `2-`, `-2`, `2,2,1`), that it is an order and not a set, and how to build a selection in code. |
 | `merge-streams` | A source that is an upload stream and a source that is already a `byte[]`, with the merged document handed back as bytes. |
 | `author-page` | A cover page written from nothing — a PNG logo with transparency, a standard font for the address and an embedded TrueType subset for accented text — merged in front of a document and read back through the inspector and the text reader. |
+| `creator-parity` | A whole document written from nothing: an A4 cover with a JPEG that keeps its own bytes, an A5 page with a PNG that states its own ICC profile, bookmarks with nesting and a URL, a metadata packet, and a third page imported from another file — read back with the inspector, the content reader and the metadata reader. |
+| `draw-shapes` | The shape surface of an authored page: a round-capped dashed rule with a phase, a path whose even-odd fill leaves a hole, a clipped column of stripes, and a group of shapes moved and turned by one transform. |
 | `edit-pages` | A document that already exists, edited in one pass: an authored page put in front of it — a stroked frame, a dashed rule, a translucent band and an ellipse, all drawn by the library — then a rotation, a deletion and a crop, with the operations and the warnings the edit reports, and the result read back to prove page 2 really is rotated. |
+| `watermark` | A stamp written from nothing and placed over every page of a document: one authored page with the word turned forty-five degrees, applied as an overlay at 18 % opacity in `Multiply`, with the operations the plan reports and the stamp read back through the text reader as text of the pages it landed on. |
+| `annotate` | A document commented on without touching a byte of its content: a highlight over a phrase, a sticky note, free text in the margin, an `Approved` stamp, a link to a URL and a link to another page, with the highlight then updated by identifier — and every annotation read back with its rectangle, its identifier and its appearance. |
+| `fill-form` | A form written from nothing — two text fields, a check box, a choice and a push button — then filled by name in a second pass over the result, then flattened so the values become page content: each step is read back through the form reader, and the flattened file is what docs/tools/validate-pdf.py, pypdf and PyMuPDF are run against. |
 | `no-container` | The same merge without a dependency injection container, and the proof that the result is the same. |
 | `inspect-first` | Describing a folder of documents before merging, which is how a file that is unusable, or encrypted and waiting for its password, is found without an exception. |
 | `read-content` | Reading what a document already contains: the image a page paints, the text both pages draw as blocks of words, the comment and the link with its resolved target, the form field, the bookmark, the attachment extracted to disk, and the XMP packet with the values parsed beside it, then the same pages one at a time. |
@@ -44,6 +49,7 @@ when every example ran, `1` when one failed, and `2` when a name on the command 
 | `inspect-objects` | Walking a document as the object graph it is — every object, its dangling references and the warnings — and the operators of page 1's content stream with the offset each one starts at. |
 | `options` | Metadata policy and override, outline and page-label policy, the target version, and a reproducible result (byte for byte). |
 | `archive-pdfa` | One authored page written for PDF/A-1b, -2b and -3b — the version, the XMP packet and the output intent each profile requires — and the refusal of a page set in a standard font, with the destination left empty. |
+| `sign-and-archive` | A page archived for PDF/A-3b and then signed — the certificate is made for the run and never written down, the timestamp token is the caller's if one is supplied — with the integrity and the trust of the result reported separately. |
 | `protect-result` | A result written with AES-256, a user and an owner password and a permission set: what a reader is asked for, what it is allowed to do, and how an encrypted source is merged into a document that is sealed again under new passwords. |
 | `warnings` | The two channels: what inspection reports about a document, and what the merge reports about its own work. |
 | `errors` | Every refusal a caller can meet, with the exception type and the message the library produces, and the merge that succeeds once the encrypted sample is given its password. |
@@ -145,8 +151,11 @@ services.AddSharpCorePDF(config);    // or from the "SharpCorePDF" configuration
 | `MergeExamples.cs` | `merge-files`, `select-pages`. |
 | `SourceExamples.cs` | `merge-streams`, `no-container`. |
 | `AuthoringExamples.cs` | `author-page`. |
-| `PdfEditExamples.cs` | `edit-pages`. |
-| `Assets/DejaVuSans-subset.ttf` | The embedded font of `author-page`, with its licence beside it, so the example runs without a system font. |
+| `CreatorExamples.cs` | `creator-parity`. |
+| `PdfEditExamples.cs` | `edit-pages`, `watermark`, `annotate`, `fill-form`. |
+| `Assets/DejaVuSans-subset.ttf` | The embedded font of `author-page` and `creator-parity`, with its licence beside it, so the examples run without a system font. |
+| `Assets/Logo.jpg` | The JPEG `creator-parity` passes through, 320 × 320 pixels, so the example shows a `DCTDecode` image without shipping a photograph. |
+| `Assets/Logo-icc.png` | The PNG `creator-parity` draws with its colour profile: 152 × 87 pixels carrying the sRGB ICC profile, which the writer declares as `/ICCBased`. |
 | `InspectionExamples.cs` | `inspect-first`. |
 | `ContentInspectionExamples.cs` | `read-content`. |
 | `LayoutExamples.cs` | `extract-layout`, `inspect-objects`. |

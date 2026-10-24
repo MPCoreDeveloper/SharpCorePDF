@@ -1,3 +1,4 @@
+using SharpCorePDF.Domain.Exceptions;
 using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure.Authoring;
 
@@ -98,13 +99,22 @@ public sealed class PdfPageCanvas
         return this;
     }
 
-    /// <summary>Draws laid-out text, placing the top-left of its bounds at a point.</summary>
+    /// <summary>Draws laid-out text, placing the top-left corner of its box at a point.</summary>
     /// <param name="layout">The layout to draw.</param>
-    /// <param name="origin">The top-left corner the layout is drawn from, in points.</param>
+    /// <param name="origin">The top-left corner of the box, in points from the top-left of the page.</param>
     /// <returns>This canvas, so calls can be chained.</returns>
     /// <remarks>
+    /// <para>
     /// Every run of every line is one text operation, so the characters can be extracted again. The
     /// style's character spacing, word spacing, horizontal scale and rise are written as PDF text state.
+    /// </para>
+    /// <para>
+    /// A run sits at its own start point added to <paramref name="origin"/>. Those start points are in the
+    /// layout's own space, whose origin is the top-left corner of its box and whose y grows downwards, so
+    /// the first baseline lands one ascent below the point and each later one a line height below that.
+    /// <see cref="PdfTextLayout.Bounds"/> states the size of the box, not a second coordinate space, so no
+    /// offset is taken from the run positions.
+    /// </para>
     /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="layout"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The origin is not finite.</exception>
@@ -113,8 +123,6 @@ public sealed class PdfPageCanvas
         ArgumentNullException.ThrowIfNull(layout);
         ValidatePosition(origin.X, origin.Y, nameof(origin), nameof(origin));
 
-        var left = layout.Bounds.IsEmpty ? 0d : layout.Bounds.Left;
-        var top = layout.Bounds.IsEmpty ? 0d : layout.Bounds.Top;
         var style = layout.Style;
 
         foreach (var line in layout.Lines)
@@ -128,8 +136,8 @@ public sealed class PdfPageCanvas
 
                 operations.Add(new TextOperation(
                     run.Text,
-                    origin.X + run.Start.X - left,
-                    origin.Y + line.Baseline - top,
+                    origin.X + run.Start.X,
+                    origin.Y + run.Start.Y,
                     style.Typeface,
                     style.FontSize,
                     style.Color,
@@ -310,51 +318,90 @@ public sealed class PdfPageCanvas
         return this;
     }
 
-    /// <summary>Draws a PNG image at an explicit size.</summary>
-    /// <param name="png">The bytes of a PNG file.</param>
+    /// <summary>Draws an image at an explicit size, detecting the format from its bytes.</summary>
+    /// <param name="image">The bytes of a PNG, JPEG, BMP or GIF file.</param>
     /// <param name="x">The x coordinate of the top-left corner, in points from the left edge.</param>
     /// <param name="y">The y coordinate of the top-left corner, in points from the top edge.</param>
     /// <param name="width">The width the image occupies on the page, in points.</param>
     /// <param name="height">The height the image occupies on the page, in points.</param>
     /// <returns>This canvas, so calls can be chained.</returns>
-    /// <exception cref="ArgumentException"><paramref name="png"/> is empty, or is not a PNG file.</exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="image"/> is empty, or its signature is not one of the four formats read.
+    /// </exception>
     /// <exception cref="ArgumentOutOfRangeException">A coordinate, the width or the height is not a finite number, or a size is not positive.</exception>
-    /// <exception cref="NotSupportedException">The PNG is interlaced, sixteen bit, or of a colour type the engine does not embed.</exception>
-    public PdfPageCanvas DrawImage(ReadOnlyMemory<byte> png, double x, double y, double width, double height)
+    /// <exception cref="NotSupportedException">The format is recognised but the variant is not embedded.</exception>
+    /// <exception cref="PdfUnsupportedFeatureException">The file names a feature the engine refuses by name.</exception>
+    public PdfPageCanvas DrawImage(ReadOnlyMemory<byte> image, double x, double y, double width, double height)
     {
         ValidatePosition(x, y, nameof(x), nameof(y));
         ValidateSize(width, height);
 
-        return AddImage(PngImage.Parse(png), x, y, width, height);
+        return AddImage(EmbeddedImage.Parse(image), x, y, width, height);
     }
 
-    /// <summary>Draws a PNG image at its natural size.</summary>
-    /// <param name="png">The bytes of a PNG file.</param>
+    /// <summary>Draws a PNG, JPEG, BMP or GIF image at its natural size.</summary>
+    /// <param name="image">The bytes of a PNG, JPEG, BMP or GIF file.</param>
     /// <param name="x">The x coordinate of the top-left corner, in points from the left edge.</param>
     /// <param name="y">The y coordinate of the top-left corner, in points from the top edge.</param>
     /// <returns>This canvas, so calls can be chained.</returns>
     /// <remarks>
-    /// The natural size comes from the <c>pHYs</c> chunk of the PNG, which states how many pixels the
-    /// image has per metre. A PNG without that chunk, or with a unit it does not define, is drawn at one
-    /// point per pixel.
+    /// The natural size comes from the metadata of the file that states one: the <c>pHYs</c> chunk of a
+    /// PNG, the JFIF density of a JPEG, or the pixels-per-metre field of a BMP. A file without that
+    /// metadata, which every GIF is, is drawn at one point per pixel.
     /// </remarks>
-    /// <exception cref="ArgumentException"><paramref name="png"/> is empty, or is not a PNG file.</exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="image"/> is empty, or its signature is not one of the four formats read.
+    /// </exception>
     /// <exception cref="ArgumentOutOfRangeException">A coordinate is not a finite number.</exception>
-    /// <exception cref="NotSupportedException">The PNG is interlaced, sixteen bit, or of a colour type the engine does not embed.</exception>
-    public PdfPageCanvas DrawImage(ReadOnlyMemory<byte> png, double x, double y)
+    /// <exception cref="NotSupportedException">The format is recognised but the variant is not embedded.</exception>
+    /// <exception cref="PdfUnsupportedFeatureException">The file names a feature the engine refuses by name.</exception>
+    public PdfPageCanvas DrawImage(ReadOnlyMemory<byte> image, double x, double y)
     {
         ValidatePosition(x, y, nameof(x), nameof(y));
 
         // The image is parsed once: the natural size is a property of the parsed file, and parsing it a
-        // second time would copy its IDAT data again.
-        var image = PngImage.Parse(png);
+        // second time would copy its IDAT, DCT or deflated samples again.
+        var parsed = EmbeddedImage.Parse(image);
 
         return AddImage(
-            image,
+            parsed,
             x,
             y,
-            image.NaturalWidthPoints ?? image.Width,
-            image.NaturalHeightPoints ?? image.Height);
+            parsed.NaturalWidthPoints ?? parsed.Width,
+            parsed.NaturalHeightPoints ?? parsed.Height);
+    }
+
+    /// <summary>Draws a prepared image at an explicit size.</summary>
+    /// <param name="image">The image, opened once and reusable across pages.</param>
+    /// <param name="x">The x coordinate of the top-left corner, in points from the left edge.</param>
+    /// <param name="y">The y coordinate of the top-left corner, in points from the top edge.</param>
+    /// <param name="width">The width the image occupies on the page, in points.</param>
+    /// <param name="height">The height the image occupies on the page, in points.</param>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="image"/> is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A coordinate, the width or the height is not a finite number, or a size is not positive.</exception>
+    public PdfPageCanvas DrawImage(PdfImage image, double x, double y, double width, double height)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        ValidatePosition(x, y, nameof(x), nameof(y));
+        ValidateSize(width, height);
+
+        return AddImage(image.Content, x, y, width, height);
+    }
+
+    /// <summary>Draws a prepared image at the size the file's own metadata states.</summary>
+    /// <param name="image">The image, opened once and reusable across pages.</param>
+    /// <param name="x">The x coordinate of the top-left corner, in points from the left edge.</param>
+    /// <param name="y">The y coordinate of the top-left corner, in points from the top edge.</param>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="image"/> is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A coordinate is not a finite number.</exception>
+    public PdfPageCanvas DrawImage(PdfImage image, double x, double y)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        ValidatePosition(x, y, nameof(x), nameof(y));
+
+        return AddImage(image.Content, x, y, image.NaturalWidth, image.NaturalHeight);
     }
 
     /// <summary>Records a path and the paint that finishes it.</summary>
@@ -404,7 +451,7 @@ public sealed class PdfPageCanvas
     /// <param name="width">The width in points.</param>
     /// <param name="height">The height in points.</param>
     /// <returns>This canvas, so calls can be chained.</returns>
-    private PdfPageCanvas AddImage(PngImage image, double x, double y, double width, double height)
+    private PdfPageCanvas AddImage(IEmbeddedImage image, double x, double y, double width, double height)
     {
         operations.Add(new ImageOperation(image, x, y, width, height));
         return this;
@@ -463,7 +510,7 @@ internal sealed record TextOperation(
 /// <param name="Width">The width in points.</param>
 /// <param name="Height">The height in points.</param>
 internal sealed record ImageOperation(
-    PngImage Image,
+    IEmbeddedImage Image,
     double X,
     double Y,
     double Width,
