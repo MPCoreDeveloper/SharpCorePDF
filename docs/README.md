@@ -6,15 +6,16 @@ long-form reference for the API.
 
 ## The manual
 
-- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.2.0.pdf)** — 113 pages, A4, with a
+- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.3.0.pdf)** — 118 pages, A4, with a
   linked contents page and PDF bookmarks.
 - **Read the chapters as Markdown** in [`manual/src`](manual/src). Each file is one chapter, and the
-  file-name order is the chapter order. This edition describes `1.2.0`. Chapters 16 to 19 were written
+  file-name order is the chapter order. This edition describes `1.3.0`. Chapters 16 to 19 were written
   while `1.1.0` was the package on the feed, and their heads used to say which part of their surface it
   already carried — the annotation writer and the form model shipped there, while the form writer, the
-  text layouter and the JPEG, BMP and GIF readers are what `1.2` adds. They now describe the surface as it
-  stands. The [`1.1.0` edition](SharpCorePDF-Manual-1.1.0.pdf) stays beside this one as the record of what
-  that release shipped, and the chapter numbers are kept so that a cross-reference survives both.
+  text layouter and the JPEG, BMP and GIF readers are what `1.2.0` added. They now describe the surface as
+  it stands. The [`1.2.0`](SharpCorePDF-Manual-1.2.0.pdf) and
+  [`1.1.0`](SharpCorePDF-Manual-1.1.0.pdf) editions stay beside this one as the record of what those
+  releases shipped, and the chapter numbers are kept so that a cross-reference survives both.
 
 | Chapter | What it covers |
 | --- | --- |
@@ -43,11 +44,13 @@ long-form reference for the API.
 | [22. The Object Graph](manual/src/22-object-graph.md) | One node per listed object, references reported rather than followed, dangling references, streams without bytes, and the operators of a page. |
 | [23. Digital Signatures](manual/src/23-signatures.md) | Appending a revision, detached CMS, the integrity/trust split, multiple signatures, and what a signature does not promise. |
 | [24. Archival PDF (PDF/A)](manual/src/24-pdf-a.md) | The profiles, what is removed versus refused, archival edits, output intents, and the veraPDF evidence. |
+| [25. How This Manual Is Built](manual/src/25-how-this-manual-is-built.md) | The four build stages, the Markdown subset, the browser as a layout engine, the two passes that measure the contents, and the footer, bookmarks and metadata written with SharpCorePDF. |
 
 The first four chapters are the shortest path to a working merge. Chapters 5 to 10 cover one part of the
 API each, chapters 11 to 14 are for design context, authoring, ready-to-adapt recipes and editing, chapters
 15 to 19 continue the authoring surface — drawing, text layout, images, annotations and forms — chapters 20
-to 22 cover the reading surface, and chapters 23 and 24 cover signatures and archival output.
+to 22 cover the reading surface, chapters 23 and 24 cover signatures and archival output, and chapter 25
+describes how the manual itself is built.
 `Chapter 3` is the place to start if you only want to see a document merged.
 
 ### Building the PDF
@@ -55,16 +58,21 @@ to 22 cover the reading surface, and chapters 23 and 24 cover signatures and arc
 The PDF is generated from the Markdown chapters; do not edit it by hand.
 
 ```powershell
-python .\docs\manual\build-manual.py                 # write docs/SharpCorePDF-Manual-1.2.0.pdf
-python .\docs\manual\build-manual.py --keep-html     # also keep docs/manual/build/manual.html
-python .\docs\manual\build-manual.py --no-stamp      # skip the footer, bookmarks and document metadata
+dotnet run --project .\tools\SharpCorePDF.Manual                     # write docs/SharpCorePDF-Manual-1.3.0.pdf
+dotnet run --project .\tools\SharpCorePDF.Manual -- --keep-html      # also keep docs/manual/build/manual.html
+dotnet run --project .\tools\SharpCorePDF.Manual -- --no-stamp       # skip the footer, bookmarks and metadata
 ```
 
-The build needs Python with `markdown`, `pygments` and `pypdf`, plus Chrome or Edge for the headless
-print. It lays the book out twice: the first pass measures the heading positions in the produced PDF,
-and the second writes the measured page numbers into the contents. The stylesheet is
+The build needs the .NET 11 SDK and Chrome or Edge for the headless print — the browser is only the
+layout engine. The Markdown, the syntax highlighting, the contents page, the footer, the bookmarks and
+the document metadata all come from [`tools/SharpCorePDF.Manual`](../tools/SharpCorePDF.Manual), which
+uses SharpCorePDF itself to finish the document. It lays the book out twice: the first pass measures the
+heading positions in the produced PDF, and the second writes the measured page numbers into the
+contents, re-rendering if a measured number moved a heading. The stylesheet is
 [`manual/manual.css`](manual/manual.css); the chapter sources are the files in
-[`manual/src`](manual/src), ordered by file name.
+[`manual/src`](manual/src), ordered by file name. `SHARPCOREPDF_CHROME` points the printer at a browser
+that is not in the place it looks first. Chapter 25 of the manual describes the same pipeline for the
+reader of the PDF.
 
 When adding or renaming a chapter, keep the two-digit numeric prefix and rebuild the PDF so the contents
 page, running footer and bookmarks stay in step.

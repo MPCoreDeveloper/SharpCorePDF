@@ -169,7 +169,10 @@ public sealed partial class PdfFormEditorTests
 
         // Only the signature widget is still an annotation: every other widget became content.
         Assert.Equal(1, page.GetArray("Annots")!.Count);
-        Assert.Equal(2, page.GetArray("Contents")!.Count);
+
+        // Four streams: the frame that keeps a state the page leaves open away from what the plan
+        // draws, the page's own stream, the frame that closes it, and the flattened appearances.
+        Assert.Equal(4, page.GetArray("Contents")!.Count);
 
         // The operators that draw the widgets are in the document, which is what makes the value
         // visible to a reader that knows nothing about forms.

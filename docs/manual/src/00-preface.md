@@ -6,7 +6,7 @@ pages from nothing, and changes the assembly of an existing document — which p
 order and with what rotation. It does all of that without calling a native library, a command line
 tool or a third-party PDF engine.
 
-This manual describes version **1.2.0** of the library. It is written for the developer who has to ship a
+This manual describes version **1.3.0** of the library. It is written for the developer who has to ship a
 feature, not only for the developer who wants to read source code: every chapter explains the behaviour you
 can rely on, the behaviour you should not rely on, and the code that exercises it.
 
@@ -39,7 +39,9 @@ Chapter 19 is forms: the field model, filling by name, reset and flatten.
 Chapters 20 to 22 cover the reading surface that turns a page into data a program can use: extraction and
 its four export formats, the layout analysis that decides what a block is and which block is read first,
 and the object graph and content operators that describe the file itself. Chapters 23 and 24 cover the
-trust surface: digital signatures and archival (PDF/A) output.
+trust surface: digital signatures and archival (PDF/A) output. Chapter 25 turns the lens on this book: the
+converter that reads these chapters, the browser that lays the pages out, and the finishing pass this
+library writes.
 
 **This edition is `1.2`, and every chapter describes what the package ships.** Chapters 16 to 19 were
 written for the `1.2` line while `1.1.0` was the package on the feed, and each of their heads used to say
@@ -69,11 +71,12 @@ as the contract, never the wording of its message.
 
 **The manual is built from Markdown.** The chapters in `docs/manual/src` are the source of both the
 GitHub documentation and the PDF. If you find a discrepancy between this text and the code, the code
-is the source of truth; please open an issue so the text can be corrected.
+is the source of truth; please open an issue so the text can be corrected. Chapter 25 describes how those
+files become the PDF you are reading.
 
-> **Version note.** This manual is written against 1.2.0. The public API is covered by an approved snapshot
+> **Version note.** This manual is written against 1.3.0. The public API is covered by an approved snapshot
 > in each project, so a change to a public member is a deliberate, reviewed event rather than an accident of
-> a refactoring. Code that compiles against 1.1.0 keeps compiling across this minor release — every addition
+> a refactoring. Code that compiles against 1.2.0 keeps compiling across this minor release — every addition
 > is additive — and the changelog records every addition and every change of behaviour.
 
 ## What you need
@@ -81,5 +84,5 @@ is the source of truth; please open an issue so the text can be corrected.
 - The .NET SDK that can target **.NET 10** or **.NET 11**. The packages ship assemblies for both.
 - A PDF to merge. Any reader can produce one; the tests use documents written by a different producer
   precisely so that the library is not tested only against its own output.
-- For building this manual: Python with `markdown`, `pygments` and `pypdf`, and Chrome or Edge. That is
-  a maintainer concern, not a requirement of the library.
+- For building this manual: the .NET SDK and Chrome or Edge, and nothing else. Chapter 25 describes the
+  build. That is a maintainer concern, not a requirement of the library.

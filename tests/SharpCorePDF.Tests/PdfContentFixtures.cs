@@ -918,6 +918,36 @@ internal static class PdfContentFixtures
     }
 
     /// <summary>
+    /// One page whose content states its transform outside a <c>q</c>, which is the shape a browser's
+    /// print output has: the transform is still in force when the page ends, so every stream that
+    /// follows it is drawn with it.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] OpenState()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+
+        var font = builder.Add(
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+
+        var content = builder.Add(Content(
+            ".24 0 0 -.24 0 595.2756 cm BT /F1 12 Tf 1 0 0 -1 300 2000 Tm (page) Tj ET"));
+
+        builder.Set(
+            page,
+            $"<< /Type /Page /Parent {pages} 0 R /MediaBox [0 0 419.52756 595.2756] "
+            + $"/Resources << /Font << /F1 {font} 0 R >> >> /Contents {content} 0 R >>");
+        builder.Set(pages, PageTree(page));
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
     /// One page whose line is drawn from the characters a markup document reads as structure: an angle
     /// bracket and an ampersand, which an export has to escape rather than write.
     /// </summary>

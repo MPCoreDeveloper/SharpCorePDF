@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The self-contained manual builder.
+
+    This tool replaces the python-markdown + Pygments + pypdf pipeline with code that lives in the
+    repository: a Markdown reader, a syntax highlighter and the finishing pass are written here, and
+    the only external process is a Chromium browser, used for layout and pagination alone.
+
+    It is a plain console app on purpose: the manual is a build artefact, and the tool that produces
+    it has to be runnable without a package feed, a Python environment or a design-time host. It is
+    not packed and not referenced by anything.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpCorePDF.Domain\SharpCorePDF.Domain.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.Application\SharpCorePDF.Application.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.Infrastructure\SharpCorePDF.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

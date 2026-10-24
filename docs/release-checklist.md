@@ -455,7 +455,14 @@ The same nine gates, asked again of the tree `1.2.0` is cut from. `<Version>`, `
 | G9 — the quality gate on the tagged commit | **Green on `5270483`, the tagged commit** | `ci.yml` on `5270483` passed the gate before the tag existed, and the tag's own `publish` run (`40090696127`) re-read it for the same commit — sonar-gate `success` — before it exchanged the OIDC token; see [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md) for why the coverage figure is recorded rather than re-argued per release |
 
 The release went out on that evidence: run `40090696127` pushed all five packages, and the manual is the
-`1.2.0` edition beside the `1.1.0` one — 25 chapters, 113 pages, built from the sources in the tagged commit,
-then rebuilt once more when the G8 finding changed two chapters (the page count did not move).
+`1.2.0` edition beside the `1.1.0` one — 25 chapters, 113 pages as released, built from the sources in the
+tagged commit, then rebuilt once more when the G8 finding changed two chapters (the page count did not
+move). The file in `docs/` stays as that release shipped it. The rebuild that moved the build to
+`tools/SharpCorePDF.Manual` and added chapter 25 is the `1.3.0` edition, at 26 chapters and 118 pages.
+
+The `1.3.0` tree states `1.3.0` / `1.3.0.0` in `src/Directory.Build.props`, carries
+`## [1.3.0] - 2026-10-24` in `CHANGELOG.md`, and generates `docs/SharpCorePDF-Manual-1.3.0.pdf` — 26
+chapters, 118 pages and 222 bookmarks. The gates above are asked again at its own cut, on the commit that
+is tagged, and nothing in this section stands in for that run.
 
 

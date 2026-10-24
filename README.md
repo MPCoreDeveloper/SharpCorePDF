@@ -55,7 +55,7 @@ independent implementations (`qpdf` via `pikepdf`, and `pypdf`).
 The product boundary is recorded in [ADR-001](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/adr/0001-pdf-platform-boundary.md).
 The capability target is PDFsharp 6.5 for creation and processing and PdfPig 0.1.x for reading and layout
 analysis; rendering, conversion, OCR, conformance validation, services and CLIs stay outside the product.
-`1.2.0` ships that target for creation, editing and reading — authoring, page editing, reading with layout
+`1.3.0` ships that target for creation, editing and reading — authoring, page editing, reading with layout
 analysis, signatures and PDF/A — with the exceptions [`docs/parity.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/parity.md)
 still records; that file names the release of every row and the test and external command behind it.
 Current capability is described below, not the target.
@@ -251,7 +251,7 @@ or pack all five into a local feed and install them from there:
 ```powershell
 dotnet pack .\SharpCorePDF.slnx -c Release -o $env:TEMP\SharpCorePDF-feed
 dotnet nuget add source $env:TEMP\SharpCorePDF-feed --name SharpCorePDF
-dotnet add package SharpCorePDF --version 1.2.0
+dotnet add package SharpCorePDF --version 1.3.0
 ```
 
 Every package carries the logo as its package icon and embeds this README, so the page a feed shows for
@@ -292,11 +292,12 @@ walks through each one.
 ## Documentation
 
 The [manual](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md) is the long-form
-guide to the API: twenty-four chapters, from the first merge to encryption, inspection, dependency injection,
+guide to the API: twenty-five chapters, from the first merge to encryption, inspection, dependency injection,
 the architecture, authoring a page, a cookbook of complete recipes, editing an existing document,
-extraction, layout analysis, the object graph, digital signatures and archival output. Read it as
-[a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.2.0.pdf)
-(the 1.2.0 edition) or chapter by chapter as Markdown, starting with
+extraction, layout analysis, the object graph, digital signatures, archival output and how the manual itself
+is built. Read it as
+[a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.3.0.pdf)
+(the 1.3.0 edition) or chapter by chapter as Markdown, starting with
 [Installation and First Merge](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/manual/src/03-installation.md).
 The [documentation index](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md)
 links every chapter and the supporting measurement, release and governance documents.

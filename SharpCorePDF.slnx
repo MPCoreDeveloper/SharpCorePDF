@@ -7,7 +7,8 @@
               plus the SharpCorePDF entry point, which packs the four as one install
     tests/    the test project, which is the only caller of all four (net10.0;net11.0)
     examples/ the runnable examples behind README.md and examples/README.md (net11.0)
-    tools/    the measurement harness behind docs/measurements.md (net11.0, never packed)
+    tools/    the measurement harness behind docs/measurements.md and the manual builder, both
+              net11.0 and never packed
 
     Use the .slnx directly:
 
@@ -29,6 +30,7 @@
     <Project Path="tests/SharpCorePDF.Tests/SharpCorePDF.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/SharpCorePDF.Manual/SharpCorePDF.Manual.csproj" />
     <Project Path="tools/SharpCorePDF.Measure/SharpCorePDF.Measure.csproj" />
   </Folder>
 </Solution>

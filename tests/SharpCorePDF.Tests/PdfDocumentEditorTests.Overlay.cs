@@ -1,9 +1,12 @@
 using System.Text;
+using SharpCorePDF.Application.Services;
 using SharpCorePDF.Domain.Aggregates;
 using SharpCorePDF.Domain.Exceptions;
+using SharpCorePDF.Domain.ReadModels;
 using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure;
 using SharpCorePDF.Infrastructure.Pdf;
+using SharpCorePDF.Infrastructure.Reading;
 using SharpCorePDF.Infrastructure.Sources;
 
 namespace SharpCorePDF.Tests;
@@ -38,6 +41,29 @@ public sealed partial class PdfDocumentEditorTests
     /// <returns>The text without any whitespace.</returns>
     private static string Compact(string text) =>
         string.Concat(text.Where(character => !char.IsWhiteSpace(character)));
+
+    private static readonly PdfLayoutReaderService Layout = new(new PdfLayoutReader());
+
+    /// <summary>Reads where the letters a filter keeps were drawn, which is what a layer's placement is.</summary>
+    /// <param name="bytes">The document to read.</param>
+    /// <param name="page">The one-based number of the page to read.</param>
+    /// <param name="filter">Which letters of the page to report.</param>
+    /// <returns>The baseline origin of each letter, rounded to the precision a page states.</returns>
+    private static async Task<List<(double X, double Y)>> BaselinesAsync(
+        byte[] bytes,
+        int page,
+        Func<PdfLetter, bool> filter)
+    {
+        var result = await Layout.ReadLettersAsync(
+            new PdfByteArraySource(bytes, "letters.pdf"),
+            PageRange.Single(page),
+            cancellationToken: Token);
+
+        return result.Items
+            .Where(filter)
+            .Select(letter => (Math.Round(letter.StartBaseLine.X, 2), Math.Round(letter.StartBaseLine.Y, 2)))
+            .ToList();
+    }
 
     /// <summary>An overlay is drawn last, so the text of the layer and of the page are both read.</summary>
     [Fact]
@@ -159,6 +185,34 @@ public sealed partial class PdfDocumentEditorTests
 
         Assert.Equal(PdfPageSize.A4.WidthPoints, info.Pages[0].Size.WidthPoints, 2);
         Assert.Equal(PdfPageSize.A4.HeightPoints, info.Pages[0].Size.HeightPoints, 2);
+    }
+
+    /// <summary>
+    /// A page may leave its state open — a transform stated outside a <c>q</c>, as a browser's print
+    /// output does — and what the plan draws after it is still placed in the page's own coordinates.
+    /// </summary>
+    [Fact]
+    public async Task Places_a_layer_where_it_was_made_when_the_page_leaves_its_state_open()
+    {
+        var page = PdfContentFixtures.OpenState();
+        var edited = await Editor.ApplyToArrayAsync(
+            new PdfByteArraySource(page, "open-state.pdf"),
+            PdfEditPlan.Create().Overlay(new PdfByteArraySource(Stamped(), "stamp.pdf"), 1),
+            cancellationToken: Token);
+
+        // The stamp draws at 24 points and the page at 12, so the size the runs state tells them apart.
+        var expectedLayer = await BaselinesAsync(Stamped(), 1, letter => letter.FontSize > 20);
+        var actualLayer = await BaselinesAsync(edited, 1, letter => letter.FontSize > 20);
+
+        Assert.NotEmpty(expectedLayer);
+        Assert.Equal(expectedLayer, actualLayer);
+
+        // The frame the plan wraps the page in restores a state, it does not move what the page drew.
+        var expectedPage = await BaselinesAsync(page, 1, letter => letter.FontSize <= 20);
+        var actualPage = await BaselinesAsync(edited, 1, letter => letter.FontSize <= 20);
+
+        Assert.NotEmpty(expectedPage);
+        Assert.Equal(expectedPage, actualPage);
     }
 
     /// <summary>A duplicate draws the layer of the page it copies, and the form is written once.</summary>

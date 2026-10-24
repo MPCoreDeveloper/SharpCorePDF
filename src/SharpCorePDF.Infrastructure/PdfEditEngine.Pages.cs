@@ -789,7 +789,15 @@ public sealed partial class PdfEditEngine
             new PdfReal(box.Top),
         ]);
 
-    /// <summary>Writes the two streams that frame the original content of a resized page.</summary>
+    /// <summary>
+    /// Writes the streams that frame the original content of a page: the state it starts in is opened
+    /// before its own streams and restored after them.
+    /// </summary>
+    /// <remarks>
+    /// A page whose transform is the identity still gets the pair, because what it opens and closes is
+    /// the state itself: a stream a page leaves unbalanced — a transform stated outside a <c>q</c>, as a
+    /// browser's print output does — must not reach what the plan draws after it.
+    /// </remarks>
     /// <param name="writer">The writer of the result.</param>
     /// <param name="page">The page whose content is framed.</param>
     private static void WriteContentFrame(PdfWriter writer, EditedPage page)
@@ -800,25 +808,23 @@ public sealed partial class PdfEditEngine
         }
 
         var matrix = page.Transform;
-        var prefix = string.Concat(
-            "q\n",
-            PdfNumberFormat.Format(matrix.A),
-            " ",
-            PdfNumberFormat.Format(matrix.B),
-            " ",
-            PdfNumberFormat.Format(matrix.C),
-            " ",
-            PdfNumberFormat.Format(matrix.D),
-            " ",
-            PdfNumberFormat.Format(matrix.E),
-            " ",
-            PdfNumberFormat.Format(matrix.F),
-            " cm\n");
+        var prefix = new StringBuilder("q\n");
+
+        if (matrix != DomainMatrix.Identity)
+        {
+            prefix
+                .Append(PdfNumberFormat.Format(matrix.A)).Append(' ')
+                .Append(PdfNumberFormat.Format(matrix.B)).Append(' ')
+                .Append(PdfNumberFormat.Format(matrix.C)).Append(' ')
+                .Append(PdfNumberFormat.Format(matrix.D)).Append(' ')
+                .Append(PdfNumberFormat.Format(matrix.E)).Append(' ')
+                .Append(PdfNumberFormat.Format(matrix.F)).Append(" cm\n");
+        }
 
         page.PrefixNumber = writer.AllocateObject();
         writer.WriteObject(
             page.PrefixNumber,
-            new PdfStream(new PdfDictionary(), Encoding.ASCII.GetBytes(prefix)));
+            new PdfStream(new PdfDictionary(), Encoding.ASCII.GetBytes(prefix.ToString())));
 
         page.SuffixNumber = writer.AllocateObject();
         writer.WriteObject(
@@ -914,7 +920,16 @@ public sealed partial class PdfEditEngine
         /// <summary>Gets or sets the annotations the page carries once its changes are applied.</summary>
         public List<AnnotationSlot>? AnnotationSlots { get; set; }
 
-        public bool HasContentFrame => Transform != DomainMatrix.Identity;
+        /// <summary>
+        /// Gets a value indicating whether the original content of the page has to be framed by a
+        /// graphics state of its own.
+        /// </summary>
+        /// <remarks>
+        /// A resized page needs the frame to be placed; a page that draws a layer needs it because the
+        /// streams of one page reach a reader as a single stream, so a transform the page states outside
+        /// a <c>q</c> would otherwise be still in force where the layer is drawn.
+        /// </remarks>
+        public bool HasContentFrame => Transform != DomainMatrix.Identity || HasLayer;
 
         /// <summary>
         /// Gets or sets the object number of the stream that draws the flattened fields of the page,

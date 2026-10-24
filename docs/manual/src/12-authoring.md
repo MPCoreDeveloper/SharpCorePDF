@@ -151,7 +151,7 @@ var document = PdfDocumentBuilder.Create(options)
 ```
 
 `WithMetadata` writes the document information dictionary. `Producer` is an authoring option, like it is
-an output option of a merge, and defaults to `SharpCorePDF 1.2.0`.
+an output option of a merge, and defaults to `SharpCorePDF 1.3.0`.
 
 The document identifier is derived from the content and the creation date, so two builds of the same
 pages at the same moment are the same file. Supplying both `CreationDate` and `DocumentId` removes the
