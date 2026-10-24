@@ -462,7 +462,31 @@ move). The file in `docs/` stays as that release shipped it. The rebuild that mo
 
 The `1.3.0` tree states `1.3.0` / `1.3.0.0` in `src/Directory.Build.props`, carries
 `## [1.3.0] - 2026-10-24` in `CHANGELOG.md`, and generates `docs/SharpCorePDF-Manual-1.3.0.pdf` — 26
-chapters, 118 pages and 222 bookmarks. The gates above are asked again at its own cut, on the commit that
-is tagged, and nothing in this section stands in for that run.
+chapters, 118 pages and 222 bookmarks. The gates above are asked again at its own cut, in the section that
+follows.
+
+## G1–G9 at `1.3.0` (2026-10-24)
+
+`1.3.0` releases the fix and the manual builder, so the surface question is answered by what did *not*
+change: no `PublicAPI.*.txt` file is in the release diff.
+
+| Gate | State at `1.3.0` | Evidence |
+| --- | --- | --- |
+| G0 — the id | **Closed** | the five ids are unchanged since `1.0.0`; `1.3.0` adds a version to ids the project already owns |
+| G1 — the surface has stopped moving | **Yes, unchanged from `1.2.0`** | no `PublicAPI.*.txt` file is in the release diff and all five `PublicAPI.Unshipped.txt` files hold 0 entries, so the surface `1.2.0` shipped is the surface `1.3.0` ships; the fix is inside `PdfEditEngine.Pages`, and `tools/SharpCorePDF.Manual` is `IsPackable` false and referenced by nothing |
+| G2 — the shipped leg | **Unchanged: both legs ship** | `lib/net10.0` and `lib/net11.0` read out of all four layer `.nupkg` files, from the Release pack before the push and again from the packed files `publish.yml` built |
+| G3 — notes a consumer can read | **Yes** | `CHANGELOG.md` holds `## [1.3.0] - 2026-10-24`, written in the same commit as the bump, and `PackageReleaseNotes` in `src/Directory.Build.props` carries the same summary onto all five package pages |
+| G4 — symbols and reproducible binaries | **Still partly** | no `.snupkg` is packed and nothing is code-signed, exactly as at `1.1.0` and `1.2.0` |
+| G5 — trusted publishing and `NUGET_USERNAME` | **Unchanged, outside the tree** | neither the policy nor the secret was touched and `publish.yml` is unchanged in this release; the same subject list published all five ids, each answer a `201 Created` rather than a `403` |
+| G6 — a dry run on the commit to be tagged | **Yes, 2026-10-24 — `publish: false`, run `40122580163`** | dispatched on `main` after `ci.yml` (`40122260761`) finished on `71907b0`, because `sonar-gate` refuses a commit `main` has not analysed; sonar-gate, build, both test legs, pack, the package checks and the local-feed handshake `success`, `NuGet login` and `Push to nuget.org` correctly `skipped` |
+| G7 — the tag equals `<Version>` | **Yes — `v1.3.0` on `71907b0`, `<Version>` 1.3.0** | an annotated tag whose message is `SharpCorePDF 1.3.0`, cut on the commit whose analysis was the newest on `main`; `publish.yml` re-checked the equality itself before it packed anything |
+| G8 — the packages install and open a document | **Yes, 2026-10-24** | all five ids serve `1.3.0` from `api.nuget.org/v3-flatcontainer/<id>/1.3.0/<id>.1.3.0.nupkg`; an empty `net10.0` console app referencing `SharpCorePDF` `1.3.0` and `Microsoft.Extensions.DependencyInjection` compiled Chapter 3's quickstart as printed — three inputs written with Chapter 12's builder, merged into `merged.pdf` — and printed **6 pages, 2,741 bytes**, `Primary source: cover.pdf`; PyMuPDF read the file back as PDF 1.7, 6 pages, producer `SharpCorePDF 1.3.0`, page 1 `cover 1`, page 6 `appendix 2`. `qpdf` is not installed on this machine, so the `qpdf check` of the `1.2.0` run was not repeated |
+| G9 — the quality gate on the tagged commit | **Green on `71907b0`, the tagged commit** | `ci.yml` (`40122260761`) passed the gate for `71907b0`; the dry run's sonar-gate job read *"The quality gate is OK for `71907b0a822…`, with 6 conditions and coverage among them"*; the tag's own run (`40122804986`) read it again for the same commit before it exchanged the OIDC token |
+
+The release went out on that evidence: run `40122804986` pushed all five packages — five `201 Created` — from
+tag `v1.3.0` on `71907b0`. The manual beside it is the `1.3.0` edition, 26 chapters, 118 pages and 222
+bookmarks, and it is the first edition the library generated itself: `docs/SharpCorePDF-Manual-1.2.0.pdf` and
+`docs/SharpCorePDF-Manual-1.1.0.pdf` stay as those releases shipped them.
+
 
 
