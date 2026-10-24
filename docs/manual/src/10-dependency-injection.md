@@ -247,6 +247,10 @@ An `InvalidOperationException` from the merge in this configuration means the en
 it could not read back — a defect worth reporting, not a problem with the input. Ordinary input
 problems still appear as `PdfException` subclasses.
 
+`ServiceCollection` and `BuildServiceProvider()` come from `Microsoft.Extensions.DependencyInjection`,
+which a test project adds for itself: the registration extends `IServiceCollection` from
+`...Abstractions` and references no more than that (Chapter 3 has the one line it costs).
+
 To test the layer above, replace `IPdfMerger` or `IPdfInspector` with a fake after the registration.
 Because the concrete services are registered separately, replacing only the interface leaves the
 engine available for tests that need it.

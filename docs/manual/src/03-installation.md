@@ -14,6 +14,19 @@ services, the engine and the dependency injection registration together. The fou
 remain installable on their own — see Chapter 1 for when that is useful — but an application that
 merges documents does not need to choose.
 
+The container is the one thing that package leaves to you. `SharpCorePDF.DependencyInjection` references
+`Microsoft.Extensions.DependencyInjection.Abstractions` — the assembly `AddSharpCorePDF()` extends and the
+one `IServiceCollection` lives in — while `ServiceCollection` and `BuildServiceProvider()` are in
+`Microsoft.Extensions.DependencyInjection`. An application that builds a provider itself adds that package:
+
+```bash
+dotnet add package Microsoft.Extensions.DependencyInjection
+```
+
+An application that runs inside an ASP.NET Core or Worker host already has it, which is why no line below
+mentions it again. Nothing else in this manual needs a second package, and Chapter 10 shows the manual
+wiring for a caller who wants no container at all.
+
 The library targets **.NET 10** and **.NET 11**. A project on either target framework can reference
 it; the package selects the matching assembly.
 

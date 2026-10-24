@@ -18,6 +18,18 @@ feed ever served.
 contents of the layers, and the entry below is written against the published `preview.1` rather than
 against an empty feed.
 
+## [Unreleased]
+
+### Fixed
+
+- **The quickstart promised one package and then built a container.** `SharpCorePDF` brings every
+  SharpCorePDF assembly, but `ServiceCollection` and `BuildServiceProvider()` live in
+  `Microsoft.Extensions.DependencyInjection`, which the registration package does not reference — it takes
+  `...Abstractions`, the assembly `AddSharpCorePDF()` extends. A project that followed Chapter 3 and
+  Chapter 10 as they were written did not compile until it added that package itself. Both chapters now say
+  so, where the first provider is built. G8 found it: the published `1.2.0` packages, installed into an empty
+  `net11.0` console app, failed on the first build with `CS1061` on `IServiceCollection`.
+
 ## [1.2.0] - 2026-10-24
 
 ### Added

@@ -435,3 +435,27 @@ runs are still there, and the merged tree is the same tree they tested.
 rather than attached as a file, and the body says why. It also says that the summary row reading 76.36% is the
 run's own figure before the five tests the release commit adds — 77.76% is what the release ships with.
 
+## G1–G9 at `1.2.0` (2026-10-24)
+
+The same nine gates, asked again of the tree `1.2.0` is cut from. `<Version>`, `AssemblyVersion` and
+`FileVersion` are `1.2.0` / `1.2.0.0` in `src/Directory.Build.props`, and every package page carries the 1.2
+`PackageReleaseNotes` from that file.
+
+| Gate | State at `1.2.0` | Evidence |
+| --- | --- | --- |
+| G0 — the id | **Closed** | the five ids are unchanged since `1.0.0`; `1.2.0` adds a version to an id the project already owns |
+| G1 — the surface has stopped moving | **Yes, for the 1.2 surface** | the 1.2 additions moved from `PublicAPI.Unshipped.txt` into `PublicAPI.Shipped.txt` in the release commit — 2,165 members in Domain, 85 in Application, 181 in Infrastructure — so "unshipped" means "not yet released" again; `RS0016`/`RS0017` are build errors and `PublicApiSurfaceTests` pins the shape |
+| G2 — the shipped leg | **Unchanged: both legs ship** | `lib/net10.0` and `lib/net11.0` in every package; narrowing stays on the backlog |
+| G3 — notes a consumer can read | **Yes** | `CHANGELOG.md` holds `## [1.2.0] - 2026-10-24`, written in the same commit as the bump, with a *Known limits at 1.2.0* section that names the five limits this release still carries |
+| G4 — symbols and reproducible binaries | **Still partly** | no `.snupkg` is packed and nothing is code-signed, exactly as at `1.1.0` |
+| G5 — trusted publishing and `NUGET_USERNAME` | **Unchanged, outside the tree** | the policy and the secret live on nuget.org and in the repository settings; `1.2.0` needs no new subject |
+| G6 — a dry run on the commit to be tagged | **Yes, 2026-10-24 — `publish: false`, run `40090484274`** | dispatched on `main` after `ci.yml` finished on `5270483` and before the tag, because `sonar-gate` refuses a commit `main` has not analysed; sonar-gate, build, both legs, pack and the local-feed handshake `success`, `NuGet login` and `Push to nuget.org` correctly `skipped` |
+| G7 — the tag equals `<Version>` | **Yes — `v1.2.0` on `5270483`, `<Version>` 1.2.0** | an annotated tag whose message is `SharpCorePDF 1.2.0`, cut on the commit whose analysis was the newest on `main`; `publish.yml` checked the equality itself before it packed anything |
+| G8 — the packages install and open a document | **Yes, 2026-10-24** | all five ids resolve at `1.2.0` from `api.nuget.org/v3-flatcontainer/<id>/index.json`; an empty `net11.0` console app referencing only `SharpCorePDF` merged two corpus documents (**5 pages, 2,522 bytes, PDF 1.7, 0 warnings**), the inspector read it back with **3** outline items, and `docs/tools/validate-pdf.py` reported `qpdf check: no problems` (5 decoded streams, 0 failed); the same program on `net10.0` produced the same five pages and bytes. G8 also found the one defect this release leaves open: `BuildServiceProvider()` needs `Microsoft.Extensions.DependencyInjection`, which the registration package does not take, so the quickstart as printed did not compile — recorded under `[Unreleased]` and fixed in chapters 3 and 10 |
+| G9 — the quality gate on the tagged commit | **Green on `5270483`, the tagged commit** | `ci.yml` on `5270483` passed the gate before the tag existed, and the tag's own `publish` run (`40090696127`) re-read it for the same commit — sonar-gate `success` — before it exchanged the OIDC token; see [`ADR-002`](./adr/0002-new-code-coverage-1.1.0.md) for why the coverage figure is recorded rather than re-argued per release |
+
+The release went out on that evidence: run `40090696127` pushed all five packages, and the manual is the
+`1.2.0` edition beside the `1.1.0` one — 25 chapters, 113 pages, built from the sources in the tagged commit,
+then rebuilt once more when the G8 finding changed two chapters (the page count did not move).
+
+
