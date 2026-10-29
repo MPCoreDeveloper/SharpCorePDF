@@ -1,0 +1,28 @@
+{
+  "stryker-config": {
+    "test-projects": [
+      "tests/SharpCorePDF.Tests/SharpCorePDF.Tests.csproj"
+    ],
+    "test-runner": "mtp",
+    "target-framework": "net11.0",
+    "configuration": "Release",
+    "mutation-level": "Standard",
+    "coverage-analysis": "perTest",
+    "thresholds": {
+      "high": 90,
+      "low": 80,
+      "break": 0
+    },
+    "reporters": [
+      "ClearText",
+      "Html",
+      "Json",
+      "Markdown"
+    ],
+    "report-file-name": "mutation-report",
+    "break-on-initial-test-failure": true,
+    "mutate": [
+      "**/*"
+    ]
+  }
+}

@@ -1,0 +1,181 @@
+# Mutation testing: whether the suite would notice a line that stopped working.
+#
+# ci.yml answers "was every line run", and answers it well enough to gate a release on. It cannot answer
+# this one: a line can be reached by an assertion that would pass either way. Stryker mutates one thing at
+# a time in the four layers under src/ -- an operator, a boundary, a returned constant, a removed statement
+# -- rebuilds the assembly and runs the tests that cover the change. Every mutant comes back killed (a test
+# failed, which is what should happen), survived (every test still passed, which is the finding this
+# workflow exists for) or not covered (no test reaches the line at all).
+#
+# It is a separate workflow, and it gates nothing:
+#
+#   * Cost. Every mutant is a compile and a test run. The Domain layer alone is thousands of mutants at
+#     Standard level and Infrastructure is larger, so a sweep of the four layers is measured in hours --
+#     not a price a pull request should pay, and a number that arrives on every push is a number nobody
+#     reads. It runs weekly, and on dispatch when a change wants a reading of its own.
+#   * No agreed floor. `break-at` is 0 in stryker-config.json, so a red run means Stryker could not finish,
+#     never "the score dropped". A floor entered before there is a recorded baseline would be a number
+#     declared to nobody, which is the mistake docs/adr/0002-new-code-coverage-1.1.0.md records for
+#     coverage: the number has to come from a measurement and be agreed, or it is furniture. The reading is
+#     written to the run summary and kept as an artifact, which is what such a floor would be derived from.
+#
+# The leg mutated is net11.0, the same leg ci.yml measures coverage on: `stryker-config.json` names the
+# target framework because every project multi-targets, and net10.0 would need a runtime identifier
+# (README -> Building and testing) that Stryker's build does not pass.
+#
+# Actions are pinned to commit hashes for the reason ci.yml records: a tag is a moving reference. The
+# `# vN` comment is what a person reads; Dependabot is what moves it.
+
+name: mutation
+
+on:
+  schedule:
+    # Mondays at 03:00 UTC. Frequent enough to catch a suite that stopped noticing, rare enough that the
+    # cost stays a footnote in a repository this size.
+    - cron: '0 3 * * 1'
+
+  workflow_dispatch:
+    inputs:
+      layer:
+        description: Which layer to mutate
+        type: choice
+        default: all
+        options:
+          - all
+          - SharpCorePDF.Domain
+          - SharpCorePDF.Application
+          - SharpCorePDF.Infrastructure
+          - SharpCorePDF.DependencyInjection
+      level:
+        description: How many mutators Stryker applies
+        type: choice
+        default: Standard
+        options:
+          - Basic
+          - Standard
+          - Advanced
+          - Complete
+      changed-only:
+        description: Only mutate the lines this branch changes against main
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Two sweeps at once would report two half-finished scores for the same commit, and a cancelled sweep
+# reports a score for whichever layers it happened to reach first.
+concurrency:
+  group: mutation
+  cancel-in-progress: false
+
+jobs:
+  # A scheduled run carries no inputs, so the matrix is decided once here instead of four times with a
+  # condition each: this job answers "which layers", and the matrix below is its answer.
+  plan:
+    name: Plan the sweep
+    runs-on: ubuntu-latest
+    outputs:
+      layers: ${{ steps.layers.outputs.value }}
+    steps:
+      - name: Decide which layers this run mutates
+        id: layers
+        env:
+          REQUESTED: ${{ inputs.layer }}
+        run: |
+          case "$REQUESTED" in
+            ''|all)
+              echo 'value=["SharpCorePDF.Domain","SharpCorePDF.Application","SharpCorePDF.Infrastructure","SharpCorePDF.DependencyInjection"]' >> "$GITHUB_OUTPUT"
+              ;;
+            SharpCorePDF.Domain|SharpCorePDF.Application|SharpCorePDF.Infrastructure|SharpCorePDF.DependencyInjection)
+              echo "value=[\"$REQUESTED\"]" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error::'$REQUESTED' is not one of the layers this repository ships."
+              exit 1
+              ;;
+          esac
+
+  mutate:
+    name: Mutate ${{ matrix.layer }}
+    needs: plan
+    runs-on: ubuntu-latest
+    # GitHub's cap is six hours. This leaves the checkout, the two SDKs and the tool install room inside
+    # it. A layer that reaches this has met a set it cannot finish at this level, and the dispatch inputs
+    # above are how to ask a smaller question next time.
+    timeout-minutes: 350
+    strategy:
+      # One layer timing out must not cancel the three still measuring: the sweep is four independent
+      # readings, not one.
+      fail-fast: false
+      matrix:
+        layer: ${{ fromJSON(needs.plan.outputs.layers) }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # `--since` compares against the base branch, which a shallow clone does not carry.
+          fetch-depth: 0
+
+      # Both SDKs, for the reason ci.yml records: the .NET 11 SDK is not on the hosted images yet, and
+      # Stryker builds the solution before it mutates anything, which includes the net10.0 leg.
+      - name: Install the .NET SDKs
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: |
+            11.0.x
+            10.0.x
+
+      # Pinned to an exact version and installed into ./.tools, the way ci.yml installs the coverage
+      # collector: stryker-config.json is a contract with this version (5.0.0 is the first that speaks
+      # Microsoft.Testing.Platform, through `--test-runner mtp`), and .tools/ is git-ignored.
+      - name: Install Stryker
+        run: dotnet tool install --tool-path ./.tools dotnet-stryker --version 5.0.0
+
+      - name: Mutate
+        env:
+          LAYER: ${{ matrix.layer }}
+          LEVEL: ${{ inputs.level }}
+          CHANGED_ONLY: ${{ inputs.changed-only }}
+        run: |
+          mkdir -p "artifacts/mutation/$LAYER"
+          args=(
+            --config-file stryker-config.json
+            --project "$LAYER.csproj"
+            --output "artifacts/mutation/$LAYER"
+          )
+          # A scheduled run passes neither input, and stryker-config.json then decides both.
+          if [ -n "$LEVEL" ]; then args+=( --mutation-level "$LEVEL" ); fi
+          if [ "$CHANGED_ONLY" = "true" ]; then args+=( --since:main ); fi
+          ./.tools/dotnet-stryker "${args[@]}" 2>&1 | tee "artifacts/mutation/$LAYER/run.log"
+
+      # The score is read from the report rather than from the console: the console table is one row per
+      # file and does not survive being pasted into a summary. `if: always()` because a reading is worth
+      # having even when the run above failed late.
+      - name: Write the reading to the run summary
+        if: always()
+        env:
+          LAYER: ${{ matrix.layer }}
+        run: |
+          report="artifacts/mutation/$LAYER/reports/mutation-report.json"
+          if [ ! -f "$report" ]; then
+            {
+              echo "### Mutate $LAYER"
+              echo
+              echo "No report: the run did not reach the end. Its log is in the \`mutation-$LAYER\` artifact."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python3 docs/tools/mutation-summary.py "$report" --markdown --detail \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # The HTML report is what a person opens, the JSON is what the next tool reads and the log is what a
+      # failure is diagnosed from. Fourteen days matches the coverage artifact in ci.yml.
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation-${{ matrix.layer }}
+          path: artifacts/mutation/${{ matrix.layer }}/
+          if-no-files-found: warn
+          retention-days: 14

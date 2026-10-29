@@ -419,6 +419,26 @@ prints what qpdf makes of its encryption dictionary. It is the check that caught
 has had so far: a hexadecimal string written with name escapes, which `qpdf` rejected as damage. The
 encrypted documents the merge engine writes were checked the same way with qpdf, pikepdf and pypdf.
 
+### Asking whether the tests would notice
+
+```powershell
+dotnet tool install --tool-path .\.tools dotnet-stryker --version 5.0.0
+
+# One layer of the four under src/ -- the SharpCorePDF project itself is a meta package with no code:
+.\.tools\dotnet-stryker --config-file stryker-config.json --project SharpCorePDF.Domain.csproj --output artifacts/mutation/Domain
+
+# The reading, out of the report it leaves behind:
+python .\docs\tools\mutation-summary.py .\artifacts\mutation\Domain\reports\mutation-report.json --detail
+```
+
+Coverage says a line ran; mutation testing says whether the suite would have noticed that line changing.
+Stryker changes one thing at a time — an operator, a boundary, a returned constant, a removed statement —
+rebuilds, and reports what no test caught; `mutation-report.html` opens each mutated line with the mutation
+in place. The first scoped run, the two tests it produced, what the six survivors left say about the tests,
+and the one local wrinkle (on a machine with Visual Studio installed, Stryker can pick Visual Studio's
+MSBuild and compile mutants with no framework references) are recorded in
+[`docs/mutation-testing.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/mutation-testing.md).
+
 ## Continuous integration
 
 [`ci.yml`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/.github/workflows/ci.yml) runs on
@@ -430,6 +450,7 @@ deliberately not the publishing workflow, so a pull request is checked without a
 | --- | --- | --- |
 | Build, both test legs, coverage, static analysis, the gate | `ci.yml` | a push to `main`, a pull request, a manual dispatch |
 | The gate read for the tagged commit, the pack, the package check, the push to nuget.org | `publish.yml` | a `v*` tag, a manual dispatch with `publish: true` |
+| Mutation testing: what the suite would notice changing, reported and not gated | `mutation.yml` | Mondays, a manual dispatch |
 
 The analysis runs in the runner rather than on SonarCloud's side, which is what lets it carry coverage:
 the scanner session opens before the build, the measured test leg runs inside it, and it closes after it,

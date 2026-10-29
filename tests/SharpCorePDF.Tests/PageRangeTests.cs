@@ -42,7 +42,15 @@ public sealed class PageRangeTests
         Assert.Equal("to", Assert.Throws<ArgumentOutOfRangeException>(() => PageRange.ToPage(0)).ParamName);
     }
 
-    /// <summary>Parsing understands the four notations, with or without spaces around the dash.</summary>
+    /// <summary>
+    /// Parsing understands the four notations, with or without spaces around the dash, and it reads a range
+    /// whose two ends are the same page as that closed range rather than as a single page.
+    /// </summary>
+    /// <remarks>
+    /// <c>3-3</c> is the one spelling that tells <c>end &gt;= start</c> from <c>end &gt; start</c>: every
+    /// other closed range in this file has a larger end than its start, so a parser that refused a range
+    /// ending where it begins went unnoticed until mutation testing asked.
+    /// </remarks>
     /// <param name="text">The text to parse.</param>
     /// <param name="from">The expected first page.</param>
     /// <param name="to">The expected last page.</param>
@@ -50,6 +58,7 @@ public sealed class PageRangeTests
     [InlineData("5", 5, 5)]
     [InlineData("2-7", 2, 7)]
     [InlineData(" 2 - 7 ", 2, 7)]
+    [InlineData("3-3", 3, 3)]
     [InlineData("3-", 3, PageRange.OpenEnd)]
     [InlineData("1-", 1, PageRange.OpenEnd)]
     [InlineData("-4", 1, 4)]
@@ -96,6 +105,20 @@ public sealed class PageRangeTests
     {
         Assert.False(PageRange.TryParse(text, out _));
         Assert.Throws<FormatException>(() => PageRange.Parse(text));
+    }
+
+    /// <summary>Refusing a range says which text was refused, in the four notations a caller could use.</summary>
+    /// <remarks>
+    /// The message is what a caller turns into an error beside a command line, so it is asserted whole
+    /// rather than by the exception type alone: a blank message still throws where a test only asks for
+    /// <see cref="FormatException"/>, and a message a user cannot act on is not a diagnosis.
+    /// </remarks>
+    [Fact]
+    public void Says_what_a_range_looks_like_when_it_refuses()
+    {
+        var exception = Assert.Throws<FormatException>(() => PageRange.Parse("first"));
+
+        Assert.Equal("'first' is not a valid page range. Expected 5, 2-7, 3- or -4.", exception.Message);
     }
 
     /// <summary>Nothing at all is not a range either.</summary>
