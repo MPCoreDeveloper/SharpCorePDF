@@ -36,6 +36,10 @@ dotnet tool install --tool-path ./.tools dotnet-stryker --version 5.0.0
 
 # The reading, out of the report the run leaves behind
 python ./docs/tools/mutation-summary.py ./artifacts/mutation/Domain/reports/mutation-report.json --detail
+
+# What moved between two readings: the verdicts, not only the score
+python ./docs/tools/mutation-summary.py ./artifacts/mutation/Domain/reports/mutation-report.json `
+    --compare ./artifacts/mutation/Domain-earlier/reports/mutation-report.json
 ```
 
 `artifacts/mutation/<layer>/reports/` keeps one reading three ways: `mutation-report.html` opens in a
@@ -165,22 +169,51 @@ written in, and would break on the day the guard moved rather than on the day th
 they say is that `TryParse` and `TryCreate` overlap — the guards are a second statement of a rule `TryCreate`
 enforces — and that overlap is where the guards could go, not where the suite is thin.
 
-### The score moves by about two points
+### Two of the seventy were caught by the clock
 
-**The same command printed 92.11% before the two tests and 92.11% after them, with different findings.** The
-three pre-test reports that were kept recorded eight, seven and seven undetected: 86, 124, 129, 135, 196 and
-199 survived in all three, and 106 and 109 in two of the three. Add that up and the pre-test reading of
-92.11% — six undetected — is the one run in which neither 106 nor 109 survived; the run above reaches the
-same six without 86 or 135, which the two tests now kill.
+`Detected` is not all assertions. Two mutants hang instead of failing:
 
-Since nothing at 106 or 109 changes behaviour, a run that records one of them as detected is a run where a
-test failed or hung for a reason of its own: a flaky assertion, or a timeout on a machine that was busy. The
-test responsible has not been identified, and it is a finding in its own right — a survivor that disappears
-in some runs is a question about the suite rather than about the mutant.
+| Line | Mutation | Why it does not return |
+| --- | --- | --- |
+| 152 | `IsOpenEnded ? documentPageCount : To` with the condition forced `false` | an open-ended range resolves to `int.MaxValue`, so `Enumerate` has two billion pages to hand out |
+| 175 | `page++` in `Enumerate` decremented | the loop counts down from 1, wraps at `int.MinValue` and keeps going |
 
-The arithmetic for a floor follows from that: four readings of one command, spread over about two points, so
-a threshold set at the last number seen would go red on a busy runner. That is why `break` stays 0 until a
-layer has been swept more than once, and why the report is the thing to read.
+Stryker records `Timeout` and counts it as detected, which is right: an enumeration that never terminates is a
+failure a caller would live through, and the suite noticed it by not returning. But a hang is a weaker witness
+than a failing assertion — it says the harness ran out of patience, not which test was watching — so the two are
+named here rather than folded silently into the seventy. Neither is worth a test that asserts on a duration:
+that test would be slower and less reliable than the timeout that already catches them.
+
+### Two reports, two trees, and where the two points came from
+
+Both reports were kept, and diffing them by mutant says what changed where a score cannot:
+
+| Report | Detected | Undetected | Score | Survivors |
+| --- | --- | --- | --- | --- |
+| before the two tests | 68 | 8 | 89.47% | 86, 106, 109, 124, 129, 135, 196, 199 |
+| after them | 70 | 6 | 92.11% | 106, 109, 124, 129, 196, 199 |
+
+Two mutants changed verdict and no other one did: line 86, where the refusal's message could be blanked, and
+line 135, where `end >= start` could be weakened. Both are `Killed` now because a test reads them. The two
+points between the scores are those two tests, and nothing else in the file moved.
+
+A third reading printed 90.79%, which is 69 detected of 76: one more than the run before the two tests and one
+fewer than the run after them, which is the count a tree with one of the two tests in place would produce. Its
+report was deleted before it could be diffed, so that number is quoted from the run rather than from a file;
+the two reports above are the evidence.
+
+The run recorded on this page was then repeated against the same tree: all 102 verdicts identical, 1 minute 27
+seconds the first time and 1 minute 34 the second. Between two runs of one tree the clock varies and the
+verdicts do not, so the comparison worth making is between reports rather than between scores:
+
+```powershell
+python .\docs\tools\mutation-summary.py .\artifacts\mutation\PageRange\reports\mutation-report.json `
+    --compare .\artifacts\mutation\SharpCorePDF.Domain\reports\mutation-report.json
+```
+
+It prints both tallies and every verdict that moved, by file, line, mutator and replacement. That is how the
+paragraph above is known rather than remembered: an earlier draft of this page claimed the score drifted by two
+points between runs of one tree, which the reports do not support.
 
 ## Why nothing gates on it
 

@@ -2,6 +2,7 @@
 
 Run with:  python docs/tools/mutation-summary.py artifacts/mutation/SharpCorePDF.Domain/reports/mutation-report.json
            python docs/tools/mutation-summary.py <report> --detail --markdown
+           python docs/tools/mutation-summary.py <report> --compare <earlier-report> --detail
 
 The report is the JSON one `stryker-config.json` asks for, written by `.github/workflows/mutation.yml`:
 
@@ -24,6 +25,12 @@ The score is printed to two decimals, with a verdict when `--threshold` is given
 repository asks for yet: `mutation.yml` reports rather than gates, and `break-at` is 0 in the config. The
 exit code is 0 for a report it could read and 1 for one below `--threshold`; a report it cannot read stops
 with a message rather than a score.
+
+The last form is for a score that moved. Two runs of one tree either agree mutant for mutant -- in which case
+the number belongs to the tree -- or they do not, and the run that moved is then the finding: an assertion that
+fails only sometimes, a test that hangs on a loaded machine, a report written against a different tree.
+Comparing two scores cannot tell those apart. Comparing verdicts by what each mutant changes can, which is why
+`--compare` lists them by file, line, mutator and replacement rather than by the id a run happened to give them.
 
 The tool only reads the report. It needs no third-party package and no network.
 """
@@ -179,6 +186,60 @@ def summarise(mutants: list[Mutant], detail: bool, markdown: bool, top: int) -> 
     return lines
 
 
+def key(mutant: Mutant) -> tuple[str, int, str, str]:
+    """Identifies a mutant by what it changes, so two runs can be compared without agreeing on ids."""
+    name, line, mutator, replacement, _status = mutant
+    return (name, line, mutator, replacement)
+
+
+def compare(earlier: list[Mutant], later: list[Mutant], markdown: bool, top: int) -> list[str]:
+    """Returns what moved between two reports: the verdicts, not only the score they add up to."""
+    before = {key(mutant): mutant[4] for mutant in earlier}
+    moved: list[list[str]] = []
+
+    for mutant in later:
+        name, line, mutator, replacement, status = mutant
+        was = before.get(key(mutant))
+
+        if was is not None and was != status:
+            moved.append([f"`{name}`", str(line), mutator, f"`{escape(replacement)}`", was, status])
+
+    def tally(mutants: list[Mutant]) -> tuple[int, int, float | None]:
+        """Returns (detected, undetected, score) for one report."""
+        detected = sum(1 for mutant in mutants if mutant[4] in DETECTED)
+        undetected = sum(1 for mutant in mutants if mutant[4] in UNDETECTED)
+        return detected, undetected, score(detected, undetected)
+
+    rows: list[list[str]] = []
+
+    for label, mutants in (("earlier", earlier), ("later", later)):
+        detected, undetected, measured = tally(mutants)
+        rows.append([label, str(detected), str(undetected), score_text(measured)])
+
+    lines = ["", "#### What moved" if markdown else "what moved between the two reports:", ""]
+    lines += table(["Report", "Detected", "Undetected", "Score"], rows)
+    lines += ["", "No verdict moved." if not moved else f"{len(moved)} verdicts moved:"]
+
+    if moved:
+        lines += [""]
+        lines += table(["File", "Line", "Mutator", "Replacement", "Was", "Now"], moved[:top])
+
+        if len(moved) > top:
+            lines += ["", f"({len(moved) - top:,} more: raise --top to see them)"]
+
+    absent = [name for name in before if name not in {key(mutant) for mutant in later}]
+    added = [mutant for mutant in later if key(mutant) not in before]
+
+    if absent or added:
+        lines += [
+            "",
+            f"{len(absent):,} mutant(s) appear only in the earlier report and {len(added):,} only in this one: "
+            "the code or the filter changed between the two runs.",
+        ]
+
+    return lines
+
+
 def main(argv: list[str]) -> int:
     """Prints the summary and returns the verdict `--threshold` asks for."""
     parser = argparse.ArgumentParser(
@@ -194,6 +255,13 @@ def main(argv: list[str]) -> int:
         default=None,
         help="fail below this mutation score in percent; nothing in this repository asks for one yet",
     )
+    parser.add_argument(
+        "--compare",
+        type=Path,
+        metavar="EARLIER",
+        default=None,
+        help="a report of the same code from an earlier run; prints what moved between the two",
+    )
     options = parser.parse_args(argv)
 
     mutants = read_report(options.report)
@@ -202,6 +270,9 @@ def main(argv: list[str]) -> int:
         print(f"report: {options.report}")
 
     print("\n".join(summarise(mutants, options.detail, options.markdown, options.top)))
+
+    if options.compare is not None:
+        print("\n".join(compare(read_report(options.compare), mutants, options.markdown, options.top)))
 
     if options.threshold is None:
         return 0
