@@ -20,10 +20,101 @@ against an empty feed.
 
 ## [Unreleased]
 
-Nothing yet. `1.3.0` is on the feed: the five packages were pushed by `publish.yml` from tag `v1.3.0` on
-2026-10-24, and the entry below it is the version that was released.
+Nothing yet. `1.3.0` is on the feed; the entry below it is `1.4.0`, the version this tree will be tagged as.
+
+## [1.4.0] - 2026-11-04
+
+### Added
+
+- **An image's colour space is read, not guessed from its name, so the spaces and bit depths that used to
+  stay payloads now yield pixels.** `DecodedPixels` was `null` for every image whose samples were not already
+  one byte per channel of `DeviceGray` or `DeviceRGB` — a bilevel scan, a palette image, a CMYK photograph,
+  an `ICCBased` one — even though the payload had been decoded and nothing about it was unknown. The read
+  now resolves `/ColorSpace` through the document (`PdfSampleSpaces`), following a resource name, an
+  `[/Indexed base hival lookup]` array to the palette it points at — a stream or a string, decoded through
+  the same filters as any payload — and an `[/ICCBased profile]` array to the component count its `/N`
+  states, and a sample that is narrower than a byte is widened instead of a row being read as a continuous
+  bit stream. `PixelFormat` gains a third value, `Cmyk32`: four device samples per pixel with no ink
+  conversion, because turning cyan, magenta, yellow and black into light is a rendering decision rather
+  than a fact of the file, and neither an ICC profile nor a tint transform is applied anywhere on this
+  route. A `Separation`, `DeviceN` or `Lab` space, sixteen bits per sample, and a palette image whose
+  indices run past its own table stay payloads, and the record states which one it is. The expansion is
+  bounded by the same `MaxInlineContentBytes` budget that governs `Data`, so widening a large image cannot
+  allocate past it.
+
+- **An image compressed with LZW is decoded instead of being handed back compressed.** `LZWDecode` sat in
+  the list of filters the reader named and passed through, so a scan stored the way TIFF stores one was
+  reported with `IsDecodable` cleared and `DecodedPixels` `null` even though the library could already read
+  everything about it but the samples. `PdfFilters` now carries a decoder for the coding PDF inherits from
+  TIFF — nine-bit codes growing to twelve, the table built as the stream is read, `EarlyChange` honoured —
+  so such an image yields its samples on both the read and the copy route, and the
+  `ImageFilterUnsupported` warning it used to raise is gone. The same decoder serves object streams, so a
+  document that stores one behind LZW now reads instead of raising `PdfUnsupportedFeatureException`, and
+  the abbreviated name `/LZW` is accepted wherever `/LZWDecode` is — which it was not before. The one
+  convention a decoder can get wrong on its own account is the code at which the field widens, so the tests
+  decode a strip libtiff wrote as well as one this repository's own test encoder wrote: a round trip cannot
+  catch a rule that is wrong on both sides, and `EarlyChange` exists precisely because a decoder's table is
+  one entry behind an encoder's.
+
+### Changed
+
+- **A materialised payload is handed back as a view of the buffer the copy route filled, not as a second array
+  of the same size.** `ReadImageDataAsync` and `ReadEmbeddedFileDataAsync` returned `ReadOnlyMemory<byte>` that
+  already was the payload, and then copied it with `ToArray()`; both now return the stream's own buffer, sliced
+  to its length, so reading a large attachment into memory costs one copy of it rather than two. Nothing
+  observable changes but the allocation: the bytes, the length and the lifetime after the call are the same.
+  `MergeToBytesAsync` keeps its copy — a `byte[]` of exactly the merged length cannot be the buffer of a stream
+  that grew by doubling — and its documentation now says so, instead of leaving the copy to be found in a
+  profiler. `ReadPageDetailAsync` is written with `await foreach` and reads exactly as it did. The same pass
+  documents the destination path of `MergeToFileAsync`, `SaveImageDataAsync` and `SaveEmbeddedFileAsync`: it is
+  used as given, no root is enforced, and confining a path that came from an untrusted source is the caller's
+  job. That boundary is stated once in `SECURITY.md`, once in the manual's chapter on error handling, and in
+  each member's XML documentation.
+
+
+### Fixed
+
+- **A filter name this library has never seen was reported as a damaged payload rather than as an
+  unsupported filter.** `PdfImageFilters` recognised five names it does not decode — `JPXDecode`,
+  `JBIG2Decode`, `CCITTFaxDecode`, `RunLengthDecode` and `Crypt` — and let every other name fall through to
+  the arm that reports data a filter refused. A producer that invents a filter name therefore had its image
+  reported as `ImageDataUnreadable` — "the payload could not be decoded" — while
+  `docs/manual/src/08-inspection.md` and `specs/001-pdf-content-inspection/contracts/warnings.md` both describe
+  such an image as `ImageFilterUnsupported`: nothing was decoded because the decoder is not there, not because
+  the bytes are damaged, and the stored bytes are still what the read carries. The pass-through decision is
+  now the complement of the four filters the library decodes, so the two cases stay apart however many names a
+  document states.
+- **An image with no filter never yielded pixels, so the simplest image of all was the one shape the read
+  model could not state.** `ImagePixels` treated a `null` filter chain as "nothing here to widen" and
+  returned before it looked at the samples, which meant an unfiltered image — and every inline image
+  written without a filter — was reported with `DecodedPixels` `null` while the same bytes behind
+  `/FlateDecode` were exposed, and `docs/manual/src/08-inspection.md` had always described the unfiltered
+  image as the simplest case rather than an exception. The condition now asks whether the chain contains
+  `DCTDecode` — the one payload whose samples are not bytes yet — instead of whether there is a chain at
+  all.
+- **A form whose field tree was too deep lost fields without saying so.** `ReadFormFieldsAsync` followed
+  the tree to a hardcoded 32 levels and, past that point — or at a reference that repeated an object it
+  had already read — returned without a word, so a truncated form read exactly like a shorter one. The
+  walk now uses `PdfEngineOptions.MaxNestingDepth`, the same guard the page tree and the content reads
+  already use, and reports the cut with the new `PdfWarningKind.FormFieldDepthExceeded`; a repeated
+  object is reported as `FormFieldUnreadable`. The fields read above the cut are still returned, which is
+  what makes "this form has five fields" and "this form was too deep to finish" two different answers.
+  Adding the enum member is additive: the set is open, so an existing `switch` keeps working through its
+  `default` arm.
+- **The signature search had a depth of its own, and it was silent too.** `SignatureValidator` carried a
+  private `MaxFieldDepth = 32` and returned past it without a word, so a document whose form nests deeper
+  than that answered "these are its signatures" with nothing to suggest the list could be short. The walk
+  now uses `PdfEngineOptions.MaxNestingDepth`, the same limit as everything else, and records
+  `PdfWarningKind.FormFieldDepthExceeded` on the reader. A signature answer has no warnings channel, so the
+  cut is also reported as the new `PdfSignatureProblemKind.FormFieldTreeTooDeep` on every validation that
+  was returned: `Integrity` and `Trust` still describe the signature that is named, and the new problem says
+  the answer is narrower than the document rather than that a signature is wrong. The page annotations are
+  still scanned as well, which is where a signature a viewer shows carries its widget, so the cut costs the
+  fields between the root and the widget and not the signature itself.
 
 ## [1.3.0] - 2026-10-24
+
+`1.3.0` is on the feed: the five packages were pushed by `publish.yml` from tag `v1.3.0` on 2026-10-24.
 
 ### Added
 

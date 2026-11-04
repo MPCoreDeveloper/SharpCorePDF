@@ -182,7 +182,7 @@ internal static class Program
     {
         string? root = null;
         string? output = null;
-        var version = "1.3.0";
+        var version = "1.4.0";
         var keepHtml = false;
         var noStamp = false;
 
@@ -285,7 +285,7 @@ internal static class Program
         Console.WriteLine();
         Console.WriteLine("  --root <path>      the repository root (default: found from the tool's location)");
         Console.WriteLine("  --out <path>       the PDF to write (default: docs/SharpCorePDF-Manual-<version>.pdf)");
-        Console.WriteLine("  --version <x.y.z>  the version the cover and metadata state (default: 1.3.0)");
+        Console.WriteLine("  --version <x.y.z>  the version the cover and metadata state (default: 1.4.0)");
         Console.WriteLine("  --keep-html        keep the intermediate HTML in docs/manual/build");
         Console.WriteLine("  --no-stamp         skip the footer, the outline and the metadata");
         Console.WriteLine("  --help             show this message");

@@ -951,6 +951,7 @@ SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionOpened = 19 -> SharpCo
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.EncryptionRevisionUnsupported = 14 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.FormAppearanceGenerated = 50 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.FormFieldActionPreserved = 52 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.FormFieldDepthExceeded = 65 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.FormFieldUnreadable = 34 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.GifAdditionalFramesIgnored = 45 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
 SharpCorePDF.Domain.ValueObjects.PdfWarningKind.ImageColorConverted = 44 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
@@ -1925,6 +1926,7 @@ SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind.CertificateNotYetValid 
 SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind.ChainIncomplete = 5 -> SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind
 SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind.ChainUntrusted = 6 -> SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind
 SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind.DigestMismatch = 1 -> SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind
+SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind.FormFieldTreeTooDeep = 13 -> SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind
 SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind.MalformedByteRange = 0 -> SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind
 SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind.OnlineRevocationUnsupported = 11 -> SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind
 SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind.RevisionNotCovered = 8 -> SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind

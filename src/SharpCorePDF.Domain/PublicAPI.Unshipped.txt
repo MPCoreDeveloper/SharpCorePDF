@@ -1,3 +1,1 @@
 #nullable enable
-SharpCorePDF.Domain.ValueObjects.PdfWarningKind.FormFieldDepthExceeded = 65 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
-SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind.FormFieldTreeTooDeep = 13 -> SharpCorePDF.Domain.ValueObjects.PdfSignatureProblemKind
