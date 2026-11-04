@@ -201,8 +201,9 @@ public enum PdfWarningKind
     XmpPacketMalformed,
 
     /// <summary>
-    /// A form field could not be read — a field dictionary that does not resolve, or a name that
-    /// cannot be built. The field is skipped and the rest of the form is still returned.
+    /// A form field could not be read — a field dictionary that does not resolve, a name that cannot be
+    /// built, or a reference that repeats one already in the tree. The field, or the branch that
+    /// repeated, is skipped and the rest of the form is still returned.
     /// </summary>
     FormFieldUnreadable,
 
@@ -384,4 +385,11 @@ public enum PdfWarningKind
     /// covers the bytes of the result and cannot be reported as valid there.
     /// </summary>
     PriorSignatureInvalidated,
+
+    /// <summary>
+    /// The form field tree is deeper than <c>PdfEngineOptions.MaxNestingDepth</c> and was cut off at that
+    /// depth. The fields read above the cut are returned, so a form whose tree is too deep is reported
+    /// rather than read as a shorter one.
+    /// </summary>
+    FormFieldDepthExceeded,
 }

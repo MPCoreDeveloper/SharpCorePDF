@@ -21,6 +21,14 @@ internal static class TestAssets
     /// </summary>
     public static string EmbeddedFont => Path.Combine(Folder, "DejaVuSans-subset.ttf");
 
+    /// <summary>
+    /// Gets an LZW strip libtiff wrote through Pillow's TIFF writer, which is the same coding a PDF image
+    /// carries. The fixture exists so the decoder is checked against an encoder this repository did not
+    /// write: it holds 200 x 8 grey samples, and <see cref="PdfLzwFilterTests"/> holds the pattern they
+    /// were written from.
+    /// </summary>
+    public static string LzwStrip => Path.Combine(Folder, "lzw-tiff-strip.bin");
+
     /// <summary>Gets a 2 page document that uses object streams and a cross-reference stream.</summary>
     public static string Modern => Path.Combine(Folder, "Modern.pdf");
 

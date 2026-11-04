@@ -1,5 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 using SharpCorePDF.Domain.ValueObjects;
+using SharpCorePDF.Infrastructure;
 
 namespace SharpCorePDF.Tests;
 
@@ -161,6 +162,42 @@ public sealed class PdfDocumentSignatureValidatorTests
 
         Assert.Equal(PdfSignatureIntegrity.Valid, validation.Integrity);
         Assert.Contains(validation.Problems, problem => problem.Kind == PdfSignatureProblemKind.CertificateExpired);
+    }
+
+    /// <summary>
+    /// The search through the form is bounded by the nesting limit, and a tree that hits it is reported on
+    /// every signature that was found: the list a caller receives is then known to be narrower than the
+    /// document rather than taken for the whole answer.
+    /// </summary>
+    [Fact]
+    public async Task Reports_a_form_tree_that_was_cut_off_while_the_signatures_were_looked_for()
+    {
+        var signed = await SigningFixtures.SignAsync(
+            SigningFixtures.BuildDeepForm(),
+            SigningFixtures.Options(Certificate));
+
+        var validation = Assert.Single(await SigningFixtures.ValidateAsync(
+            signed,
+            new PdfEngineOptions { MaxNestingDepth = 4 }));
+
+        Assert.Equal(PdfSignatureIntegrity.Valid, validation.Integrity);
+        Assert.Contains(validation.Problems, problem => problem.Kind == PdfSignatureProblemKind.FormFieldTreeTooDeep);
+    }
+
+    /// <summary>A tree the walk can finish is read whole, so nothing is said about its depth.</summary>
+    [Fact]
+    public async Task Reads_a_form_tree_within_the_limit_without_reporting_its_depth()
+    {
+        var signed = await SigningFixtures.SignAsync(
+            SigningFixtures.BuildDeepForm(),
+            SigningFixtures.Options(Certificate));
+
+        var validation = Assert.Single(await SigningFixtures.ValidateAsync(
+            signed,
+            new PdfEngineOptions { MaxNestingDepth = 8 }));
+
+        Assert.Equal(PdfSignatureIntegrity.Valid, validation.Integrity);
+        Assert.DoesNotContain(validation.Problems, problem => problem.Kind == PdfSignatureProblemKind.FormFieldTreeTooDeep);
     }
 
     /// <summary>Changes one byte of the page box, which is inside the range the signature covers.</summary>

@@ -98,27 +98,43 @@ public sealed record PdfImageInfo
     public ReadOnlyMemory<byte>? Data { get; init; }
 
     /// <summary>
-    /// Gets the pixels of the image — the samples themselves, one byte per sample — or
+    /// Gets the pixels of the image — the samples themselves, one byte per channel — or
     /// <see langword="null"/> when the payload is not exposed as pixels.
     /// </summary>
     /// <remarks>
-    /// The pixels are the same bytes <see cref="Data"/> carries, stated in a form that needs no second
-    /// interpretation: tightly packed, top row first, eight bits per sample, and exactly
-    /// <see cref="Width"/> times <see cref="Height"/> times the channel count of the colour space long.
-    /// They are present when the library decoded the payload, the geometry is stated, every sample is
-    /// eight bits, and the colour space is one whose samples are the channels — <c>DeviceGray</c>,
-    /// <c>CalGray</c> or <c>G</c> for one, <c>DeviceRGB</c>, <c>CalRGB</c> or <c>RGB</c> for three.
+    /// <para>
+    /// The pixels are stated in a form that needs no second interpretation: tightly packed, top row
+    /// first, eight bits per sample, and exactly <see cref="Width"/> times <see cref="Height"/> times
+    /// the channel count of <see cref="PixelFormat"/> long. They are present when the library decoded the
+    /// payload, the geometry is stated, and the colour space is one whose samples mean what they are:
+    /// <c>DeviceGray</c>, <c>CalGray</c> or <c>G</c> for one channel; <c>DeviceRGB</c>, <c>CalRGB</c> or
+    /// <c>RGB</c> for three; <c>DeviceCMYK</c> for four; an <c>Indexed</c> space over one of those, whose
+    /// palette is applied so that the caller gets colours rather than indices; and an <c>ICCBased</c>
+    /// space whose profile states one, three or four components.
+    /// </para>
+    /// <para>
+    /// Samples narrower than eight bits are widened, so a bilevel image yields <c>0</c> and <c>255</c>
+    /// rather than <c>0</c> and <c>1</c>, and a four-bit one steps by seventeen. Neither an ICC profile
+    /// nor a tint transform is applied: the samples are what the document stores, and
+    /// <c>Cmyk32</c> states four device values per pixel without an ink conversion, because turning ink
+    /// coverage into light is a rendering decision rather than a fact of the file.
+    /// </para>
+    /// <para>
     /// Anything else stays a payload, and <see cref="Filter"/>, <see cref="ColorSpace"/> and
-    /// <see cref="IsDecodable"/> state why: a palette image needs its palette, an <c>ICCBased</c> space
-    /// states its components inside the profile it points at rather than beside them, and a
-    /// <c>DCTDecode</c> image is the JPEG it is — a format the caller can already read, so its
-    /// <see cref="PixelFormat"/> is <see langword="null"/> rather than a decoder being shipped for it.
+    /// <see cref="IsDecodable"/> state why: a <c>Separation</c> or <c>DeviceN</c> space carries a
+    /// function rather than colours, a <c>Lab</c> space states lightness and two opponents rather than
+    /// three channels, sixteen-bit samples would need a rounding decision, a palette image whose indices
+    /// run past its table disagrees with itself, and a <c>DCTDecode</c> image is the JPEG it is — a
+    /// format the caller can already read, so its <see cref="PixelFormat"/> is <see langword="null"/>
+    /// rather than a decoder being shipped for it.
+    /// </para>
     /// </remarks>
     public ReadOnlyMemory<byte>? DecodedPixels { get; init; }
 
     /// <summary>
-    /// Gets the layout of <see cref="DecodedPixels"/> — <c>"Gray8"</c>, one channel, or <c>"Rgb24"</c>,
-    /// three channels interleaved — or <see langword="null"/> when no pixels are exposed.
+    /// Gets the layout of <see cref="DecodedPixels"/> — <c>"Gray8"</c>, one channel, <c>"Rgb24"</c>,
+    /// three channels interleaved, or <c>"Cmyk32"</c>, four device samples interleaved — or
+    /// <see langword="null"/> when no pixels are exposed.
     /// </summary>
     public string? PixelFormat { get; init; }
 

@@ -10,9 +10,6 @@ namespace SharpCorePDF.Infrastructure;
 /// </summary>
 public sealed partial class PdfPageContentReader
 {
-    /// <summary>The depth to which a field tree is followed, as a guard against a damaged document.</summary>
-    private const int MaxFieldDepth = 32;
-
     /// <inheritdoc />
     public async Task<PdfReadResult<PdfFormFieldInfo>> ReadFormFieldsAsync(
         string sourceName,
@@ -25,14 +22,15 @@ public sealed partial class PdfPageContentReader
 
         NoteClosedEncryption(reader, warnings);
 
-        return Result(reader, ReadFormFields(reader, warnings), warnings);
+        return Result(reader, ReadFormFields(reader, warnings, options.MaxNestingDepth), warnings);
     }
 
     /// <summary>Reads the field tree of an already opened document.</summary>
     /// <param name="reader">The document.</param>
     /// <param name="warnings">The list that receives the remarks made while reading.</param>
+    /// <param name="maxDepth">The depth to which the tree is followed, taken from the engine options.</param>
     /// <returns>Every field, in the order the form states them.</returns>
-    private static List<PdfFormFieldInfo> ReadFormFields(PdfFileReader reader, List<PdfWarning> warnings)
+    private static List<PdfFormFieldInfo> ReadFormFields(PdfFileReader reader, List<PdfWarning> warnings, int maxDepth)
     {
         var fields = new List<PdfFormFieldInfo>();
         var form = reader.ResolveDictionary(reader.Catalog?.Get("AcroForm"));
@@ -47,7 +45,7 @@ public sealed partial class PdfPageContentReader
 
         foreach (var root in roots.Items)
         {
-            ReadField(reader, root, parentName: null, inheritedType: null, widgetPages, fields, warnings, visited, 0);
+            ReadField(reader, root, parentName: null, inheritedType: null, widgetPages, fields, warnings, visited, 0, maxDepth);
         }
 
         return fields;
@@ -63,6 +61,7 @@ public sealed partial class PdfPageContentReader
     /// <param name="warnings">The list that receives the remarks made while reading.</param>
     /// <param name="visited">The object numbers already read, so a damaged tree cannot loop.</param>
     /// <param name="depth">The depth of the node.</param>
+    /// <param name="maxDepth">The depth to which the tree is followed before it is reported as cut off.</param>
     private static void ReadField(
         PdfFileReader reader,
         PdfObject? value,
@@ -72,15 +71,24 @@ public sealed partial class PdfPageContentReader
         List<PdfFormFieldInfo> fields,
         List<PdfWarning> warnings,
         HashSet<long> visited,
-        int depth)
+        int depth,
+        int maxDepth)
     {
-        if (depth > MaxFieldDepth)
+        if (depth > maxDepth)
         {
+            warnings.Add(new(
+                PdfWarningKind.FormFieldDepthExceeded,
+                $"'{reader.SourceName}': the form field tree is deeper than {maxDepth} levels and was cut off."));
+
             return;
         }
 
         if (value is PdfReference reference && !visited.Add(reference.ObjectNumber))
         {
+            warnings.Add(new(
+                PdfWarningKind.FormFieldUnreadable,
+                $"'{reader.SourceName}': the form field tree repeats object {reference.ObjectNumber}; the branch was skipped."));
+
             return;
         }
 
@@ -131,7 +139,7 @@ public sealed partial class PdfPageContentReader
                     continue;
                 }
 
-                ReadField(reader, kid, name, fieldType, widgetPages, fields, warnings, visited, depth + 1);
+                ReadField(reader, kid, name, fieldType, widgetPages, fields, warnings, visited, depth + 1, maxDepth);
             }
         }
 

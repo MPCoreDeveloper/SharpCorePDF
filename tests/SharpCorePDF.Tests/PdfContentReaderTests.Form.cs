@@ -1,4 +1,6 @@
 using SharpCorePDF.Domain.ReadModels;
+using SharpCorePDF.Domain.ValueObjects;
+using SharpCorePDF.Infrastructure;
 
 namespace SharpCorePDF.Tests;
 
@@ -86,5 +88,31 @@ public sealed partial class PdfContentReaderTests
         var result = await Reader().ReadFormFieldsAsync(source, cancellationToken: Token);
 
         Assert.Empty(result.Items);
+    }
+
+    /// <summary>A field tree deeper than the configured limit is cut off with a warning, not silence.</summary>
+    [Fact]
+    public async Task Reports_a_field_tree_cut_off_by_the_depth_limit()
+    {
+        var source = Source(PdfContentFixtures.DeepForm(depth: 6), "deep-form.pdf");
+
+        var result = await Reader(new PdfEngineOptions { MaxNestingDepth = 4 })
+            .ReadFormFieldsAsync(source, cancellationToken: Token);
+
+        AssertWarning(result.Warnings, PdfWarningKind.FormFieldDepthExceeded);
+        Assert.Equal(5, result.Items.Count);
+    }
+
+    /// <summary>A field tree within the configured limit is read in full and says nothing about depth.</summary>
+    [Fact]
+    public async Task Reads_a_field_tree_within_the_depth_limit_without_a_warning()
+    {
+        var source = Source(PdfContentFixtures.DeepForm(depth: 6), "deep-form.pdf");
+
+        var result = await Reader(new PdfEngineOptions { MaxNestingDepth = 8 })
+            .ReadFormFieldsAsync(source, cancellationToken: Token);
+
+        Assert.DoesNotContain(result.Warnings, warning => warning.Kind == PdfWarningKind.FormFieldDepthExceeded);
+        Assert.Equal(6, result.Items.Count);
     }
 }

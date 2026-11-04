@@ -190,8 +190,9 @@ them in. A document with no signature yields an empty list; a document that is n
 proves a document is signed by a certificate it already knows.
 
 `Problems` explains every verdict. `Kind` is the contract — `DigestMismatch`, `CertificateExpired`,
-`ChainUntrusted`, `RevisionNotCovered`, `TimestampInvalid` and the rest — so a caller matches on the kind
-and logs the `Message`. A `switch` over it keeps a `default` arm, because a later release may add one.
+`ChainUntrusted`, `RevisionNotCovered`, `TimestampInvalid`, `FormFieldTreeTooDeep` and the rest — so a
+caller matches on the kind and logs the `Message`. A `switch` over it keeps a `default` arm, because a
+later release may add one.
 
 ## What validation does not do
 
@@ -204,6 +205,15 @@ Revocation data embedded in the CMS is still reported.
 Signing an encrypted document works when the password is passed, and the result stays encrypted.
 Validation takes the same password for the same reason. Neither rewrites the document, so neither can
 repair one: a signature that does not verify stays that way.
+
+The form the signatures live in is followed to `PdfEngineOptions.MaxNestingDepth` levels, the limit every
+other walk uses, so a document whose form nests deeper is answered from the part that was read. That is
+said rather than left to be assumed: the reader records `PdfWarningKind.FormFieldDepthExceeded`, and every
+validation carries a `FormFieldTreeTooDeep` problem stating that the search was cut off. Its verdict still
+describes the signature it names, because the cut is a fact about the document and not about that
+signature. A signature a viewer shows carries its widget in the page annotations, and those are scanned
+independently of the tree, so what the cut costs is the fields between the root and the widget — not the
+signature.
 
 ## Reading the result
 

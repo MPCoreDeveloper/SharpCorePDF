@@ -29,12 +29,16 @@ internal sealed record SignatureField(string FieldName, PdfDictionary Dictionary
 /// </remarks>
 internal static class SignatureValidator
 {
-    /// <summary>The deepest field tree this release walks before it stops trusting the document's nesting.</summary>
-    private const int MaxFieldDepth = 32;
-
     /// <summary>Finds every signature of a document, in the order the document lists them.</summary>
     /// <param name="reader">The opened document.</param>
     /// <returns>The signature fields, each with its dictionary.</returns>
+    /// <remarks>
+    /// The form field tree is followed to <see cref="PdfEngineOptions.MaxNestingDepth"/> levels, the limit
+    /// the page tree and the form reads use, and a tree that is cut off is reported as a
+    /// <see cref="PdfWarningKind.FormFieldDepthExceeded"/> remark rather than passed off as a complete one.
+    /// Signatures are not lost to the cut where it matters: the page annotations are scanned as well, and a
+    /// signature a viewer shows carries a widget there whatever the depth of the tree above it.
+    /// </remarks>
     public static IReadOnlyList<SignatureField> Collect(PdfFileReader reader)
     {
         ArgumentNullException.ThrowIfNull(reader);
@@ -59,6 +63,10 @@ internal static class SignatureValidator
     /// <param name="fields">The list the signature fields are added to.</param>
     /// <param name="seen">The signature dictionaries already added.</param>
     /// <param name="depth">How deep the walk already is.</param>
+    /// <remarks>
+    /// A tree deeper than the limit is cut off and the cut is recorded on the reader, so the answer about
+    /// the document is never quietly narrower than the document itself.
+    /// </remarks>
     private static void Walk(
         PdfFileReader reader,
         PdfArray? array,
@@ -67,8 +75,19 @@ internal static class SignatureValidator
         HashSet<PdfDictionary> seen,
         int depth)
     {
-        if (array is null || depth > MaxFieldDepth)
+        if (array is null)
         {
+            return;
+        }
+
+        var maxDepth = reader.Options.MaxNestingDepth;
+
+        if (depth > maxDepth)
+        {
+            reader.AddWarning(new(
+                PdfWarningKind.FormFieldDepthExceeded,
+                $"'{reader.SourceName}': the signature field tree is deeper than {maxDepth} levels and was cut off."));
+
             return;
         }
 
@@ -170,11 +189,44 @@ internal static class SignatureValidator
 
         // A later signature covers everything an earlier one covered plus the revision it added, so ordering by
         // the end of the covered range puts the signatures in the order they were applied.
-        return
-        [
-            .. validations.OrderBy(validation => validation.Signer.ByteRange.Offset2 + validation.Signer.ByteRange.Length2),
-        ];
+        var ordered = validations
+            .OrderBy(validation => validation.Signer.ByteRange.Offset2 + validation.Signer.ByteRange.Length2)
+            .ToList();
+
+        if (!WasCutShort(reader))
+        {
+            return ordered;
+        }
+
+        // A cut field tree means the list is not necessarily every signature of the document, and each
+        // validation in it inherits that. Reporting the cut on every one of them keeps a caller that reads a
+        // single validation from concluding that the document carries nothing below the cut.
+        var maxDepth = reader.Options.MaxNestingDepth;
+
+        return [.. ordered.Select(validation => WithCutReported(validation, maxDepth))];
     }
+
+    /// <summary>Gets a value indicating whether the field tree was cut off while the signatures were looked for.</summary>
+    /// <param name="reader">The opened document.</param>
+    /// <returns><see langword="true"/> when the walk stopped at the nesting limit.</returns>
+    private static bool WasCutShort(PdfFileReader reader) =>
+        reader.Warnings.Any(warning => warning.Kind == PdfWarningKind.FormFieldDepthExceeded);
+
+    /// <summary>Adds the remark about the cut field tree to one validation.</summary>
+    /// <param name="validation">The validation.</param>
+    /// <param name="maxDepth">The depth the search stopped at.</param>
+    /// <returns>The validation, with the remark as its last problem.</returns>
+    private static PdfSignatureValidation WithCutReported(PdfSignatureValidation validation, int maxDepth) =>
+        validation with
+        {
+            Problems =
+            [
+                .. validation.Problems,
+                new PdfSignatureProblem(
+                    PdfSignatureProblemKind.FormFieldTreeTooDeep,
+                    $"The form field tree of the document is deeper than {maxDepth} levels and was cut off while the signatures were looked for, so a signature below the cut was not examined; '{validation.Signer.FieldName}' is reported from the part of the tree that was read."),
+            ],
+        };
 
     /// <summary>Reads and checks one signature.</summary>
     /// <param name="reader">The opened document.</param>

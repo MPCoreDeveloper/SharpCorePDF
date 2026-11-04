@@ -154,7 +154,11 @@ public sealed record PdfTrustOptions
 `PdfSignatureProblemKind` covers at least: `MalformedByteRange`, `DigestMismatch`,
 `CertificateMissing`, `CertificateExpired`, `CertificateNotYetValid`, `ChainIncomplete`,
 `ChainUntrusted`, `UnsupportedAlgorithm`, `TimestampMissing`, `TimestampInvalid`,
-`RevisionNotCovered`, and `StructureUnreadable`.
+`RevisionNotCovered`, `FormFieldTreeTooDeep`, and `StructureUnreadable`.
+
+`FormFieldTreeTooDeep` is the one kind that is not a defect of the signature it is reported on: the form
+field tree was deeper than `PdfEngineOptions.MaxNestingDepth`, so a signature below the cut was not
+examined. The verdict of the signature the problem names is unaffected.
 
 ## PDF/A Conversion Result
 

@@ -218,11 +218,12 @@ public sealed partial class PdfPageContentReader
                 var (format, pixels) = ImagePixels.Of(
                     entry.IsDecodable,
                     entry.Filter,
-                    entry.ColorSpace,
+                    entry.ColorSpaceInfo,
                     entry.Width,
                     entry.Height,
                     entry.BitsPerComponent,
-                    entry.Data);
+                    entry.Data,
+                    maxInlineBytes);
 
                 images.Add(new PdfImageInfo
                 {
@@ -450,11 +451,17 @@ public sealed partial class PdfPageContentReader
         private void Populate(ImageEntry entry, PdfStream stream, int pageNumber)
         {
             var dictionary = stream.Dictionary;
+            var colorSpace = dictionary.Get("ColorSpace");
 
             entry.Width = ToInt(dictionary.GetInteger("Width"));
             entry.Height = ToInt(dictionary.GetInteger("Height"));
             entry.BitsPerComponent = ToInt(dictionary.GetInteger("BitsPerComponent"));
-            entry.ColorSpace = DescribeColorSpace(dictionary.Get("ColorSpace"));
+            entry.ColorSpace = DescribeColorSpace(colorSpace);
+
+            // The name a document states is a label, not a description: an Indexed space keeps its
+            // palette in another object and an ICCBased one keeps its component count there, so what a
+            // sample means has to be resolved from the document rather than from the name.
+            entry.ColorSpaceInfo = PdfSampleSpaces.Resolve(reader, colorSpace, reader.SourceName);
             entry.Filter = PdfImageFilters.DescribeFilter(dictionary);
 
             var payload = PdfImageFilters.Decode(stream, maxInlineBytes, reader.SourceName);
@@ -609,6 +616,9 @@ public sealed partial class PdfPageContentReader
         public int? BitsPerComponent { get; set; }
 
         public string? ColorSpace { get; set; }
+
+        /// <summary>Gets or sets the colour space, resolved to what a sample of the image means.</summary>
+        public PdfSampleSpace ColorSpaceInfo { get; set; }
 
         public string? Filter { get; set; }
 

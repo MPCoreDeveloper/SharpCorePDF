@@ -197,6 +197,7 @@ that was not read.
 * No resampling on the page: the image is drawn into a box, and how fine it looks is the viewer's
   business — an image drawn larger than its pixels is soft, and nothing here guesses an interpolation.
 * No pixel access on this side: `PdfImage` describes the file it read and draws it, and the samples a *read*
-  hands back are `PdfImageInfo.DecodedPixels` in `Gray8` or `Rgb24` — Chapter 8. A JPEG has no pixels there
-  either, for the same reason it is passed through here: it is already a format the caller can decode.
+  hands back are `PdfImageInfo.DecodedPixels` in `Gray8`, `Rgb24` or `Cmyk32` — Chapter 8. A JPEG has no
+  pixels there either, for the same reason it is passed through here: it is already a format the caller can
+  decode.
 * No PDF/A image rules here: Chapter 24 covers the profiles, which refuse an image they cannot describe.

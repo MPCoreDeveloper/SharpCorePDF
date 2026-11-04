@@ -69,4 +69,11 @@ public enum PdfSignatureProblemKind
 
     /// <summary>The signature value of the CMS does not verify against the public key of the signer.</summary>
     SignatureMismatch,
+
+    /// <summary>
+    /// The form field tree of the document is deeper than <c>PdfEngineOptions.MaxNestingDepth</c> and was cut
+    /// off while the signatures were looked for, so a signature below the cut was not examined. The signature
+    /// this problem is reported on was read and checked as usual.
+    /// </summary>
+    FormFieldTreeTooDeep,
 }

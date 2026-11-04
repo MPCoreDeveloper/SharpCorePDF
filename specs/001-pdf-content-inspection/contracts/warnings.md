@@ -63,6 +63,13 @@ copy route still yields it, so nothing is wrong.
 | `FormFieldUnreadable` | A field, or a child of a field, cannot be resolved | Every other field, in document order; the unreadable one is skipped | Report the form as partially readable |
 | `AnnotationUnreadable` | An annotation cannot be resolved | Every other annotation on the page | Report the page as having an annotation that cannot be described |
 
+`FormFieldDepthExceeded` was added after this feature, when the form walk gained the depth report the page
+tree already had: the tree is followed to `PdfEngineOptions.MaxNestingDepth` levels and a tree that is
+deeper returns the fields above the cut together with this kind, rather than dropping the branch in
+silence. The search for signatures walks the same tree under the same limit, so it reuses the kind: it
+records the warning on the reader and, because a signature answer has no warnings channel, adds a
+`PdfSignatureProblemKind.FormFieldTreeTooDeep` problem to each validation it returns.
+
 The three outline kinds (`BookmarkSkipped`, `BookmarksTruncated`, `BookmarkDestinationDropped`) predate
 this feature and appear unchanged when the outline is read. `PageSizeAssumed` likewise predates it and
 is reused when a page has no readable `/MediaBox`. The encryption kinds (`EncryptionNotOpened`,

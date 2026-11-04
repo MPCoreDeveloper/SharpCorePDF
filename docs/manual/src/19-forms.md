@@ -144,7 +144,14 @@ Two widgets deliberately survive a flatten:
 | `FormAppearanceGenerated` | The fields of a page carry an appearance the engine drew |
 | `XfaFormRemoved` | The source carried an XFA packet, which cannot be kept beside fields this editor writes |
 | `FormFieldActionPreserved` | A field carries an action; it is copied as it stands and never executed |
-| `FormFieldUnreadable` | A field of the source could not be resolved while reading |
+| `FormFieldUnreadable` | A field of the source could not be resolved while reading, or the tree repeated an object |
+| `FormFieldDepthExceeded` | The field tree is deeper than `PdfEngineOptions.MaxNestingDepth` and was cut off |
+
+The field tree is followed to `PdfEngineOptions.MaxNestingDepth` levels — the same limit the page tree and
+the content reads use. A tree that is cut off contributes `FormFieldDepthExceeded` together with the fields
+read above the cut, so a form too deep to finish is reported rather than read as a shorter one. The search
+for signature fields is bounded the same way, which is why the same warning also accompanies the
+`PdfSignatureProblemKind.FormFieldTreeTooDeep` problem that the signature report carries (chapter 23).
 
 ## XFA
 

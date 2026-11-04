@@ -128,8 +128,10 @@ page's), each with all of its widgets.
 - `Widgets[i].PageNumber` is the page that carries the widget, or `null` when no page references it.
 - `Value` is `null` when absent and `""` when the document states an empty string.
 - Signature fields are reported with name, rectangle and type; their contents are not interpreted.
-- A document without a form returns an empty result with no warnings. A field that cannot be read is
-  skipped with `FormFieldUnreadable`.
+- A document without a form returns an empty result with no warnings. A field that cannot be read, or a
+  reference that repeats an object already in the tree, is skipped with `FormFieldUnreadable`.
+- The tree is followed to `PdfEngineOptions.MaxNestingDepth` levels. A tree deeper than that is reported
+  with `FormFieldDepthExceeded`; the fields above the cut are still returned.
 
 ## `ReadMetadataAsync(source, …)`
 

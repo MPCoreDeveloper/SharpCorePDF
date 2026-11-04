@@ -81,6 +81,266 @@ internal static class PdfContentFixtures
         return builder.Build(catalog);
     }
 
+    /// <summary>Gets the samples of the palette image of <see cref="ColorSpaces"/>, which are indices.</summary>
+    public static byte[] PaletteSamples { get; } = [0, 1, 2, 3];
+
+    /// <summary>Gets the lookup table of the palette image: red, green, blue and white.</summary>
+    public static byte[] PaletteLookup { get; } = [255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 255];
+
+    /// <summary>Gets the lookup table of the grey palette image, stored in the document as a string.</summary>
+    public static byte[] GrayPaletteLookup { get; } = [0, 128, 255, 64];
+
+    /// <summary>
+    /// Gets the samples of the bilevel image: two rows of five bits, each row padded to a whole byte.
+    /// </summary>
+    public static byte[] BilevelSamples { get; } = [0b1010_0000, 0b0101_0000];
+
+    /// <summary>
+    /// Gets the samples of the four-bit image, which is three samples wide: one nibble per sample, high
+    /// nibble first, and each row padded to a whole byte. The rows are <c>0</c>, <c>15</c>, <c>10</c> and
+    /// <c>1</c>, <c>2</c>, <c>3</c> before they are scaled.
+    /// </summary>
+    public static byte[] FourBitSamples { get; } = [0x0F, 0xA0, 0x12, 0x30];
+
+    /// <summary>
+    /// Gets the samples of the two-bit image, which is five samples wide: the row is ten bits of samples
+    /// and six of padding, so the pixels are <c>0</c>, <c>1</c>, <c>2</c>, <c>3</c> and <c>1</c> before
+    /// they are scaled.
+    /// </summary>
+    public static byte[] TwoBitSamples { get; } = [0b0001_1011, 0b0100_0000];
+
+    /// <summary>Gets the samples of the CMYK image, four per pixel.</summary>
+    public static byte[] CmykSamples { get; } = [0, 128, 255, 0, 255, 0, 128, 255];
+
+    /// <summary>Gets the samples of the ICCBased image, three per pixel.</summary>
+    public static byte[] IccSamples { get; } = [1, 2, 3];
+
+    /// <summary>
+    /// A one page document whose images each name their colour space in a different shape: a palette
+    /// whose table is a stream, a palette whose table is a string, a bilevel grey space, a four-bit and a
+    /// two-bit grey space, a device CMYK space, an ICCBased space, a Separation space and a palette image
+    /// whose samples index past the table it states.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] ColorSpaces()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.Reserve();
+
+        var lookup = builder.AddStream("<< /Filter /FlateDecode", PdfBuilder.Compress(PaletteLookup));
+        var profile = builder.AddStream("<< /N 3 /Alternate /DeviceRGB", [0x00]);
+        var tint = builder.Add("<< /FunctionType 2 /Domain [0 1] /C0 [0 0 0 0] /C1 [0 1 0 0] /N 1 >>");
+
+        var palette = builder.AddStream(
+            $"<< /Type /XObject /Subtype /Image /Width 2 /Height 2 /ColorSpace [/Indexed /DeviceRGB 3 {lookup} 0 R] "
+            + "/BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress(PaletteSamples));
+
+        var grayPalette = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 3 /Height 1 /ColorSpace [/Indexed /DeviceGray 3 <0080FF40>] "
+            + "/BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([0, 1, 2]));
+
+        var bilevel = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 5 /Height 2 /ColorSpace /DeviceGray "
+            + "/BitsPerComponent 1 /Filter /FlateDecode",
+            PdfBuilder.Compress(BilevelSamples));
+
+        var fourBit = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 3 /Height 2 /ColorSpace /DeviceGray "
+            + "/BitsPerComponent 4 /Filter /FlateDecode",
+            PdfBuilder.Compress(FourBitSamples));
+
+        var twoBit = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 5 /Height 1 /ColorSpace /DeviceGray "
+            + "/BitsPerComponent 2 /Filter /FlateDecode",
+            PdfBuilder.Compress(TwoBitSamples));
+
+        var cmyk = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 2 /Height 1 /ColorSpace /DeviceCMYK "
+            + "/BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress(CmykSamples));
+
+        var icc = builder.AddStream(
+            $"<< /Type /XObject /Subtype /Image /Width 1 /Height 1 /ColorSpace [/ICCBased {profile} 0 R] "
+            + "/BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress(IccSamples));
+
+        var separation = builder.AddStream(
+            $"<< /Type /XObject /Subtype /Image /Width 1 /Height 2 /ColorSpace [/Separation /Spot /DeviceCMYK {tint} 0 R] "
+            + "/BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([0, 255]));
+
+        var overrun = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 4 /Height 1 /ColorSpace [/Indexed /DeviceRGB 1 <FF000000FF00>] "
+            + "/BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([0, 1, 2, 3]));
+
+        builder.Set(
+            content,
+            Content("/Pal Do /GrayPal Do /Bilevel Do /Four Do /Two Do /Cmyk Do /Icc Do /Sep Do /Over Do"));
+
+        builder.Set(
+            page,
+            Page(
+                pages,
+                $"/Pal {palette} 0 R /GrayPal {grayPalette} 0 R /Bilevel {bilevel} 0 R /Four {fourBit} 0 R "
+                + $"/Two {twoBit} 0 R /Cmyk {cmyk} 0 R /Icc {icc} 0 R /Sep {separation} 0 R /Over {overrun} 0 R",
+                content));
+
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
+    /// A one page document whose images each state a colour space at the edge of what the read model
+    /// accepts: the calibrated forms of grey and RGB, a palette over a palette, a palette over a space
+    /// that needs a function, a palette whose declared index is zero, one that declares 255 entries and
+    /// holds five, an image whose index runs past that table, an <c>ICCBased</c> array with no profile in
+    /// it, a one-component and a four-component profile, a palette whose table holds nothing, four-bit
+    /// RGB, an image whose width or height is zero, and one that declares no filter at all.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] ColorSpaceEdges()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.Reserve();
+
+        var tint = builder.Add("<< /FunctionType 2 /Domain [0 1] /C0 [0 0 0 0] /C1 [0 1 0 0] /N 1 >>");
+
+        var calGray = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 2 /Height 2 "
+            + "/ColorSpace [/CalGray << /WhitePoint [0.9505 1 1.089] >>] /BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([0, 64, 128, 255]));
+
+        var calRgb = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 3 /Height 1 "
+            + "/ColorSpace [/CalRGB << /WhitePoint [0.9505 1 1.089] /Gamma [2.2 2.2 2.2] >>] "
+            + "/BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([1, 2, 3, 4, 5, 6, 7, 8, 9]));
+
+        var overPalette = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 1 /Height 1 "
+            + "/ColorSpace [/Indexed [/Indexed /DeviceRGB 1 <FF000000FF00>] 1 <FF0000FF00FF>] "
+            + "/BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([0]));
+
+        var overFunction = builder.AddStream(
+            $"<< /Type /XObject /Subtype /Image /Width 2 /Height 1 "
+            + $"/ColorSpace [/Indexed [/Separation /Spot /DeviceCMYK {tint} 0 R] 1 <FF000000FF00>] "
+            + "/BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([0, 1]));
+
+        var singleEntry = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 4 /Height 1 "
+            + "/ColorSpace [/Indexed /DeviceGray 0 <00>] /BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([0, 0, 0, 0]));
+
+        var wideHival = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 3 /Height 2 "
+            + "/ColorSpace [/Indexed /DeviceGray 255 <00FF008000>] /BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([0, 1, 2, 3, 4, 1]));
+
+        var overIndex = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 4 /Height 2 "
+            + "/ColorSpace [/Indexed /DeviceGray 255 <00FF008000>] /BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([0, 1, 2, 5, 0, 0, 0, 0]));
+
+        var bareIcc = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 6 /Height 1 /ColorSpace [/ICCBased] "
+            + "/BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([1, 2, 3, 4, 5, 6]));
+
+        // A profile states what its samples mean through /N, so a one-component profile is a grey image
+        // and a four-component one is ink: both are read by that count rather than by the family name.
+        var grayProfile = builder.AddStream("<< /N 1 /Alternate /DeviceGray", [0x00]);
+
+        var cmykProfile = builder.AddStream("<< /N 4 /Alternate /DeviceCMYK", [0x00]);
+
+        var grayIcc = builder.AddStream(
+            $"<< /Type /XObject /Subtype /Image /Width 5 /Height 1 /ColorSpace [/ICCBased {grayProfile} 0 R] "
+            + "/BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([7, 8, 9, 10, 11]));
+
+        var cmykIcc = builder.AddStream(
+            $"<< /Type /XObject /Subtype /Image /Width 1 /Height 2 /ColorSpace [/ICCBased {cmykProfile} 0 R] "
+            + "/BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([1, 2, 3, 4, 5, 6, 7, 8]));
+
+        // A lookup table that holds nothing states no colour for any index, which is a table this library
+        // cannot look anything up in rather than an empty palette that happens to be read.
+        var emptyLookup = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 7 /Height 1 "
+            + "/ColorSpace [/Indexed /DeviceGray 1 ()] /BitsPerComponent 8 /Filter /FlateDecode",
+            PdfBuilder.Compress([0, 0, 0, 0, 0, 0, 0]));
+
+        // A sample narrower than a byte does not have to be a single channel: four-bit RGB packs three
+        // nibbles per pixel, so the component offset is computed rather than read beside the last one.
+        var subByteRgb = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 2 /Height 3 /ColorSpace /DeviceRGB "
+            + "/BitsPerComponent 4 /Filter /FlateDecode",
+            PdfBuilder.Compress([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0x01, 0x23, 0x45]));
+
+        // An image that states no extent draws nothing, and the specification forbids one: the samples of
+        // such a statement are not pixels whatever the payload happens to hold. Both carry no filter and no
+        // bytes, which is the one shape in which a zero extent is the only thing refusing them.
+        var noWidth = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 0 /Height 3 /ColorSpace /DeviceGray "
+            + "/BitsPerComponent 8",
+            []);
+
+        var noHeight = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 3 /Height 0 /ColorSpace /DeviceGray "
+            + "/BitsPerComponent 8",
+            []);
+
+        // An image that declares no filter at all: the payload is already the samples, so the simplest case
+        // of all is not the one to lose.
+        var noFilter = builder.AddStream(
+            "<< /Type /XObject /Subtype /Image /Width 3 /Height 3 /ColorSpace /DeviceRGB /BitsPerComponent 8",
+            [
+                1, 2, 3, 4, 5, 6, 7, 8, 9,
+                10, 11, 12, 13, 14, 15, 16, 17, 18,
+                19, 20, 21, 22, 23, 24, 25, 26, 27,
+            ]);
+
+        builder.Set(
+            content,
+            Content(
+                "/CalGrayImg Do /CalRgbImg Do /OverPalette Do /OverFunction Do "
+                + "/SingleEntry Do /WideHival Do /OverIndex Do /BareIcc Do "
+                + "/GrayIcc Do /CmykIcc Do /EmptyLookup Do /SubByteRgb Do /NoWidth Do /NoHeight Do "
+                + "/NoFilter Do"));
+
+        builder.Set(
+            page,
+            Page(
+                pages,
+                $"/CalGrayImg {calGray} 0 R /CalRgbImg {calRgb} 0 R /OverPalette {overPalette} 0 R "
+                + $"/OverFunction {overFunction} 0 R /SingleEntry {singleEntry} 0 R "
+                + $"/WideHival {wideHival} 0 R /OverIndex {overIndex} 0 R /BareIcc {bareIcc} 0 R "
+                + $"/GrayIcc {grayIcc} 0 R /CmykIcc {cmykIcc} 0 R /EmptyLookup {emptyLookup} 0 R "
+                + $"/SubByteRgb {subByteRgb} 0 R /NoWidth {noWidth} 0 R /NoHeight {noHeight} 0 R "
+                + $"/NoFilter {noFilter} 0 R",
+                content));
+
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+
     /// <summary>A one page document whose only image is far larger than the default inline budget.</summary>
     /// <param name="size">The number of samples, which is also the decoded payload length.</param>
     /// <returns>The bytes of the document.</returns>
@@ -341,6 +601,45 @@ internal static class PdfContentFixtures
             $"<< /Type /Page /Parent {pages} 0 R /MediaBox [0 0 200 200] /Contents {content} 0 R /Annots "
             + $"[{nameWidget} 0 R {groupWidget1} 0 R {groupWidget2} 0 R {groupWidget3} 0 R {signatureWidget} 0 R] >>");
 
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R /AcroForm {acroForm} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
+    /// A one page document whose form is a chain of nested text fields, each the single child of the one
+    /// above it, so a reader that follows the tree to a depth limit has fields above the cut to return.
+    /// </summary>
+    /// <param name="depth">The number of levels in the chain, the root counting as the first.</param>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] DeepForm(int depth = 8)
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.Reserve();
+        var acroForm = builder.Reserve();
+
+        var levels = new int[depth];
+
+        for (var index = 0; index < depth; index++)
+        {
+            levels[index] = builder.Reserve();
+        }
+
+        builder.Set(content, Content(string.Empty));
+
+        for (var index = depth - 1; index >= 0; index--)
+        {
+            var kids = index + 1 < depth ? $" /Kids [{levels[index + 1]} 0 R]" : string.Empty;
+            builder.Set(levels[index], $"<< /T (level{index}) /FT /Tx{kids} >>");
+        }
+
+        builder.Set(acroForm, $"<< /Fields [{levels[0]} 0 R] >>");
+        builder.Set(page, $"<< /Type /Page /Parent {pages} 0 R /MediaBox [0 0 200 200] /Contents {content} 0 R >>");
         builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
         builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R /AcroForm {acroForm} 0 R >>");
 
@@ -671,7 +970,7 @@ internal static class PdfContentFixtures
 
     /// <summary>
     /// A one page document painting four images: a chain of ASCII85 and Flate, an ASCII hexadecimal
-    /// image, and one image per filter the library does not decode.
+    /// image, an LZW image, and an image behind a filter the library does not decode.
     /// </summary>
     /// <returns>The bytes of the document.</returns>
     public static byte[] FilterChains()
@@ -690,7 +989,7 @@ internal static class PdfContentFixtures
             EncodeAscii85(PdfBuilder.Compress(ChainSamples)));
 
         var hexadecimal = builder.AddStream(header + "/Filter /ASCIIHexDecode", EncodeAsciiHex(ChainSamples));
-        var lzw = builder.AddStream(header + "/Filter /LZWDecode", ChainSamples);
+        var lzw = builder.AddStream(header + "/Filter /LZWDecode", TestLzw.Encode(ChainSamples));
         var runLength = builder.AddStream(header + "/Filter /RunLengthDecode", ChainSamples);
 
         builder.Set(content, Content("/Chained Do /Hex Do /Lzw Do /Rle Do"));

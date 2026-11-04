@@ -148,10 +148,15 @@ internal static class PdfImageFilters
             var decodeParameters = parameters.Count > 0 ? parameters[0] : null;
 
             // A predictor turns the payload into rows, so it is undone a row at a time and written as it
-            // is produced, rather than inflated whole and then unpredicted whole.
-            if (HasPredictor(decodeParameters))
+            // is produced, rather than inflated whole and then unpredicted whole. The decoder is itself the
+            // answer to whether there is a predictor to undo: asking `HasPredictor` first and then testing
+            // the decoder for null asked the same question twice, and left a branch no document could
+            // reach, because the two tests name the same predictor values.
+            using var predictor = PdfFilters.CreatePredictorDecoder(decodeParameters, sourceName);
+
+            if (predictor is not null)
             {
-                await InflatePredictorToAsync(stream.Raw, decodeParameters, sourceName, destination, cancellationToken)
+                await InflatePredictorToAsync(stream.Raw, predictor, destination, cancellationToken)
                     .ConfigureAwait(false);
             }
             else
@@ -232,26 +237,16 @@ internal static class PdfImageFilters
     /// payload larger than the inline budget is never held whole on the copy route.
     /// </summary>
     /// <param name="data">The compressed bytes.</param>
-    /// <param name="parameters">The decode parameters of the filter.</param>
-    /// <param name="sourceName">The name of the source, used in diagnostics.</param>
+    /// <param name="predictor">The decoder that undoes the prediction, owned by the caller.</param>
     /// <param name="destination">A writable stream that receives the payload.</param>
     /// <param name="cancellationToken">A token to cancel the copy.</param>
     /// <returns>A task that completes when the payload has been written.</returns>
     private static async Task InflatePredictorToAsync(
         ReadOnlyMemory<byte> data,
-        PdfDictionary? parameters,
-        string sourceName,
+        PdfFilters.PredictorRowDecoder predictor,
         Stream destination,
         CancellationToken cancellationToken)
     {
-        using var predictor = PdfFilters.CreatePredictorDecoder(parameters, sourceName);
-
-        if (predictor is null)
-        {
-            await InflateToAsync(data, destination, cancellationToken).ConfigureAwait(false);
-            return;
-        }
-
         using var input = OpenInput(data);
         using Stream inflater = LooksLikeZlib(data)
             ? new ZLibStream(input, CompressionMode.Decompress)
@@ -339,6 +334,12 @@ internal static class PdfImageFilters
                 case "FlateDecode":
                     return TryInflateCapped(data, cap, out bytes, out length);
 
+                case "LZWDecode" when HasPredictor(parameters):
+                    return TryLzwPredictorCapped(data, parameters, cap, sourceName, out bytes, out length);
+
+                case "LZWDecode":
+                    return TryLzwCapped(data, parameters, cap, out bytes, out length);
+
                 case "ASCIIHexDecode":
                 {
                     var decoded = PdfFilters.DecodeAsciiHex(data);
@@ -358,6 +359,9 @@ internal static class PdfImageFilters
                 }
 
                 default:
+                    // Unreachable: `Decode` passes only the names `IsDecodable` states, and every one of
+                    // them has a case above. The arm exists because a switch has to end somewhere, and it
+                    // answers the same question the decision above answers rather than inventing a decoder.
                     return false;
             }
         }
@@ -615,6 +619,148 @@ internal static class PdfImageFilters
         }
     }
 
+    /// <summary>Decodes an LZW stream, keeping the bytes only while they fit the budget.</summary>
+    /// <param name="data">The compressed bytes.</param>
+    /// <param name="parameters">The decode parameters of the filter, which state <c>EarlyChange</c>.</param>
+    /// <param name="cap">The largest payload that is kept.</param>
+    /// <param name="bytes">The decoded bytes while they fit the budget, otherwise <see langword="null"/>.</param>
+    /// <param name="length">The decoded length, whether or not the bytes are returned.</param>
+    /// <returns><see langword="true"/> when the data could be decoded.</returns>
+    private static bool TryLzwCapped(
+        ReadOnlyMemory<byte> data,
+        PdfDictionary? parameters,
+        int cap,
+        out byte[]? bytes,
+        out long length)
+    {
+        bytes = null;
+        length = 0;
+
+        if (data.IsEmpty)
+        {
+            return false;
+        }
+
+        PooledByteBuffer? output = cap > 0 ? new PooledByteBuffer(Math.Min(cap, CopyChunkSize)) : null;
+
+        try
+        {
+            var decoded = PdfFilters.TryDecodeLzw(
+                data.Span,
+                PdfFilters.ReadEarlyChange(parameters),
+                sequence =>
+                {
+                    if (output is null)
+                    {
+                        return;
+                    }
+
+                    // The budget is crossed by this sequence: the bytes decoded so far are dropped and
+                    // the rest is only counted, so the length stays truthful without the memory.
+                    if (output.Length + sequence.Length > cap)
+                    {
+                        output.Dispose();
+                        output = null;
+                        return;
+                    }
+
+                    output.Write(sequence);
+                },
+                out length);
+
+            if (!decoded)
+            {
+                return false;
+            }
+
+            bytes = output?.ToExactArray();
+            return true;
+        }
+        finally
+        {
+            output?.Dispose();
+        }
+    }
+
+    /// <summary>Decodes an LZW stream with a predictor and keeps the undone rows within a budget.</summary>
+    /// <param name="data">The compressed bytes.</param>
+    /// <param name="parameters">The decode parameters of the filter.</param>
+    /// <param name="cap">The largest payload that is kept.</param>
+    /// <param name="sourceName">The name of the source, used in diagnostics.</param>
+    /// <param name="bytes">The decoded bytes while they fit the budget, otherwise <see langword="null"/>.</param>
+    /// <param name="length">The decoded length, whether or not the bytes are returned.</param>
+    /// <returns><see langword="true"/> when the data could be decoded.</returns>
+    private static bool TryLzwPredictorCapped(
+        ReadOnlyMemory<byte> data,
+        PdfDictionary? parameters,
+        int cap,
+        string sourceName,
+        out byte[]? bytes,
+        out long length)
+    {
+        bytes = null;
+        length = 0;
+
+        if (data.IsEmpty)
+        {
+            return false;
+        }
+
+        using var predictor = PdfFilters.CreatePredictorDecoder(parameters, sourceName);
+
+        if (predictor is null)
+        {
+            return false;
+        }
+
+        PooledByteBuffer? output = cap > 0 ? new PooledByteBuffer(Math.Min(cap, CopyChunkSize)) : null;
+        var total = 0L;
+
+        try
+        {
+            var decoded = PdfFilters.TryDecodeLzw(
+                data.Span,
+                PdfFilters.ReadEarlyChange(parameters),
+                sequence => predictor.Push(sequence, row =>
+                {
+                    total += row.Length;
+
+                    if (output is null)
+                    {
+                        return;
+                    }
+
+                    if (total > cap)
+                    {
+                        output.Dispose();
+                        output = null;
+                        return;
+                    }
+
+                    row.CopyTo(output.GetSpan(row.Length));
+                    output.Advance(row.Length);
+                }),
+                out _);
+
+            if (!decoded)
+            {
+                return false;
+            }
+
+            length = total;
+            bytes = output?.ToExactArray();
+            return true;
+        }
+        catch (PdfSourceFormatException)
+        {
+            return false;
+        }
+        finally
+        {
+            output?.Dispose();
+        }
+    }
+
     private static ReadOnlyMemory<byte>? Buffer(ReadOnlyMemory<byte> data, int cap)
     {
         if (cap <= 0)
@@ -635,10 +781,28 @@ internal static class PdfImageFilters
     private static bool HasPredictor(PdfDictionary? parameters) =>
         parameters is not null && (parameters.GetInteger("Predictor") ?? 1) > 1;
 
-    private static bool IsPassThrough(string name) =>
-        IsDecodablePassThrough(name)
-        || name is "JPXDecode" or "JBIG2Decode" or "CCITTFaxDecode" or "LZWDecode" or "RunLengthDecode" or "Crypt";
+    /// <summary>Determines whether a payload can be turned into samples by a filter with this name.</summary>
+    /// <param name="name">The filter name, with its abbreviation expanded.</param>
+    /// <returns><see langword="true"/> for the four filters this class decodes.</returns>
+    private static bool IsDecodable(string name) =>
+        name is "FlateDecode" or "LZWDecode" or "ASCIIHexDecode" or "ASCII85Decode";
 
+    /// <summary>Determines whether a filter is handed back raw instead of being decoded.</summary>
+    /// <param name="name">The filter name, with its abbreviation expanded.</param>
+    /// <returns><see langword="true"/> when nothing is decoded and the stored bytes are the answer.</returns>
+    /// <remarks>
+    /// Every filter that is not decoded passes through, rather than the five the specification names as
+    /// passes a library may leave alone. A producer that writes <c>JPXDecode</c> and one that writes a name
+    /// invented last year have both written a document this library does not decode, and the contract calls
+    /// that an unsupported filter carrying its stored bytes (NFR-7.8); only a filter that is understood and
+    /// refuses its data is an unreadable payload. Listing the five and letting every other name reach the
+    /// decoder's default reported the second case as the third.
+    /// </remarks>
+    private static bool IsPassThrough(string name) => IsDecodablePassThrough(name) || !IsDecodable(name);
+
+    /// <summary>Determines whether a filter's bytes are already the image.</summary>
+    /// <param name="name">The filter name, with its abbreviation expanded.</param>
+    /// <returns><see langword="true"/> for JPEG, whose bytes are handed on without being decoded.</returns>
     private static bool IsDecodablePassThrough(string name) => name == "DCTDecode";
 
     private static string Normalize(string name) => name switch
@@ -649,6 +813,7 @@ internal static class PdfImageFilters
         "DCT" => "DCTDecode",
         "CCF" => "CCITTFaxDecode",
         "RL" => "RunLengthDecode",
+        "LZW" => "LZWDecode",
         _ => name,
     };
 

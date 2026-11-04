@@ -91,6 +91,28 @@ public sealed partial class PdfContentReaderTests
         Assert.Equal(2 * 2 * 3, flate.DecodedPixels!.Value.Length);
     }
 
+    /// <summary>
+    /// An image that declares no filter is the simplest payload there is — the bytes are already the
+    /// samples — so it is read as pixels rather than passed over for having nothing to undo.
+    /// </summary>
+    [Fact]
+    public async Task Exposes_the_samples_of_an_image_that_declares_no_filter()
+    {
+        var source = Source(PdfContentFixtures.ColorSpaceEdges(), "edges.pdf");
+
+        var result = await Reader().ReadImagesAsync(source, PageRange.All, cancellationToken: Token);
+        var image = Assert.Single(result.Items, item => item.Filter is null && item.Width == 3 && item.Height == 3);
+
+        Assert.Equal("Rgb24", image.PixelFormat);
+        Assert.Equal(
+            [
+                1, 2, 3, 4, 5, 6, 7, 8, 9,
+                10, 11, 12, 13, 14, 15, 16, 17, 18,
+                19, 20, 21, 22, 23, 24, 25, 26, 27,
+            ],
+            image.DecodedPixels!.Value.ToArray());
+    }
+
     /// <summary>A JPEG stays a JPEG, so it is a payload and not a set of pixels.</summary>
     [Fact]
     public async Task Does_not_expose_a_jpeg_as_pixels()
@@ -305,9 +327,23 @@ public sealed partial class PdfContentReaderTests
         Assert.Equal(PdfContentFixtures.ChainSamples, hexadecimal.Data!.Value.ToArray());
     }
 
-    /// <summary>A filter the library does not decode is named and left raw, one entry per filter.</summary>
+    /// <summary>An LZW image is decoded to its samples, and those samples are exposed as pixels.</summary>
+    [Fact]
+    public async Task Decodes_an_lzw_image()
+    {
+        var source = Source(PdfContentFixtures.FilterChains(), "chains.pdf");
+
+        var result = await Reader().ReadImagesAsync(source, PageRange.All, cancellationToken: Token);
+        var lzw = Assert.Single(result.Items, image => image.Filter == "LZWDecode");
+
+        Assert.True(lzw.IsDecodable);
+        Assert.Equal(PdfContentFixtures.ChainSamples, lzw.Data!.Value.ToArray());
+        Assert.Equal("Gray8", lzw.PixelFormat);
+        Assert.Equal(PdfContentFixtures.ChainSamples, lzw.DecodedPixels!.Value.ToArray());
+    }
+
+    /// <summary>A filter the library does not decode is named and left raw.</summary>
     [Theory]
-    [InlineData("LZWDecode")]
     [InlineData("RunLengthDecode")]
     public async Task Keeps_a_filter_it_cannot_decode_untouched(string filter)
     {

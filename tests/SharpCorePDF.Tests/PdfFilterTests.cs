@@ -86,13 +86,30 @@ public sealed class PdfFilterTests
     [Fact]
     public void Reports_a_filter_it_does_not_implement()
     {
-        var stream = Stream([1, 2, 3], ("Filter", new PdfName("LZWDecode")));
+        var stream = Stream([1, 2, 3], ("Filter", new PdfName("RunLengthDecode")));
 
         var exception = Assert.Throws<PdfUnsupportedFeatureException>(() => PdfFilters.Decode(stream, "sample.pdf"));
 
         Assert.Equal("sample.pdf", exception.SourceName);
-        Assert.Equal("LZWDecode", exception.Feature);
-        Assert.Contains("LZWDecode", exception.Message, StringComparison.Ordinal);
+        Assert.Equal("RunLengthDecode", exception.Feature);
+        Assert.Contains("RunLengthDecode", exception.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>An LZW stream is decompressed, under its full name and under its abbreviation.</summary>
+    /// <remarks>
+    /// An object stream is stored behind a filter like any other stream, and a producer that chose LZW for
+    /// one is not doing anything the specification forbids, so this path has to read it too.
+    /// </remarks>
+    [Fact]
+    public void Decodes_an_lzw_stream()
+    {
+        var encoded = TestLzw.Encode(Encoding.Latin1.GetBytes("Hello"));
+
+        var spelled = Stream(encoded, ("Filter", new PdfName("LZWDecode")));
+        var abbreviated = Stream(encoded, ("Filter", new PdfName("LZW")));
+
+        Assert.Equal("Hello", Text(PdfFilters.Decode(spelled, "sample.pdf")));
+        Assert.Equal("Hello", Text(PdfFilters.Decode(abbreviated, "sample.pdf")));
     }
 
     /// <summary>A stream without a filter is handed over exactly as it is stored.</summary>

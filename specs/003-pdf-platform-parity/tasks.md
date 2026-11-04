@@ -736,6 +736,15 @@ agreement and 95% reading-order agreement on the labelled corpus; every export v
   - `IsDecodable` is unchanged and still states whether the payload is in the form the caller asked for;
     the pixels are withheld whenever it is `false`.
   - Suite: 1808 executions, 0 failures.
+  - Extended 2026-10-31: the colour space is no longer read from the text of `/ColorSpace` but resolved
+    from the document by `Infrastructure/Pdf/PdfSampleSpaces.cs`, so an `Indexed` space is followed to the
+    lookup table it points at — a stream or a string, decoded through the same filters as any payload — and
+    an `ICCBased` one to the component count its profile's `/N` states, falling back to `/Alternate`.
+    `ImagePixels` now widens one-, two- and four-bit samples at each row's padded length, applies a palette,
+    and returns `Cmyk32` for four device samples without an ink conversion; `PixelFormat` therefore has a
+    third value. `Separation`, `DeviceN`, `Lab`, sixteen-bit samples and a palette whose samples index past
+    its own table stay payloads. The fixture is `PdfContentFixtures.ColorSpaces()` (seven images) and the
+    tests are `PdfContentReaderTests.ImageColorSpaces.cs`.
 - [x] T073 [US3] Implement the four exporters in `src/SharpCorePDF.Infrastructure/Reading/Exporters/`; coordinates are page space, text is escaped, and an empty page still produces a valid element.
 - [x] T074 [US3] Register `IPdfLayoutReader` and `IPdfObjectInspector` in `src/SharpCorePDF.DependencyInjection/SharpCorePDFServiceCollectionExtensions.cs`.
   - Half done: `PdfLayoutReader` is registered as itself and as `IPdfPageLayoutReader`, and `PdfLayoutReaderService`

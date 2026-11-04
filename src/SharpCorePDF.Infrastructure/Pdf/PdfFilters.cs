@@ -7,7 +7,8 @@ namespace SharpCorePDF.Infrastructure.Pdf;
 /// </summary>
 /// <remarks>
 /// Stream bytes are otherwise copied verbatim, so this class only runs for object streams and
-/// cross-reference streams, which must be uncompressed or Flate compressed.
+/// cross-reference streams, which must be compressed with one of the filters implemented here: Flate,
+/// LZW, ASCII hexadecimal or ASCII85.
 /// </remarks>
 internal static partial class PdfFilters
 {
@@ -51,12 +52,13 @@ internal static partial class PdfFilters
             decoded = name switch
             {
                 "FlateDecode" or "Fl" => ApplyFlate(current, parametersForFilter, sourceName),
+                "LZWDecode" or "LZW" => ApplyLzw(current, parametersForFilter, sourceName),
                 "ASCIIHexDecode" or "AHx" => DecodeAsciiHex(current),
                 "ASCII85Decode" or "A85" => DecodeAscii85(current),
                 _ => throw new PdfUnsupportedFeatureException(
                     sourceName,
                     name,
-                    "the engine only decompresses object streams and cross-reference streams, which must be uncompressed, FlateDecode, ASCIIHexDecode or ASCII85Decode. All other streams are copied without being decoded."),
+                    "the engine only decompresses object streams and cross-reference streams, which must be uncompressed, FlateDecode, LZWDecode, ASCIIHexDecode or ASCII85Decode. All other streams are copied without being decoded."),
             };
 
             current = decoded;

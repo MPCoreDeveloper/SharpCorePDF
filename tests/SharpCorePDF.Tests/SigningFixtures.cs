@@ -55,6 +55,46 @@ internal static class SigningFixtures
         return builder.Build(catalog);
     }
 
+    /// <summary>
+    /// Gets a one page document whose form field tree is a chain of the given depth. The fields between the
+    /// root and the leaf carry no type of their own, which is how a form nests a group of fields and the only
+    /// shape a walk can descend through.
+    /// </summary>
+    /// <param name="depth">The number of levels in the chain, the root counting as the first.</param>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] BuildDeepForm(int depth = 6)
+    {
+        var builder = new PdfBuilder();
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.AddStream(string.Empty, []);
+        var acroForm = builder.Reserve();
+
+        var levels = new int[depth];
+
+        for (var index = 0; index < depth; index++)
+        {
+            levels[index] = builder.Reserve();
+        }
+
+        for (var index = depth - 1; index >= 0; index--)
+        {
+            builder.Set(
+                levels[index],
+                index + 1 < depth
+                    ? $"<< /T (level{index}) /Kids [{levels[index + 1]} 0 R] >>"
+                    : $"<< /T (level{index}) /FT /Tx >>");
+        }
+
+        builder.Set(acroForm, $"<< /Fields [{levels[0]} 0 R] >>");
+        builder.Set(page, $"<< /Type /Page /Parent {pages} 0 R /MediaBox [0 0 200 200] /Resources << >> /Contents {content} 0 R >>");
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R /AcroForm {acroForm} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
     /// <summary>Builds signature options that name a fixed moment, so a report can be asserted exactly.</summary>
     /// <param name="certificate">The certificate to sign with.</param>
     /// <param name="fieldName">The name of the field.</param>
@@ -95,6 +135,24 @@ internal static class SigningFixtures
         using var content = new MemoryStream(document, writable: false);
 
         return await Validator.ValidateAsync("source.pdf", content, trust, password: null, TestContext.Current.CancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>Reads and checks every signature of a document under the engine options a test needs.</summary>
+    /// <param name="document">The document.</param>
+    /// <param name="options">The engine options, which fix the limits the read runs under.</param>
+    /// <param name="trust">What counts as trusted, or <see langword="null"/> for no trust evaluation.</param>
+    /// <returns>One validation per signature.</returns>
+    public static async Task<IReadOnlyList<PdfSignatureValidation>> ValidateAsync(
+        byte[] document,
+        PdfEngineOptions options,
+        PdfTrustOptions? trust = null)
+    {
+        using var content = new MemoryStream(document, writable: false);
+        var validator = new PdfDocumentSignatureValidator(options);
+
+        return await validator
+            .ValidateAsync("source.pdf", content, trust, password: null, TestContext.Current.CancellationToken)
             .ConfigureAwait(false);
     }
 

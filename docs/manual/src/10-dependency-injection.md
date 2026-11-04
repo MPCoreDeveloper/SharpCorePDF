@@ -142,7 +142,7 @@ defaults are deliberately permissive:
 | Option | Default | Effect |
 | --- | --- | --- |
 | `MaxSourceBytes` | 512 MiB | Largest source read into memory; larger sources are rejected |
-| `MaxNestingDepth` | 64 | Maximum dictionary/array nesting and page-tree depth |
+| `MaxNestingDepth` | 64 | Maximum dictionary/array nesting, page-tree depth and form field tree depth |
 | `MaxPagesPerSource` | 100 000 | Declared page limit; see the note below |
 | `ReconstructCrossReferenceOnFailure` | `true` | Rebuild a damaged or missing cross-reference table by scanning |
 | `VerifyOutput` | `false` | Re-read the written document and check its page count |
@@ -152,9 +152,12 @@ The source limit is enforced by the reader, and exceeding it throws `PdfSourceFo
 detail that names the limit. It is not a streaming cap: the whole source is held in memory while it is
 processed, so the practical ceiling is your process's memory budget, not the number on the option.
 
-`MaxNestingDepth` has two effects. It bounds how deep an object graph may be parsed, and it bounds the
-page-tree walk; a page tree that is cut off contributes a `PageTreeTooDeep` warning rather than
-failing the merge.
+`MaxNestingDepth` has four effects. It bounds how deep an object graph may be parsed, it bounds the
+page-tree walk, it bounds the form field tree, and it bounds the tree the signature search descends. A
+page tree that is cut off contributes a `PageTreeTooDeep` warning rather than failing the merge; a field
+tree that is cut off contributes `FormFieldDepthExceeded` together with the fields above the cut, and the
+search for signatures reports the same warning and adds a `PdfSignatureProblemKind.FormFieldTreeTooDeep`
+problem to the validations it returns.
 
 `ReconstructCrossReferenceOnFailure` is the difference between "repair what you can" and "reject what
 is not well formed". Leaving it on produces a `CrossReferenceRebuilt` warning when repair happened.

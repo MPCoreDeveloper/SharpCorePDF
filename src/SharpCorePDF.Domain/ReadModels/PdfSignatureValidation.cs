@@ -15,7 +15,7 @@ namespace SharpCorePDF.Domain.ReadModels;
 /// <param name="Signer">What the signature states.</param>
 /// <param name="Integrity">Whether the covered bytes still match what was signed.</param>
 /// <param name="Trust">Whether the chain leads to an anchor the caller named.</param>
-/// <param name="Problems">Everything that keeps the signature from being reported as valid.</param>
+/// <param name="Problems">Everything that keeps the signature from being reported as valid, and every limit that makes the answer narrower than the document.</param>
 public sealed record PdfSignatureValidation(
     PdfSignatureInfo Signer,
     PdfSignatureIntegrity Integrity,

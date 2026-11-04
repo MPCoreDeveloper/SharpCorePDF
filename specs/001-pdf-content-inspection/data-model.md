@@ -246,6 +246,10 @@ than minting variants.
 A condition that merely reduces the payload — going over budget — raises no warning. Nothing is wrong
 when the caller can still fetch every byte.
 
+`FormFieldDepthExceeded` (65) was added later: the form walk follows the tree to
+`PdfEngineOptions.MaxNestingDepth` levels and reports the cut, instead of dropping the branch below it
+without a word.
+
 ## Relationships
 
 ```text

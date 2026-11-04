@@ -31,7 +31,7 @@ public sealed partial class PdfPageContentReader
         var destinations = new NamedDestinations(reader);
         var pageMap = BuildPageMap(reader);
         var formWarnings = new List<PdfWarning>();
-        var formFields = ReadFormFields(reader, formWarnings);
+        var formFields = ReadFormFields(reader, formWarnings, options.MaxNestingDepth);
         var first = true;
 
         foreach (var page in pages)

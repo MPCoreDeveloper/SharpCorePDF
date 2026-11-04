@@ -28,9 +28,11 @@ fixed-position cover.
 
 SharpCorePDF can change the **assembly** of an existing document: rotate a page, delete it, move it,
 duplicate it, insert an authored page, crop the area a page shows, and override the document information
-(Chapter 14). What it cannot do *in this release* is change what a page draws. There is no API to replace
-text or an image, remove an annotation, fill a form, add a redaction, or change a page's media box or its
-size. Page content and page geometry that survive an edit are copied verbatim.
+(Chapter 14). It can also add, edit and remove annotations (Chapter 18), and create, fill, reset and flatten
+form fields (Chapter 19) — structures stored beside a page rather than inside it. What it cannot do *in this
+release* is change what a page already draws. There is no API to replace text or an image, add a redaction,
+or change a page's media box or its size. Page content and page geometry that survive an edit are copied
+verbatim.
 
 Signing and archival output are separate surfaces that change the file rather than its assembly: a
 signature appends one revision to the bytes it is given (Chapter 23), and the archival writer states the
@@ -43,10 +45,9 @@ under a page of the source. What an edit still does not do is rewrite the operat
 a layer is added beside them. The capabilities that stay outside the product at every release —
 rendering, conversion, OCR, conformance validation, services and CLIs — are the sections below.
 
-**Use instead:** a viewer/editor SDK for interactive editing, a form-filling library when field values
-have to change, and a redaction product when content has to be removed. If the change is which pages the
-document contains, in what order, with what rotation and within what visible area, that is what an edit
-plan does.
+**Use instead:** a viewer/editor SDK for interactive editing, and a redaction product when content has to be
+removed. If the change is which pages the document contains, in what order, with what rotation and within
+what visible area, or which annotations and field values it carries, that is what an edit plan does.
 
 ## It is not a renderer, converter or OCR engine
 
@@ -152,7 +153,9 @@ cookbook shows one.
 | Walk the object graph and the operators of a page, read-only | Yes |
 | Lay out a report: page flow, tables, columns, hyphenation, JPEG images | No |
 | Wrap and align a paragraph inside a fixed box (Chapter 16) | Yes |
-| Change a page's size or media box, replace text or images, add or edit annotations and form fields | No |
-| Fill forms, redact, or rebuild tagged structure | No |
+| Add, edit or remove annotations (Chapter 18) | Yes |
+| Create, fill, reset and flatten form fields (Chapter 19) | Yes |
+| Change a page's size or media box, or replace the text or images a page draws | No |
+| Redact, or rebuild tagged structure | No |
 | Render, convert, OCR or reflow text | No |
 | Certify PDF/A or accessibility conformance | No |

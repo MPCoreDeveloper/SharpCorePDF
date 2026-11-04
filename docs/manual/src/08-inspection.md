@@ -148,7 +148,7 @@ foreach (var image in images.Items)
 
 | Method | Answers |
 | --- | --- |
-| `ReadImagesAsync` | One entry per distinct image object the range paints: every page that draws it, the position of the first draw, geometry, filter, the soft or explicit mask beside the samples, and — when the payload was decoded — the pixels themselves as `DecodedPixels` in `Gray8` or `Rgb24`. |
+| `ReadImagesAsync` | One entry per distinct image object the range paints: every page that draws it, the position of the first draw, geometry, filter, the soft or explicit mask beside the samples, and — when the payload was decoded — the pixels themselves as `DecodedPixels` in `Gray8`, `Rgb24` or `Cmyk32`. |
 | `CopyImageDataAsync` | Writes the bytes of one image to a stream you supply. |
 | `CopyImageMaskDataAsync` | Writes the bytes of one image's soft or explicit mask to a stream you supply; a colour key mask has no bytes and is refused by name. |
 | `ReadAnnotationsAsync` | Every annotation with its page, subtype, rectangle, flags, text, author, date, appearance and, for a link, the resolved `Target`. |
@@ -207,9 +207,9 @@ the file opened for you. A `ReadOnlyMemory<byte>` that escapes a call never alia
 ### Pixels
 
 `Data` is the payload as the document stores it, which for most images is samples behind a compression
-filter. `DecodedPixels` is the same samples already unpacked — tightly packed, top row first, one byte per
-sample — so a caller that wants to look at a picture does not write a decoder first. `PixelFormat` names the
-layout: `Gray8`, one channel, or `Rgb24`, three interleaved.
+filter. `DecodedPixels` is the same picture already unpacked — tightly packed, top row first, one byte per
+channel — so a caller that wants to look at an image does not write a decoder first. `PixelFormat` names the
+layout: `Gray8`, one channel, `Rgb24`, three interleaved, or `Cmyk32`, four device samples interleaved.
 
 ```csharp
 foreach (var image in images.Items)
@@ -219,31 +219,49 @@ foreach (var image in images.Items)
         continue;                       // a payload, not pixels — see the table below for why
     }
 
-    var channels = image.PixelFormat == "Rgb24" ? 3 : 1;
+    var channels = image.PixelFormat switch { "Gray8" => 1, "Rgb24" => 3, _ => 4 };
     var stride = image.Width!.Value * channels;
-    var first = pixels.Span[..stride]; // the top row, one byte per sample
+    var first = pixels.Span[..stride]; // the top row, one byte per channel
 }
 ```
 
 The pixels are present only when nothing is left to interpret: the library decoded the payload itself, the
-document states the width, the height and eight bits per sample, the colour space is one whose samples are
-its channels (`DeviceGray`, `CalGray`, `G`, `DeviceRGB`, `CalRGB`, `RGB`), and the payload is exactly
-`Width × Height × channels` bytes. That last one is an invariant a caller can check instead of trusting, and
-it is why an image whose geometry disagrees with its data is reported rather than reinterpreted.
+document states the width and the height, and the colour space is one whose samples mean what they are —
+`DeviceGray` or the abbreviation `G` for one channel, `DeviceRGB` or `RGB` for three, `DeviceCMYK` or `CMYK`
+for four, the array form of `CalGray` or `CalRGB`, an `ICCBased` space whose profile states one of those
+component counts, or an `Indexed` space over any of them. An image that carries no filter is the simplest
+case rather than an exception — its payload is its samples — so an inline image, which producers rarely
+compress, states its pixels the way a Flate one does. Nothing is left behind a filter either, because the
+filters an image realistically uses are decoded here — Flate and LZW, each with its predictor, and the two
+ASCII encodings — so an image that a viewer can show is an image whose samples this record states.
 
-Three cases yield `null`, and the record always states which one it is:
+Two things are unpacked on the way out rather than handed over as they lie in the file. Samples narrower than
+a byte are widened to the same scale, so a bilevel image yields `0` and `255` rather than `0` and `1`, a
+four-bit sample steps by seventeen and a two-bit one by eighty-five; a row is read at its own padded length
+rather than as a continuous bit stream, so the padding of one row is not the start of the next. A palette is
+applied, so an `Indexed` image yields the colours its lookup table states rather than indices into it. Both
+leave `Data` untouched: the payload is always the bytes the document holds.
+
+The length of the pixels is an invariant a caller can check instead of trusting — `Width × Height × channels`
+— and it is why an image whose geometry disagrees with its data, or whose palette does not reach as far as its
+largest index, is reported rather than reinterpreted. Three cases yield `null`, and the record always states
+which one it is:
 
 | Case | What the entry says | Why no pixels |
 | --- | --- | --- |
 | A `DCTDecode` image | `IsDecodable` true, `Filter` `DCTDecode`, `PixelFormat` null | The bytes are already a JPEG, which a caller can read; unpacking it here would mean shipping a second decoder. |
-| A filter the library passes through — `JPXDecode`, `JBIG2Decode` and the rest | `IsDecodable` false, `Filter` names it | Nothing was decoded, so there are no samples to hand back. |
-| Another bit depth, a palette, a `CMYK` or an `ICCBased` space, or a geometry the document does not state | `BitsPerComponent` or `ColorSpace` states which | Pixels are eight bit and channel-ordered by contract; converting or guessing would hide the mismatch from the caller. |
+| A filter the library passes through — `JPXDecode`, `JBIG2Decode`, `CCITTFaxDecode`, `RunLengthDecode`, or a name it does not know | `IsDecodable` false, `Filter` names it, and the read warns with `ImageFilterUnsupported` | Nothing was decoded, so there are no samples to hand back. |
+| A `Separation`, `DeviceN` or `Lab` space, sixteen bits per sample, a palette whose samples run past its table or whose table holds nothing, a width or height of zero, or a geometry the document does not state | `BitsPerComponent` or `ColorSpace` states which | The first needs a function evaluated, the second a rounding rule, the third a decision the file does not support, and the last a rectangle that is not there. Pixels are eight bit and channel-ordered by contract, so converting or guessing would hide the mismatch from the caller. |
+
+Neither a colour profile nor a tint transform is applied: the samples are what the document stores. That is
+why `Cmyk32` exists rather than an RGB conversion — turning ink coverage into light is a rendering decision,
+not a fact of the file — and why an `Indexed` palette is applied but an `ICCBased` profile is not.
 
 `DecodedPixels` is subject to the same inline budget as `Data`: when a payload is withheld, the pixels are
-`null` as well, because they are the payload. Nothing is resampled, colour-converted or rotated here, and
-nothing in this library renders a page to a raster — Chapter 20's exports describe a page rather than paint
-it. This surface exists so that text extraction, an OCR pipeline or a checksum can see the samples without
-carrying a decoder of its own.
+`null` as well, and so are the pixels of a payload that fits the budget but would expand past it. Nothing is
+resampled, colour-converted or rotated here, and nothing in this library renders a page to a raster —
+Chapter 20's exports describe a page rather than paint it. This surface exists so that text extraction, an
+OCR pipeline or a checksum can see the samples without carrying a decoder of its own.
 
 
 `ReadPageDetailsAsync` is how an index is built: it parses and decodes one page, yields its detail, and only
@@ -345,7 +363,7 @@ The kinds fall into five groups:
 | Page tree | `PageTreeMissing`, `PageTreeCycle`, `PageSizeAssumed` | Pages were skipped, cut off, or described with a default size |
 | Encryption | `EncryptionOpened`, `EncryptionHandlerUnsupported`, `CryptFilterUndefined` | The encryption was understood, opened, or could not be used |
 | Merge decisions | `NamedDestinationsDropped`, `OutlinesDroppedByPolicy`, `BookmarksTruncated` | Content was intentionally not carried over |
-| Content reading | `ContentStreamUnreadable`, `ImageFilterUnsupported`, `ImageDataUnreadable`, `XObjectResourceMissing`, `NamedDestinationUnresolved`, `EmbeddedFileUnreadable`, `EmbeddedFileNameCollision`, `XmpPacketMalformed`, `FormFieldUnreadable`, `AnnotationUnreadable`, `TextUnreadable` | A page, an image, an attachment, a packet, a named destination or a font could not be read; the rest of the read is still returned |
+| Content reading | `ContentStreamUnreadable`, `ImageFilterUnsupported`, `ImageDataUnreadable`, `XObjectResourceMissing`, `NamedDestinationUnresolved`, `EmbeddedFileUnreadable`, `EmbeddedFileNameCollision`, `XmpPacketMalformed`, `FormFieldUnreadable`, `FormFieldDepthExceeded`, `AnnotationUnreadable`, `TextUnreadable` | A page, an image, an attachment, a packet, a named destination, a form field or a font could not be read, or a form tree was cut off at its depth limit; the rest of the read is still returned |
 
 `EncryptionOpened` is a warning even though it describes success: it tells a caller that the document
 was protected and is not simply unprotected. `OutputVerified` is likewise a success signal, reported

@@ -62,8 +62,25 @@ internal sealed partial class PdfFileReader
     /// <summary>Gets the merged cross-reference table.</summary>
     public PdfCrossReferenceTable CrossReferenceTable { get; }
 
+    /// <summary>Gets the options the document was opened with.</summary>
+    public PdfEngineOptions Options => options;
+
     /// <summary>Gets non-fatal remarks collected while reading.</summary>
     public IReadOnlyList<PdfWarning> Warnings => warnings;
+
+    /// <summary>Records a non-fatal remark found by a walk that runs outside this class.</summary>
+    /// <param name="warning">The remark.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="warning"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The page tree is walked from inside this class and hands its list straight to the walker; the
+    /// signature search lives in its own namespace and records what it could not finish here instead, so
+    /// every remark about a document sits in one place.
+    /// </remarks>
+    public void AddWarning(PdfWarning warning)
+    {
+        ArgumentNullException.ThrowIfNull(warning);
+        warnings.Add(warning);
+    }
 
     /// <summary>Gets a value indicating whether the document declares encryption.</summary>
     public bool IsEncrypted => CrossReferenceTable.Trailer.ContainsKey("Encrypt");

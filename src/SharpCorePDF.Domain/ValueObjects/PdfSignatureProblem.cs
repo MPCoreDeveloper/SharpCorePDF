@@ -1,8 +1,8 @@
 namespace SharpCorePDF.Domain.ValueObjects;
 
 /// <summary>
-/// One thing that keeps a signature from being reported as valid, named by kind and described for a
-/// human.
+/// One thing that keeps a signature from being reported as valid, or that limits what the answer about it
+/// covers, named by kind and described for a human.
 /// </summary>
 /// <remarks>
 /// <see cref="Kind"/> is the contract and <see cref="Message"/> is for humans: it names the field, the
