@@ -65,10 +65,17 @@ public static class PdfContentReaderExtensions
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>The payload, exactly as the copy route would have written it.</returns>
         /// <remarks>
+        /// <para>
         /// This member materialises the payload: the result is one array of <c>ByteLength</c> bytes, so
         /// it is only appropriate when that fits in memory. For a large image use
         /// <see cref="Domain.Ports.IPdfContentReader.CopyImageDataAsync"/>, which writes to a stream of
         /// the caller's choosing through a bounded buffer.
+        /// </para>
+        /// <para>
+        /// The result is a view of the buffer the copy wrote into rather than a second array: it is
+        /// read-only, it is exactly the payload, and it stays valid after the stream this member owns
+        /// has been disposed.
+        /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException">An argument is <see langword="null"/>.</exception>
         public async Task<ReadOnlyMemory<byte>> ReadImageDataAsync(
@@ -87,7 +94,9 @@ public static class PdfContentReaderExtensions
                 .CopyImageDataAsync(source, image, buffer, password, cancellationToken)
                 .ConfigureAwait(false);
 
-            return buffer.ToArray();
+            // The copy route filled this stream's own buffer, so slicing that buffer to Length hands the
+            // payload back without allocating a second array its size, which is what ToArray would do.
+            return buffer.GetBuffer().AsMemory(0, (int)buffer.Length);
         }
 
         /// <summary>Writes the payload of one image to a file.</summary>
@@ -97,7 +106,15 @@ public static class PdfContentReaderExtensions
         /// <param name="password">The user or owner password, when the document is encrypted.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>A task that completes when the file is written and flushed.</returns>
-        /// <remarks>The file is written through the copy route, so the image is never held in memory.</remarks>
+        /// <remarks>
+        /// <para>The file is written through the copy route, so the image is never held in memory.</para>
+        /// <para>
+        /// The path is used as given: a relative path resolves against the process working directory,
+        /// <c>..</c> is followed, the destination directory is created when it does not exist, and an
+        /// existing file is truncated. No root is enforced — a caller that takes the path from an
+        /// untrusted source must confine it before the call.
+        /// </para>
+        /// </remarks>
         /// <exception cref="ArgumentException"><paramref name="destinationPath"/> is null, empty or whitespace.</exception>
         public async Task SaveImageDataAsync(
             IPdfContentSource source,
@@ -123,8 +140,15 @@ public static class PdfContentReaderExtensions
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>The bytes of the file.</returns>
         /// <remarks>
+        /// <para>
         /// This member materialises the payload; for an attachment of unknown size use
         /// <see cref="Domain.Ports.IPdfContentReader.CopyEmbeddedFileDataAsync"/>.
+        /// </para>
+        /// <para>
+        /// The result is a view of the buffer the copy wrote into rather than a second array: it is
+        /// read-only, it is exactly the payload, and it stays valid after the stream this member owns
+        /// has been disposed.
+        /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException">An argument is <see langword="null"/>.</exception>
         public async Task<ReadOnlyMemory<byte>> ReadEmbeddedFileDataAsync(
@@ -143,7 +167,9 @@ public static class PdfContentReaderExtensions
                 .CopyEmbeddedFileDataAsync(source, file, buffer, password, cancellationToken)
                 .ConfigureAwait(false);
 
-            return buffer.ToArray();
+            // The copy route filled this stream's own buffer, so slicing that buffer to Length hands the
+            // payload back without allocating a second array its size, which is what ToArray would do.
+            return buffer.GetBuffer().AsMemory(0, (int)buffer.Length);
         }
 
         /// <summary>Writes the payload of one embedded file to a file.</summary>
@@ -153,7 +179,15 @@ public static class PdfContentReaderExtensions
         /// <param name="password">The user or owner password, when the document is encrypted.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>A task that completes when the file is written and flushed.</returns>
-        /// <remarks>The file is written through the copy route, so the attachment is never held in memory.</remarks>
+        /// <remarks>
+        /// <para>The file is written through the copy route, so the attachment is never held in memory.</para>
+        /// <para>
+        /// The path is used as given: a relative path resolves against the process working directory,
+        /// <c>..</c> is followed, the destination directory is created when it does not exist, and an
+        /// existing file is truncated. No root is enforced — a caller that takes the path from an
+        /// untrusted source must confine it before the call.
+        /// </para>
+        /// </remarks>
         /// <exception cref="ArgumentException"><paramref name="destinationPath"/> is null, empty or whitespace.</exception>
         public async Task SaveEmbeddedFileAsync(
             IPdfContentSource source,
@@ -178,6 +212,11 @@ public static class PdfContentReaderExtensions
         /// <param name="password">The user or owner password, when the document is encrypted.</param>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
         /// <returns>The page's detail, or <see langword="null"/> when the document has no such page.</returns>
+        /// <remarks>
+        /// The range holds one page, so the enumeration is disposed as soon as that page arrives. A range
+        /// that yields nothing — a page past the last one, a document that could not be opened — answers
+        /// <see langword="null"/> rather than throwing.
+        /// </remarks>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="page"/> is less than one.</exception>
         public async Task<PdfPageDetail?> ReadPageDetailAsync(
             IPdfContentSource source,
@@ -185,17 +224,18 @@ public static class PdfContentReaderExtensions
             string? password = null,
             CancellationToken cancellationToken = default)
         {
-            var detail = reader.ReadPageDetailsAsync(source, PageRange.Single(page), password, cancellationToken);
-            var pages = detail.GetAsyncEnumerator(cancellationToken);
+            // The range holds one page, so this loop runs once by contract: it is the enumerator's disposal on
+            // return that the loop is for, and S1751's "at most one iteration" is the intent, not a smell
+            // (src/.editorconfig records the decision).
+            await foreach (var detail in reader // NOSONAR: one page by contract, disposed on return
+                .ReadPageDetailsAsync(source, PageRange.Single(page), password, cancellationToken)
+                .WithCancellation(cancellationToken)
+                .ConfigureAwait(false))
+            {
+                return detail;
+            }
 
-            try
-            {
-                return await pages.MoveNextAsync().ConfigureAwait(false) ? pages.Current : null;
-            }
-            finally
-            {
-                await pages.DisposeAsync().ConfigureAwait(false);
-            }
+            return null;
         }
     }
 

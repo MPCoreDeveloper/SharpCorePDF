@@ -164,6 +164,15 @@ Windows and on the common Unix file systems. The `finally` block removes the tem
 and on cancellation; after a successful move the file is already gone. The destination is either the
 previous file or the complete new one, never a half-written document.
 
+The path itself is caller input, and the library does not confine it. `MergeToFileAsync`,
+`SaveImageDataAsync` and `SaveEmbeddedFileAsync` resolve the destination with `Path.GetFullPath` and write
+there: a relative path becomes absolute against the process working directory, `..` is followed, a missing
+directory is created, and an existing file is truncated. No root is enforced, because the library never chose
+one — a `..` guard would break the relative paths callers build on purpose, and would not make the library a
+sandbox, since the same bytes can be written through a `FileStream` the caller opened. When a destination comes
+from an untrusted source, confine it before the call: decide which directory it must land in, resolve it
+against that directory, reject the segments you will not accept, and check the result.
+
 `MergeToBytesAsync` has the same all-or-nothing property for a different reason: the buffer is local to
 the call, so a failure returns no bytes and leaves nothing behind. It is the simplest safe choice when
 the result fits in memory.

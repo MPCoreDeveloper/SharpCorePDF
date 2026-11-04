@@ -126,11 +126,11 @@ jobs:
             11.0.x
             10.0.x
 
-      # Pinned to an exact version and installed into ./.tools, the way ci.yml installs the coverage
-      # collector: stryker-config.json is a contract with this version (5.0.0 is the first that speaks
-      # Microsoft.Testing.Platform, through `--test-runner mtp`), and .tools/ is git-ignored.
-      - name: Install Stryker
-        run: dotnet tool install --tool-path ./.tools dotnet-stryker --version 5.0.0
+      # The version is the repository's own, not this workflow's: .config/dotnet-tools.json pins
+      # dotnet-stryker to the version stryker-config.json is written for (5.0.0 is the first that speaks
+      # Microsoft.Testing.Platform, through `--test-runner mtp`), so a local run and this one cannot drift.
+      - name: Restore the tools
+        run: dotnet tool restore
 
       - name: Mutate
         env:
@@ -147,7 +147,7 @@ jobs:
           # A scheduled run passes neither input, and stryker-config.json then decides both.
           if [ -n "$LEVEL" ]; then args+=( --mutation-level "$LEVEL" ); fi
           if [ "$CHANGED_ONLY" = "true" ]; then args+=( --since:main ); fi
-          ./.tools/dotnet-stryker "${args[@]}" 2>&1 | tee "artifacts/mutation/$LAYER/run.log"
+          dotnet stryker "${args[@]}" 2>&1 | tee "artifacts/mutation/$LAYER/run.log"
 
       # The score is read from the report rather than from the console: the console table is one row per
       # file and does not survive being pasted into a summary. `if: always()` because a reading is worth

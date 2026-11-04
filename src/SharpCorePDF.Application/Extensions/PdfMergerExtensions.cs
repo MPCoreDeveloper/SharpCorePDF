@@ -22,6 +22,12 @@ public static class PdfMergerExtensions
         /// <param name="destinationPath">The path of the file to create or overwrite.</param>
         /// <param name="cancellationToken">A token to cancel the merge.</param>
         /// <returns>A summary of what was written.</returns>
+        /// <remarks>
+        /// The path is used as given: a relative path resolves against the process working directory,
+        /// <c>..</c> is followed, the destination directory is created when it does not exist, and an
+        /// existing file is truncated. No root is enforced — a caller that takes the path from an
+        /// untrusted source must confine it before the call.
+        /// </remarks>
         /// <exception cref="ArgumentException"><paramref name="destinationPath"/> is null, empty or whitespace.</exception>
         public async Task<MergeResult> MergeToFileAsync(
             MergePlan plan,
@@ -58,8 +64,18 @@ public static class PdfMergerExtensions
         /// <param name="cancellationToken">A token to cancel the merge.</param>
         /// <returns>The bytes of the merged document.</returns>
         /// <remarks>
+        /// <para>
         /// Use this only when the result fits in memory. For large results, merge to a file or to a
         /// stream instead.
+        /// </para>
+        /// <para>
+        /// Unlike the materialising reads, whose result is a view of the buffer the copy route filled,
+        /// this member returns a <see cref="byte"/> array of exactly the merged length: a merge writes an
+        /// unknown number of bytes into a stream that grows by doubling, so the array cannot be that
+        /// stream's own buffer and <c>ToArray</c> copies it. That copy is the cost of the return type,
+        /// not an oversight — <see cref="MergeToFileAsync"/> and <c>MergeAsync</c>, which write where the
+        /// bytes are wanted, avoid it.
+        /// </para>
         /// </remarks>
         public async Task<byte[]> MergeToBytesAsync(
             MergePlan plan,

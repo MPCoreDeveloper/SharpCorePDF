@@ -42,7 +42,7 @@ dotnet_diagnostic.CA1720.severity = none
 # interface would let any type claim to be an operation the engine cannot execute.
 dotnet_diagnostic.S1694.severity = none
 
-# The three SonarCloud rules this repository answers with a decision rather than a change. Each silence is
+# The four SonarCloud rules this repository answers with a decision rather than a change. Each silence is
 # scoped to the file that carries the decision and each line carries // NOSONAR as well, so the server side
 # of the gate reaches the same conclusion as a local build. Anything else the analyzer reports is a finding
 # to fix, not to configure away.
@@ -61,3 +61,9 @@ dotnet_diagnostic.S1694.severity = none
 # reader that wrote SHA-256 instead could not open a document encrypted by any other producer.
 [**/Pdf/PdfStandardSecurity.cs]
 dotnet_diagnostic.S4790.severity = none
+
+# S1751: the await foreach in ReadPageDetailAsync exists for the enumerator it disposes on return, not for
+# iteration. The member answers one page by contract — the range it asks for holds one — so a loop that runs
+# at most once is the intent rather than a loop that lost its body.
+[**/Extensions/PdfContentReaderExtensions.cs]
+dotnet_diagnostic.S1751.severity = none

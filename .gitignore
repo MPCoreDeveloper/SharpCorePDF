@@ -21,6 +21,9 @@ coverage*.xml
 .sonarqube/
 .tools/
 
+# Stryker's default output directory, for a run that does not name --output; a run that does writes to artifacts/
+StrykerOutput/
+
 # Visual Studio, Rider, VS Code
 .vs/
 .idea/

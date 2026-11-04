@@ -370,7 +370,7 @@ engine be swapped in.
 # Everything at once, through the solution: the five packages, the tests,
 # the examples and the measurement harness.
 dotnet build .\SharpCorePDF.slnx -c Release
-dotnet test  .\SharpCorePDF.slnx                      # 549 tests on each of net10.0 and net11.0
+dotnet test  .\SharpCorePDF.slnx                      # 1010 tests on each of net10.0 and net11.0
 dotnet run --project .\examples\SharpCorePDF.Examples -c Release
 
 # Or one project at a time:
@@ -422,10 +422,13 @@ encrypted documents the merge engine writes were checked the same way with qpdf,
 ### Asking whether the tests would notice
 
 ```powershell
-dotnet tool install --tool-path .\.tools dotnet-stryker --version 5.0.0
+dotnet tool restore                     # Stryker is a local tool: .config\dotnet-tools.json states the version
 
 # One layer of the four under src/ -- the SharpCorePDF project itself is a meta package with no code:
-.\.tools\dotnet-stryker --config-file stryker-config.json --project SharpCorePDF.Domain.csproj --output artifacts/mutation/Domain
+dotnet stryker --config-file stryker-config.json --project SharpCorePDF.Domain.csproj --output artifacts/mutation/Domain
+
+# One file, when one change is the question:
+dotnet stryker --config-file stryker-config.json --project SharpCorePDF.Infrastructure.csproj --mutate "**/ImagePixels.cs"
 
 # The reading, out of the report it leaves behind:
 python .\docs\tools\mutation-summary.py .\artifacts\mutation\Domain\reports\mutation-report.json --detail
@@ -434,10 +437,12 @@ python .\docs\tools\mutation-summary.py .\artifacts\mutation\Domain\reports\muta
 Coverage says a line ran; mutation testing says whether the suite would have noticed that line changing.
 Stryker changes one thing at a time — an operator, a boundary, a returned constant, a removed statement —
 rebuilds, and reports what no test caught; `mutation-report.html` opens each mutated line with the mutation
-in place. The first scoped run, the two tests it produced, what the six survivors left say about the tests,
-and the one local wrinkle (on a machine with Visual Studio installed, Stryker can pick Visual Studio's
-MSBuild and compile mutants with no framework references) are recorded in
-[`docs/mutation-testing.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/mutation-testing.md).
+in place. The first scoped run, the two tests it produced, what the six survivors left say about the tests, and
+the two readings of the extension conveniences — the one that found the gaps and the one that closed them — are
+recorded in
+[`docs/mutation-testing.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/mutation-testing.md),
+which also records the one local wrinkle: on a machine with Visual Studio installed, Stryker can pick Visual
+Studio's MSBuild and compile mutants with no framework references.
 
 ## Continuous integration
 

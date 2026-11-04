@@ -40,6 +40,30 @@ behaviour, not a defect.
 Also out of scope: anything that requires the library to reach the network. It never does. It opens no
 socket, writes no log, and stores no secret; a password is used for one operation and not kept.
 
+## Where the library's responsibility for a path ends
+
+Three conveniences write a file the caller names rather than a stream the caller holds: `MergeToFileAsync`,
+`SaveImageDataAsync` and `SaveEmbeddedFileAsync`. Each resolves the path with `Path.GetFullPath` and writes
+there. That is the whole of the policy, and it is stated here because it is the one place where a caller's input
+reaches the file system through this library.
+
+- **The path is used as given.** A relative path resolves against the process working directory, `..` is
+  followed, and no root is enforced: the library never chose one, so it has none to confine a write to.
+- **The destination directory is created when it does not exist**, and an existing file is truncated rather than
+  appended to.
+- **Confining the path is the caller's job.** An application that takes a destination from an untrusted source —
+  a filename in a request, a row in a database, an entry inside a PDF — must validate it before the call: decide
+  which directory it must land in, resolve it against that directory, reject the segments it will not accept,
+  and check the result. This library is not a sandbox, and a guard here would not make it one: a caller that can
+  reach `SaveImageDataAsync` can open the same file itself.
+- **No `..` guard is applied, deliberately.** A relative path with `..` is a legitimate way to name a sibling
+  folder, and refusing it would break callers while stopping nothing — the same bytes can be written through a
+  `FileStream` the caller opened and handed to `CopyImageDataAsync`.
+
+The distinction this policy draws: a byte written **outside the stream the caller handed over** is in scope
+above. A byte written to the path the caller named is not — the caller named it.
+
+
 ## Reporting a vulnerability
 
 **Do not open a public issue, and do not attach the document to one.** A public issue describing a crash
