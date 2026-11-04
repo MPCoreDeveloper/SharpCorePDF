@@ -20,7 +20,8 @@ against an empty feed.
 
 ## [Unreleased]
 
-Nothing yet. `1.3.0` is on the feed; the entry below it is `1.4.0`, the version this tree will be tagged as.
+Nothing yet. `1.4.0` is on the feed: the five packages were pushed by `publish.yml` from tag `v1.4.0` on
+2026-11-04, and the entry below it is the version that was released.
 
 ## [1.4.0] - 2026-11-04
 
