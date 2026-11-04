@@ -156,6 +156,12 @@ readings were wrong:
   minus one reaches `MemoryStream`'s constructor through the mutant that pins the pre-sizing conditional true and
   throws there, before the copy runs. Four mutants turn on a record whose length cannot be a size.
 
+> **Superseded after `1.4.0`, in part.** The second bullet's remedy — asserting `ParamName` — was withdrawn once
+> the release was out: the field is not part of the members' documented contract, so pinning it pinned an
+> implementation choice, and the two mutants it killed are recorded as accepted survivors instead. The reading
+> that moved is 68.42 % → 64.91 % over the same 57 scored mutants, measured both ways. `docs/mutation-testing.md`,
+> "The sixth record", has the reasoning and both reports.
+
 Production code did not move: the follow-up is tests and this record. What it bought is measurable — 28.07 % to
 68.42 % over the same 57 scored mutants, with `NoCoverage` at zero in both files — and what is left is eighteen
 mutants that are equivalent, out of reach without a two-gigabyte allocation, or a continuation.

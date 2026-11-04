@@ -525,6 +525,10 @@ fields, and it is there because the alternative was a survivor explained as equi
 
 ### What is left, and why each of the eighteen is not a test
 
+**Correction, from the sixth record below.** Two of these eighteen survive again, by choice: the `ParamName`
+assertions that were killing them have been removed, and the sixth record says why and what it costs. The
+table is left exactly as this reading produced it.
+
 | Survivors | Where | Reading |
 | --- | --- | --- |
 | `ByteLength is > 0` → `>= 0` | 2, one per materialising read | equivalent: the true branch computes `(int)ByteLength`, which for zero is the same zero the false branch returns |
@@ -543,4 +547,80 @@ Production code is untouched: the two extension files are the ones the fourth re
 is a test. `MergeToBytesAsync`'s `ToArray()` still copies, on purpose (research D2); no threshold moved, `break`
 stays at 0, and no `ignore` was added to the configuration. The score went from 28.07 % to 68.42 % because
 eighteen mutants stopped being invisible — not because the number was flattered.
+
+## The sixth record: the two assertions that came back out
+
+The fifth record's last section reached for a field to make a guard observable. It worked — the reading went to
+68.42 % — and the assertion was still the wrong instrument, because nothing in the members' contract mentions
+the field. This record takes it back out, states what that costs, and measures the cost instead of estimating it.
+
+### Why `ParamName` was the wrong instrument
+
+`SaveImageDataAsync` and `SaveEmbeddedFileAsync` both reach the guard through one private helper,
+`OpenDestination`; `MergeToFileAsync` carries its own copy of the same three lines. Each guard is
+`ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath)` followed immediately by
+`Path.GetFullPath(destinationPath)`, and both refuse a whitespace path with an `ArgumentException`. The guard's
+exception carries `ParamName == "destinationPath"`, because `CallerArgumentExpression` captured the caller's
+expression; the framework's carries `"path"`, as its message says — *The path is empty. (Parameter 'path')*. That
+name is the entire difference a caller can observe.
+
+What the members document is the type:
+`<exception cref="ArgumentException"><paramref name="destinationPath"/> is null, empty or whitespace.</exception>`.
+They do not promise which field the exception carries, so a test that asserts the field pins an implementation
+choice rather than a contract: a reader who replaced the guard with an explicit
+`if (string.IsNullOrWhiteSpace(destinationPath)) throw new ArgumentException(…, nameof(destinationPath))` keeps
+every documented promise, and the guard moving back inside the two members would keep them too. The suite
+asserts what the documentation states and records the rest as a survivor — the rule this repository set for
+itself, that a survivor is a finding to explain rather than a number to raise.
+
+### The reading, with the assertions and without them
+
+Both readings are the same command and the same scope; only the two assertions differ. The first was run on the
+tree the fifth record describes, the second on the tree this record describes. On a machine with Visual Studio
+installed, `MSBUILD_EXE_PATH` is set first, as [Running it](#running-it) records.
+
+```powershell
+dotnet stryker --config-file stryker-config.json --project SharpCorePDF.Application.csproj `
+  --mutate "**/PdfContentReaderExtensions.cs" --mutate "**/PdfMergerExtensions.cs" `
+  --output artifacts/mutation/extensions-paramname    # the second run wrote extensions4
+```
+
+| Reading | Mutants | Detected | Undetected | Compile errors | Ignored | Score |
+| --- | --- | --- | --- | --- | --- | --- |
+| fifth, the whitespace path asserted to its `ParamName` | 72 | 39 | 18 | 4 | 11 | 68.42 % |
+| sixth, the two assertions removed | 72 | 37 | 20 | 4 | 11 | 64.91 % |
+
+The two mutants that moved are one statement in two files:
+`ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);` at line 244 of `PdfContentReaderExtensions.cs` —
+inside the `OpenDestination` helper both `Save*` members share — and at line 38 of `PdfMergerExtensions.cs`. Each
+is a `Statement mutation` to `;`, each was `Killed` in the first reading and is `Survived` in the second, and
+nothing else moved: same 72 mutants, same four compile errors, same eleven ignored, and `NoCoverage` stays at
+zero — the two refusal tests still run the guard's line, because what they assert is that the call is refused
+and that no file appears.
+
+`PdfContentReaderExtensions.cs` is now 29 of its 41 scored mutants (70.73 %) and `PdfMergerExtensions.cs` 8 of
+16 (50.00 %), where the fifth record read 30 and 9.
+
+**Correction to the fifth record's command block.** The report that record points at,
+`artifacts/mutation/extensions3`, holds the reading from *before* the assertions were added — 37 detected, 20
+undetected, 64.91 % — so the 68.42 % row had no report on disk to read it back from. Re-running it for this
+record reproduced both numbers exactly: `extensions-paramname` at 68.42 % and `extensions4` at 64.91 %, with the
+two statement mutants flipping between them and nothing else changing. The earlier reading's numbers were right;
+only where to find them was wrong.
+
+### What is left, and why each of the twenty is not a test
+
+The fifth record's table stands unchanged, plus the one statement this record gave back — the refusal's own
+guard, in both files:
+
+| Survivors | Where | Reading |
+| --- | --- | --- |
+| `ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);` deleted | 2: `OpenDestination` in the reader, `MergeToFileAsync` in the merger | not equivalent, and not claimed to be. The call is still refused — `Path.GetFullPath` refuses the same path — and what changes is `ArgumentException.ParamName`: `destinationPath` from the guard, `path` from the framework underneath. The members document the type and not the field, so the assertion that would kill this one pins an implementation choice. Everything the contract does say is still asserted, including that nothing is created |
+
+### What this record did not change
+
+Production code is untouched, and so are the thresholds: `break` stays at 0, `high` and `low` stay at 90 and 80,
+and no `ignore` was added. The two test files lose one assertion each and gain a remark that says where the
+survivor is recorded, so the next reader of a refusal test is not left wondering why its whitespace case looks
+weaker than the null cases above it. The suite is still 1010 tests, green on both legs.
 

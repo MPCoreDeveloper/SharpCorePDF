@@ -186,11 +186,11 @@ public sealed class PdfMergerExtensionsTests
 
     /// <summary>A path that is not a path is refused, and nothing is created from it.</summary>
     /// <remarks>
-    /// The whitespace case is asserted down to <see cref="ArgumentException.ParamName"/>, because the type
-    /// alone does not tell the guard apart: <see cref="Path.GetFullPath(string)"/> refuses a whitespace path
-    /// with an <see cref="ArgumentException"/> of its own. What the guard adds is the <em>name</em> — the
-    /// caller's argument rather than the framework's internal one — and that it refuses before the file
-    /// system is touched at all.
+    /// The whitespace case is asserted to its type alone. <see cref="ArgumentException.ThrowIfNullOrWhiteSpace(string)"/>
+    /// and <see cref="Path.GetFullPath(string)"/> refuse a whitespace path with the same exception, so deleting the
+    /// guard leaves this assertion green; the only thing that changes is <see cref="ArgumentException.ParamName"/>,
+    /// which the member's documentation does not promise. That survivor is recorded in
+    /// <c>docs/mutation-testing.md</c> rather than pinned here.
     /// </remarks>
     [Fact]
     public async Task Refuses_a_destination_path_that_is_not_a_path()
@@ -201,11 +201,8 @@ public sealed class PdfMergerExtensionsTests
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => merger.MergeToFileAsync(plan, null!, token));
         await Assert.ThrowsAsync<ArgumentException>(() => merger.MergeToFileAsync(plan, string.Empty, token));
+        await Assert.ThrowsAsync<ArgumentException>(() => merger.MergeToFileAsync(plan, "   ", token));
 
-        var refusal = await Assert.ThrowsAsync<ArgumentException>(
-            () => merger.MergeToFileAsync(plan, "   ", token));
-
-        Assert.Equal("destinationPath", refusal.ParamName);
         Assert.Null(merger.LastPlan);
     }
 

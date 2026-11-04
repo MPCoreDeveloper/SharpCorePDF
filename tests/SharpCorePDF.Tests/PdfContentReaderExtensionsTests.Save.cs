@@ -96,10 +96,11 @@ public sealed partial class PdfContentReaderExtensionsTests
     /// the caller did not mean, and leaves nothing behind.
     /// </summary>
     /// <remarks>
-    /// The whitespace path is asserted down to <see cref="ArgumentException.ParamName"/>, because the type
-    /// alone would not tell the guard apart: <see cref="Path.GetFullPath(string)"/> refuses a whitespace path
-    /// with an <see cref="ArgumentException"/> of its own. What the guard adds is the name of the caller's
-    /// argument, and that the call is refused before the file system is touched.
+    /// The whitespace case is asserted to its type alone. <see cref="ArgumentException.ThrowIfNullOrWhiteSpace(string)"/>
+    /// and <see cref="Path.GetFullPath(string)"/> refuse a whitespace path with the same exception, so deleting the
+    /// guard leaves this assertion green; the only thing that changes is <see cref="ArgumentException.ParamName"/>,
+    /// which the member's documentation does not promise — it names the argument, not the field it arrives in. That
+    /// survivor is recorded in <c>docs/mutation-testing.md</c> rather than pinned here.
     /// </remarks>
     [Fact]
     public async Task Refuses_a_missing_argument_before_a_file_is_opened()
@@ -119,11 +120,8 @@ public sealed partial class PdfContentReaderExtensionsTests
             () => reader.SaveImageDataAsync(Source, image, null!, cancellationToken: token));
         await Assert.ThrowsAsync<ArgumentException>(
             () => reader.SaveImageDataAsync(Source, image, string.Empty, cancellationToken: token));
-
-        var refusal = await Assert.ThrowsAsync<ArgumentException>(
+        await Assert.ThrowsAsync<ArgumentException>(
             () => reader.SaveImageDataAsync(Source, image, "   ", cancellationToken: token));
-
-        Assert.Equal("destinationPath", refusal.ParamName);
 
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => reader.SaveEmbeddedFileAsync(null!, file, destination, cancellationToken: token));
