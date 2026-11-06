@@ -63,9 +63,33 @@ public sealed partial class PdfPageContentReader
         CancellationToken cancellationToken)
     {
         var reader = await OpenAsync(sourceName, content, password, cancellationToken).ConfigureAwait(false);
+        return ReadGlyphPages(reader, range, cancellationToken);
+    }
+
+    /// <summary>Reads the glyphs of a range from a document that is already open.</summary>
+    /// <param name="reader">The opened document.</param>
+    /// <param name="range">The pages to read.</param>
+    /// <param name="cancellationToken">A token to cancel the read.</param>
+    /// <returns>The glyphs of the range and the boxes of its pages, in ascending page order.</returns>
+    /// <remarks>
+    /// A layout session hands the same reader to every question so the cross-reference table and the object
+    /// cache are paid for once. The walk itself is unchanged from the stream-based overload.
+    /// </remarks>
+    internal static PdfGlyphRead ReadGlyphPages(
+        PdfFileReader reader,
+        PageRange range,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+
         var warnings = new List<PdfWarning>();
         var glyphs = new List<PdfGlyph>();
         var pages = new List<PdfPageBox>();
+
+        // The fonts a resource dictionary names are read once per read, not once per page that inherits
+        // the same dictionary — a 200-page document with one shared resources spells the /ToUnicode maps
+        // and width tables once instead of two hundred times.
+        var fontsCache = new Dictionary<PdfDictionary, Dictionary<string, PdfFont>>(ReferenceEqualityComparer.Instance);
 
         NoteClosedEncryption(reader, warnings);
 
@@ -85,11 +109,11 @@ public sealed partial class PdfPageContentReader
                 continue;
             }
 
-            var collector = new PdfTextCollector(reader, pageNumber, warnings);
+            var collector = new PdfTextCollector(reader, pageNumber, warnings, fontsCache);
 
-            glyphs.AddRange(collector.Collect(pageContent, PageResources(reader, page)));
+            collector.Collect(pageContent, PageResources(reader, page), glyphs);
         }
 
-        return new PdfGlyphRead(Result(reader, glyphs, warnings), pages);
+        return new PdfGlyphRead(ResultOwned(reader, glyphs, warnings), pages);
     }
 }

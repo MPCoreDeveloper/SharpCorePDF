@@ -12,8 +12,13 @@ namespace SharpCorePDF.Infrastructure.Pdf;
 /// </remarks>
 internal sealed class PdfTextOperation
 {
+    // The scan reuses one instance and yields it again and again, so per-operator allocations stay off
+    // the hot path of a page walk. The instance is consumed before the next MoveNext — a foreach over
+    // the scan does exactly that — which is why a mutable, non-copying shape is safe here and nowhere
+    // public: <see cref="PdfTextScanner.Scan"/> is internal to this assembly.
+
     /// <summary>Gets the operator, for example <c>Tj</c>, <c>TJ</c> or <c>Tf</c>.</summary>
-    public required string Operator { get; init; }
+    public string Operator { get; set; } = string.Empty;
 
     /// <summary>Gets the numeric operands, in the order they were written.</summary>
     public List<double> Numbers { get; } = [];
@@ -28,7 +33,7 @@ internal sealed class PdfTextOperation
     /// Gets the items of an array operand — the numbers and strings of a <c>TJ</c> — in the order they
     /// were written, or <see langword="null"/> when the operator takes no array.
     /// </summary>
-    public List<object>? Items { get; init; }
+    public List<object>? Items { get; set; }
 }
 
 /// <summary>
@@ -62,9 +67,10 @@ internal static class PdfTextScanner
     private static IEnumerable<PdfTextOperation> ScanCore(byte[] data)
     {
         var index = 0;
-        var numbers = new List<double>();
-        var strings = new List<byte[]>();
-        var names = new List<string>();
+        var operation = new PdfTextOperation();
+        var numbers = operation.Numbers;
+        var strings = operation.Strings;
+        var names = operation.Names;
         List<object>? items = null;
 
         while (index < data.Length)
@@ -148,18 +154,16 @@ internal static class PdfTextScanner
                 continue;
             }
 
-            var operation = new PdfTextOperation { Operator = keyword, Items = items };
+            operation.Operator = keyword;
+            operation.Items = items;
 
-            operation.Numbers.AddRange(numbers);
-            operation.Strings.AddRange(strings);
-            operation.Names.AddRange(names);
+            yield return operation;
 
             numbers.Clear();
             strings.Clear();
             names.Clear();
             items = null;
-
-            yield return operation;
+            operation.Items = null;
         }
     }
 

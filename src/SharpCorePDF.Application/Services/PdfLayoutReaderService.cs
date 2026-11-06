@@ -13,7 +13,8 @@ namespace SharpCorePDF.Application.Services;
 /// <remarks>
 /// <para>
 /// The class is stateless and thread safe: each call opens its own stream, so two reads of the same source
-/// do not interfere and a read can run beside a merge or an edit of the same file.
+/// do not interfere and a read can run beside a merge or an edit of the same file. A caller that will ask
+/// more than one question about the same document opens a session once and reuses that parse.
 /// </para>
 /// <para>
 /// Nothing is written and nothing is rendered. The reading surface describes what the document states —
@@ -135,6 +136,23 @@ public sealed class PdfLayoutReaderService : IPdfLayoutReader
 
         return await reader
             .ExportAsync(source.DisplayName, content, range, format, destination, rules, password, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IPdfLayoutSession> OpenAsync(
+        IPdfContentSource source,
+        string? password = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        // The session owns the parse. The stream is only needed to fill it: once Open returns, the
+        // session no longer needs the stream, so the source's handle can be released here.
+        await using var content = await source.OpenReadAsync(cancellationToken).ConfigureAwait(false);
+
+        return await reader
+            .OpenAsync(source.DisplayName, content, password, cancellationToken)
             .ConfigureAwait(false);
     }
 }

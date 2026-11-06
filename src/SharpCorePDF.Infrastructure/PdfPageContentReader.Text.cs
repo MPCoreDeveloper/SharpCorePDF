@@ -60,6 +60,7 @@ public sealed partial class PdfPageContentReader
         var reader = await OpenAsync(sourceName, content, password, cancellationToken).ConfigureAwait(false);
         var warnings = new List<PdfWarning>();
         var blocks = new List<PdfTextBlock>();
+        var fontsCache = new Dictionary<PdfDictionary, Dictionary<string, PdfFont>>(ReferenceEqualityComparer.Instance);
 
         NoteClosedEncryption(reader, warnings);
 
@@ -75,7 +76,7 @@ public sealed partial class PdfPageContentReader
                 continue;
             }
 
-            var collector = new PdfTextCollector(reader, pageNumber, warnings);
+            var collector = new PdfTextCollector(reader, pageNumber, warnings, fontsCache);
             var glyphs = collector.Collect(pageContent, PageResources(reader, page));
 
             blocks.AddRange(BuildBlocks(glyphs, pageNumber));

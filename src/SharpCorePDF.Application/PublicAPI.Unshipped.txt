@@ -1,1 +1,3 @@
 #nullable enable
+SharpCorePDF.Application.Ports.IPdfPageLayoutReader.OpenAsync(string! sourceName, System.IO.Stream! content, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.Ports.IPdfLayoutSession!>!
+SharpCorePDF.Application.Services.PdfLayoutReaderService.OpenAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.Ports.IPdfLayoutSession!>!

@@ -1,3 +1,4 @@
+using System.Text;
 using SharpCorePDF.Domain.ReadModels;
 using SharpCorePDF.Domain.ValueObjects;
 
@@ -17,7 +18,9 @@ namespace SharpCorePDF.Infrastructure.Reading.LayoutAnalysis;
 /// </para>
 /// <para>
 /// Every word keeps the letters it was grouped from, so a caller that disagrees with the rule can regroup
-/// from the same read instead of opening the document again.
+/// from the same read instead of opening the document again. The walk groups on glyph geometry alone and a
+/// glyph is read as a letter only once it becomes a member of a word — a skipped space, and the box of a
+/// glyph the word never closes over, never pays for the record.
 /// </para>
 /// </remarks>
 internal static class WordExtractor
@@ -32,16 +35,36 @@ internal static class WordExtractor
         ArgumentNullException.ThrowIfNull(glyphs);
         ArgumentNullException.ThrowIfNull(options);
 
+        var items = glyphs.Items;
         var words = new List<PdfWord>();
 
-        foreach (var page in glyphs.Items.GroupBy(glyph => glyph.PageNumber))
+        if (items.Count == 0)
         {
-            var items = page.Select(glyph => new Item(glyph, LetterExtractor.ToLetter(glyph))).ToList();
-
-            words.AddRange(Group(
-                options.Strategy == PdfWordExtractionStrategy.Raw ? items : InPageOrder(items, options),
-                options));
+            return new()
+            {
+                Items = words,
+                Warnings = glyphs.Warnings,
+            };
         }
+
+        var pageItems = new List<PdfGlyph>(Math.Min(items.Count, 256));
+        var pageNumber = items[0].PageNumber;
+
+        for (var index = 0; index < items.Count; index++)
+        {
+            var glyph = items[index];
+
+            if (glyph.PageNumber != pageNumber)
+            {
+                words.AddRange(GroupPage(pageItems, options));
+                pageItems.Clear();
+                pageNumber = glyph.PageNumber;
+            }
+
+            pageItems.Add(glyph);
+        }
+
+        words.AddRange(GroupPage(pageItems, options));
 
         return new()
         {
@@ -50,186 +73,220 @@ internal static class WordExtractor
         };
     }
 
+    /// <summary>Groups the glyphs of one page into words.</summary>
+    /// <param name="items">The glyphs of one page, in drawing order.</param>
+    /// <param name="options">The order and the distances to group by.</param>
+    /// <returns>The words of the page.</returns>
+    private static List<PdfWord> GroupPage(List<PdfGlyph> items, PdfWordExtractionOptions options)
+    {
+        if (items.Count == 0)
+        {
+            return [];
+        }
+
+        if (options.Strategy != PdfWordExtractionStrategy.Raw)
+        {
+            InPageOrder(items, options);
+        }
+
+        return Group(items, options);
+    }
+
     /// <summary>
-    /// Takes the letters in the order of the page: the top line first, and inside a line the direction the
+    /// Takes the glyphs in the order of the page: the top line first, and inside a line the direction the
     /// line runs in.
     /// </summary>
-    /// <param name="items">The letters of one page, in drawing order.</param>
+    /// <param name="items">The glyphs of one page, in drawing order; reordered in place.</param>
     /// <param name="options">The rules, whose vertical gap decides where one line ends and the next begins.</param>
-    /// <returns>The letters of the page, ordered for reading.</returns>
     /// <remarks>
-    /// A run of letters that share a baseline is reversed when most of it runs right to left, so that a
+    /// A run of glyphs that share a baseline is reversed when most of it runs right to left, so that a
     /// right-to-left word is read in its own direction rather than mirrored. The sort itself is by
     /// descending baseline and then ascending x, which is the page's order for the scripts that write the
     /// other way round as well.
     /// </remarks>
-    private static List<Item> InPageOrder(List<Item> items, PdfWordExtractionOptions options)
+    private static void InPageOrder(List<PdfGlyph> items, PdfWordExtractionOptions options)
     {
-        var ordered = items
-            .OrderByDescending(item => item.Letter.StartBaseLine.Y)
-            .ThenBy(item => item.Letter.StartBaseLine.X)
-            .ToList();
+        items.Sort(static (left, right) =>
+        {
+            var byY = right.Y.CompareTo(left.Y);
 
-        for (var start = 0; start < ordered.Count;)
+            return byY != 0
+                ? byY
+                : left.X.CompareTo(right.X);
+        });
+
+        for (var start = 0; start < items.Count;)
         {
             var end = start + 1;
-            var baseline = ordered[start].Letter.StartBaseLine.Y;
-            var size = Math.Max(ordered[start].Letter.FontSize, 1d);
 
-            while (end < ordered.Count
-                && Math.Abs(ordered[end].Letter.StartBaseLine.Y - baseline) <= size * options.MaxVerticalGap)
+            while (end < items.Count && SameLine(items[start], items[end], options))
             {
                 end++;
             }
 
-            if (RunsRightToLeft(ordered, start, end))
+            if (RunsRightToLeft(items, start, end))
             {
-                ordered.Reverse(start, end - start);
+                items.Reverse(start, end - start);
             }
 
             start = end;
         }
-
-        return ordered;
     }
 
-    /// <summary>Decides whether most of a run of letters on one baseline runs right to left.</summary>
-    /// <param name="items">The letters of the page.</param>
-    /// <param name="start">The index of the first letter of the run.</param>
-    /// <param name="end">The index one past the last letter of the run.</param>
-    /// <returns><see langword="true"/> when the run reads right to left.</returns>
-    private static bool RunsRightToLeft(List<Item> items, int start, int end)
+    /// <summary>Decides whether two glyphs sit on the same line of the page.</summary>
+    /// <param name="first">The first glyph of the line so far.</param>
+    /// <param name="next">The glyph being considered.</param>
+    /// <param name="options">The rules, whose vertical gap is the line tolerance.</param>
+    /// <returns><see langword="true"/> when the glyphs share a baseline within the allowance.</returns>
+    private static bool SameLine(PdfGlyph first, PdfGlyph next, PdfWordExtractionOptions options)
     {
-        var rightToLeft = 0;
-        var leftToRight = 0;
+        var size = Math.Max(first.FontSize, next.FontSize);
+
+        return size > 0d
+            && Math.Abs(next.Y - first.Y) <= size * options.MaxVerticalGap;
+    }
+
+    /// <summary>Decides whether a run of glyphs on one baseline mostly advances right to left.</summary>
+    /// <param name="items">The glyphs of the page.</param>
+    /// <param name="start">The inclusive start of the run.</param>
+    /// <param name="end">The exclusive end of the run.</param>
+    /// <returns><see langword="true"/> when more of the run advances to the left than to the right.</returns>
+    private static bool RunsRightToLeft(List<PdfGlyph> items, int start, int end)
+    {
+        var left = 0;
+        var right = 0;
 
         for (var index = start; index < end; index++)
         {
-            if (items[index].Letter.IsWhitespace)
+            // A letter runs right to left exactly when its end baseline point sits left of its start, which
+            // for a glyph is a negative advance; see PdfLetter.TextDirection.
+            if (items[index].Width < 0d)
             {
-                continue;
-            }
-
-            if (items[index].Letter.TextDirection == PdfTextDirection.RightToLeft)
-            {
-                rightToLeft++;
+                left++;
             }
             else
             {
-                leftToRight++;
+                right++;
             }
         }
 
-        return rightToLeft > leftToRight;
+        return left > right;
     }
 
-    /// <summary>Groups one page's letters into words.</summary>
-    /// <param name="items">The letters of the page, in the order the strategy selected.</param>
+    /// <summary>Groups a sequence of glyphs into words by the gap and baseline rules.</summary>
+    /// <param name="items">The glyphs of one page, in the order the strategy selected.</param>
     /// <param name="options">The rules to group by.</param>
     /// <returns>The words, in the same order.</returns>
-    private static List<PdfWord> Group(List<Item> items, PdfWordExtractionOptions options)
+    private static List<PdfWord> Group(List<PdfGlyph> items, PdfWordExtractionOptions options)
     {
         var words = new List<PdfWord>();
-        var run = new List<Item>();
+        var runStart = 0;
 
-        foreach (var item in items)
+        for (var index = 0; index < items.Count; index++)
         {
-            if (item.Letter.IsWhitespace)
+            var glyph = items[index];
+
+            if (glyph.IsWhitespace)
             {
-                // A white space ends the word it follows. When the caller asked for whitespace it stays in
-                // that word, which is what makes concatenating the words of a page reproduce its text.
-                if (options.IncludeWhitespace && run.Count > 0)
+                if (options.IncludeWhitespace && index > runStart)
                 {
-                    run.Add(item);
+                    AddWord(items, runStart, index + 1, words);
+                }
+                else if (index > runStart)
+                {
+                    AddWord(items, runStart, index, words);
                 }
 
-                AddWord(run, words);
+                runStart = index + 1;
                 continue;
             }
 
-            if (run.Count > 0 && !Continues(run[^1].Letter, item.Letter, options))
+            if (index > runStart && !Continues(items[index - 1], glyph, options))
             {
-                AddWord(run, words);
+                AddWord(items, runStart, index, words);
+                runStart = index;
             }
-
-            run.Add(item);
         }
 
-        AddWord(run, words);
+        AddWord(items, runStart, items.Count, words);
 
         return words;
     }
 
-    /// <summary>Adds the letters collected so far as a word and clears the collection.</summary>
-    /// <param name="run">The letters of the word.</param>
+    /// <summary>Adds the glyphs of one run as a word.</summary>
+    /// <param name="items">The glyphs of the page.</param>
+    /// <param name="start">The inclusive start of the run; smaller than <paramref name="end"/> on entry.</param>
+    /// <param name="end">The exclusive end of the run.</param>
     /// <param name="words">The list that receives the word.</param>
-    private static void AddWord(List<Item> run, List<PdfWord> words)
+    /// <remarks>
+    /// The text and the box are read straight off the glyphs: the box edges are the minimum and maximum of
+    /// each glyph's two baseline points and the usual ascender and descender of the em, which is exactly
+    /// what <see cref="PdfLetter.BoundingBox"/> says — one rectangle per word rather than one per glyph.
+    /// </remarks>
+    private static void AddWord(List<PdfGlyph> items, int start, int end, List<PdfWord> words)
     {
-        if (run.Count == 0)
+        var count = end - start;
+
+        if (count == 0)
         {
             return;
         }
 
-        words.Add(new PdfWord
-        {
-            Text = string.Concat(run.Select(item => item.Letter.Value)),
-            PageNumber = run[0].Letter.PageNumber,
-            BoundingBox = Union(run.Select(item => item.Letter.BoundingBox)),
-            Glyphs = [.. run.Select(item => item.Glyph)],
-            Letters = [.. run.Select(item => item.Letter)],
-        });
-
-        run.Clear();
-    }
-
-    /// <summary>Decides whether a letter continues the word its predecessor began.</summary>
-    /// <param name="previous">The last letter of the word so far.</param>
-    /// <param name="next">The letter being placed.</param>
-    /// <param name="options">The rules to group by.</param>
-    /// <returns><see langword="true"/> when the letter belongs to the same word.</returns>
-    private static bool Continues(PdfLetter previous, PdfLetter next, PdfWordExtractionOptions options)
-    {
-        var size = Math.Max(previous.FontSize, next.FontSize);
-
-        if (size <= 0d || Math.Abs(next.StartBaseLine.Y - previous.StartBaseLine.Y) > size * options.MaxVerticalGap)
-        {
-            return false;
-        }
-
-        var gap = next.StartBaseLine.X - previous.EndBaseLine.X;
-        var allowance = size * options.MaxHorizontalGap;
-
-        // A gap wider than the allowance is a space. A letter that starts before the previous one ends is
-        // either a kerned pair, which overlaps by a hair, or the start of a new column on the same baseline,
-        // which overlaps by most of a word; the overlap is bounded for that.
-        return gap <= allowance && -gap <= Math.Abs(previous.Width) + allowance;
-    }
-
-    /// <summary>Finds the smallest rectangle that encloses the ones given.</summary>
-    /// <param name="rectangles">The rectangles to enclose; never empty in the calls made here.</param>
-    /// <returns>The enclosing rectangle, or an empty one at the origin when nothing was given.</returns>
-    private static PdfRectangle Union(IEnumerable<PdfRectangle> rectangles)
-    {
+        var letters = new PdfLetter[count];
+        var glyphs = new PdfGlyph[count];
+        var text = new StringBuilder(count);
         var left = double.PositiveInfinity;
         var bottom = double.PositiveInfinity;
         var right = double.NegativeInfinity;
         var top = double.NegativeInfinity;
 
-        foreach (var rectangle in rectangles)
+        for (var index = start; index < end; index++)
         {
-            left = Math.Min(left, rectangle.Left);
-            bottom = Math.Min(bottom, rectangle.Bottom);
-            right = Math.Max(right, rectangle.Right);
-            top = Math.Max(top, rectangle.Top);
+            var glyph = items[index];
+
+            letters[index - start] = LetterExtractor.ToLetter(glyph);
+            glyphs[index - start] = glyph;
+            text.Append(glyph.Text);
+
+            var near = Math.Min(glyph.X, glyph.X + glyph.Width);
+            var far = Math.Max(glyph.X, glyph.X + glyph.Width);
+
+            left = Math.Min(left, near);
+            right = Math.Max(right, far);
+            bottom = Math.Min(bottom, glyph.Y - (glyph.FontSize * 0.2d));
+            top = Math.Max(top, glyph.Y + (glyph.FontSize * 0.8d));
         }
 
-        return double.IsFinite(left)
-            ? PdfRectangle.FromCorners(left, bottom, right, top)
-            : new PdfRectangle(0d, 0d, 0d, 0d);
+        words.Add(new PdfWord
+        {
+            Text = text.ToString(),
+            PageNumber = items[start].PageNumber,
+            BoundingBox = PdfRectangle.FromCorners(left, bottom, right, top),
+            Glyphs = glyphs,
+            Letters = letters,
+        });
     }
 
-    /// <summary>One glyph and the letter it was read as, kept together so a word can carry both.</summary>
-    /// <param name="Glyph">The glyph of the content stream.</param>
-    /// <param name="Letter">The letter the glyph was projected into.</param>
-    private readonly record struct Item(PdfGlyph Glyph, PdfLetter Letter);
+    /// <summary>Decides whether a glyph continues the word its predecessor began.</summary>
+    /// <param name="previous">The last glyph of the word so far.</param>
+    /// <param name="next">The glyph being placed.</param>
+    /// <param name="options">The rules to group by.</param>
+    /// <returns><see langword="true"/> when the glyph belongs to the same word.</returns>
+    private static bool Continues(PdfGlyph previous, PdfGlyph next, PdfWordExtractionOptions options)
+    {
+        var size = Math.Max(previous.FontSize, next.FontSize);
+
+        if (size <= 0d || Math.Abs(next.Y - previous.Y) > size * options.MaxVerticalGap)
+        {
+            return false;
+        }
+
+        var gap = next.X - (previous.X + previous.Width);
+        var allowance = size * options.MaxHorizontalGap;
+
+        // A gap wider than the allowance is a space. A glyph that starts before the previous one ends is
+        // either a kerned pair, which overlaps by a hair, or the start of a new column on the same baseline,
+        // which overlaps by most of a word; the overlap is bounded for that.
+        return gap <= allowance && -gap <= Math.Abs(previous.Width) + allowance;
+    }
 }

@@ -39,7 +39,7 @@ public sealed class PdfByteArraySource : IPdfContentSource
     public ValueTask<Stream> OpenReadAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return new ValueTask<Stream>(new MemoryStream(bytes, writable: false));
+        return new ValueTask<Stream>(new MemoryStream(bytes, 0, bytes.Length, writable: false, publiclyVisible: true));
     }
 
     /// <summary>Formats the source as its display name followed by its size.</summary>
@@ -145,7 +145,7 @@ public sealed class PdfStreamSource : IPdfContentSource
                 continue;
             }
 
-            return new MemoryStream(bytes, writable: false);
+            return new MemoryStream(bytes, 0, bytes.Length, writable: false, publiclyVisible: true);
         }
     }
 

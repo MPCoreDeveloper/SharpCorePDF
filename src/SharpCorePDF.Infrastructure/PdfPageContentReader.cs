@@ -107,6 +107,26 @@ public sealed partial class PdfPageContentReader : IPdfPageContentReader
             Warnings = [.. reader.Warnings, .. warnings],
         };
 
+    /// <summary>Builds a result over a list the caller will not touch again, without copying it.</summary>
+    /// <typeparam name="T">The type of the items.</typeparam>
+    /// <param name="reader">The document, whose own remarks are folded in.</param>
+    /// <param name="items">The items that were read, handed over as they are.</param>
+    /// <param name="warnings">The remarks made while reading.</param>
+    /// <returns>The result.</returns>
+    /// <remarks>
+    /// <see cref="Result{T}"/> defends its input; this one takes ownership of it. The glyph walk of a
+    /// layout read is the caller: its list is built here, passed here and never enumerated twice, so a
+    /// 69,492-entry copy is a cost with nothing to defend.
+    /// </remarks>
+    internal static PdfReadResult<T> ResultOwned<T>(
+        PdfFileReader reader,
+        List<T> items,
+        List<PdfWarning> warnings) => new()
+        {
+            Items = items,
+            Warnings = [.. reader.Warnings, .. warnings],
+        };
+
     /// <summary>Reads the resources of a page, which it may inherit from its ancestors.</summary>
     /// <param name="reader">The document.</param>
     /// <param name="page">The page.</param>

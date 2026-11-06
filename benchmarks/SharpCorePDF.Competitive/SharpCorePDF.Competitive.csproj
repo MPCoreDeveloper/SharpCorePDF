@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <!--
+    Deliberately outside SharpCorePDF.slnx and the test suite. These packages are comparison subjects,
+    never product or test dependencies. See THIRD-PARTY.md before redistributing this harness.
+  -->
+  <ItemGroup>
+    <PackageReference Include="PdfPig" Version="0.1.16" />
+    <PackageReference Include="PDFsharp" Version="6.5.0" />
+    <!-- PDFsharp 6.5.0 requests Pkcs 8.0.1, which NuGet flags. This benchmark-only override selects
+         the current net10 servicing package; signing is not one of the comparison scenarios. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpCorePDF.Domain\SharpCorePDF.Domain.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.Application\SharpCorePDF.Application.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.Infrastructure\SharpCorePDF.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reuse the exact deterministic 200-page fixture, not a second generator that could drift. -->
+    <Compile Include="..\..\tools\SharpCorePDF.Measure\ContentFixtures.cs" Link="ContentFixtures.cs" />
+  </ItemGroup>
+</Project>

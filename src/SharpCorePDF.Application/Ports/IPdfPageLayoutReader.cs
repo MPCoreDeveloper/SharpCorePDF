@@ -115,4 +115,20 @@ public interface IPdfPageLayoutReader
         PdfLayoutOptions? options = null,
         string? password = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Opens a document for several layout reads without paying the open cost again.</summary>
+    /// <param name="sourceName">The name of the source, used in diagnostics.</param>
+    /// <param name="content">A readable stream positioned at the start of the document.</param>
+    /// <param name="password">The user or owner password, when the document is encrypted.</param>
+    /// <param name="cancellationToken">A token to cancel the open.</param>
+    /// <returns>A session that answers every layout question from the same parse.</returns>
+    /// <remarks>
+    /// The stream is read into the session and is not disposed. Dispose the session when the questions
+    /// are done; nothing here keeps the stream open after the open returns.
+    /// </remarks>
+    Task<Domain.Ports.IPdfLayoutSession> OpenAsync(
+        string sourceName,
+        Stream content,
+        string? password = null,
+        CancellationToken cancellationToken = default);
 }

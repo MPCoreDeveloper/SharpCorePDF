@@ -144,12 +144,12 @@ await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
       .AddFile(@"C:\reports\statement.pdf");
   ```
 
-  It is authoring for fixed-position content, not a page-flow engine: no tables, page breaks, columns or
-  JPEG images, and vector drawing is shapes placed at coordinates rather than a scene graph. A paragraph
+  It is authoring for fixed-position content, not a page-flow engine: no tables, page breaks or columns,
+  and vector drawing is shapes placed at coordinates rather than a scene graph. Images are PNG, JPEG, BMP
+  and GIF (with the refusals `docs/parity.md` names). A paragraph
   does wrap and align inside a fixed box — `PdfTextLayouter.Layout` measures with the face's own data and
   hands `DrawTextLayout` the lines to draw. Chapter 15 covers the shape surface — paths, fill and stroke,
-  dashes, clipping, transforms and the saved graphics state — and Chapter 16 covers measuring and wrapping,
-  which `1.2` adds to the surface this section describes. The
+  dashes, clipping, transforms and the saved graphics state — and Chapter 16 covers measuring and wrapping. The
   `author-page` and `draw-shapes` scenarios in `examples/` show both: one writes a cover and merges it in
   front of a document, the other draws a clipped, dashed, rotated page from nothing.
 * **An existing document can be edited into a new one.** `IPdfDocumentEditor` applies an immutable

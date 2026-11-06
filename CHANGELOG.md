@@ -20,10 +20,65 @@ against an empty feed.
 
 ## [Unreleased]
 
-Nothing yet. `1.4.0` is on the feed: the five packages were pushed by `publish.yml` from tag `v1.4.0` on
-2026-11-04, and the entry below it is the version that was released.
+### Added
+
+- **A convention-free box overlap column in the competitive scorer.** The labelled scoring now reports
+  intersection-over-union per matched character beside the label-convention agreement, so a coordinate
+  convention and a miss are distinguishable: on the current corpus PdfPig scores 0% against the label
+  baseline boxes but 40.83% under IoU while SharpCorePDF scores 100% on both. Alternates are measurable
+  too: `text-200-all-nearest-neighbour-alt` is a named opt-in row per adapter, and the external
+  robustness leg accepts a SHA-256 manifest (`--robustness-lock`, written once with
+  `--write-robustness-lock`) that reports a changed file as `LockMismatch` without opening it. Harness
+  only — no product package changed. See `docs/competitive-scoreboard.md`.
+
+- **A reusable layout session.** `IPdfLayoutReader.OpenAsync` returns an `IPdfLayoutSession` that keeps one
+  parse open across letters, words, blocks, hyperlinks and exports. One-shot members are unchanged. The
+  competitive harness measures cold extract and a named `text-200-all-warm` row so session reuse is visible
+  beside PdfPig's single open.
+
+- **A competitive measurement harness, outside the product packages.**
+  `benchmarks/SharpCorePDF.Competitive` restores pinned PdfPig 0.1.16 and PDFsharp 6.5.0 behind a
+  separate solution and lock file, never referenced by `SharpCorePDF.slnx`, `src/` or the unit tests.
+  It scores labelled extraction, timed text/create/merge scenarios with equal-work summaries, optional
+  local-corpus robustness, and captured writer output for `validate-pdf.py`. Methodology and the first
+  local baseline live in `docs/competitive-scoreboard.md`; licence notes are in
+  `benchmarks/SharpCorePDF.Competitive/THIRD-PARTY.md`. Reports are gitignored under
+  `artifacts/competitive/`.
+
+### Changed
+
+- **The glyph walk no longer copies its own output.** Pages append straight into the read's glyph list
+  (no per-page list plus `AddRange`), and the result of a glyph walk is handed over as built instead of
+  being copied into a defensive list. Extract allocations fell again (36 → 34 MB on the competitive
+  fixture, ~36% below PdfPig); warm full-document extract is within ~1.2× of PdfPig in the latest run —
+  `docs/competitive-scoreboard.md` keeps the run-to-run variance note.
+
+- **Word grouping no longer materialises a letter and a rectangle per glyph on the way to a word.**
+  `WordExtractor` groups on glyph geometry and reads as a letter only what lands in a word; the word box
+  comes straight off the baseline points. One-byte fonts resolve widths through a table lookup instead of
+  a dictionary hit per code. Competitive cold extract: ~146 → ~110 ms median; allocations on extract are
+  now ~33% below PdfPig while PdfPig still leads that wall-time row — see `docs/competitive-scoreboard.md`.
+
+- **Font state and the text scan are no longer rebuilt per operator or per page.** The fonts a resource
+  dictionary names are read once per read — a 200-page document with one shared resources entry decodes its
+  /ToUnicode maps and width tables once instead of 200 times — and `PdfTextScanner` yields a single reused
+  operation instance instead of allocating one object and three lists per operator. Median cold extract time
+  on the competitive fixture moved again (467 → ~146 ms across slices); PdfPig still leads that row.
+
+- **Cold text extraction no longer copies an in-memory source before the page walk.** When the stream is a
+  `MemoryStream` that already owns the whole document array (the shape `PdfByteArraySource` hands in),
+  `PdfByteReader` uses those bytes as they are. `WordExtractor` groups pages with a linear scan and an
+  in-place page-order sort instead of LINQ `GroupBy`/`OrderBy`, and builds each word without per-glyph
+  `Select` allocations. On the competitive 200-page cold extract (2 warm-ups / 5 iterations, this machine)
+  median wall time dropped about 3× versus the prior smoke baseline while work counts stayed equal;
+  PdfPig still leads that full-document row, and the warm session row still trails — see
+  `docs/competitive-scoreboard.md`.
+
+- **The README authoring summary no longer denies JPEG.** PNG, JPEG, BMP and GIF are the image formats
+  the surface accepts, with the refusals already named in `docs/parity.md`.
 
 ## [1.4.0] - 2026-11-04
+
 
 ### Added
 

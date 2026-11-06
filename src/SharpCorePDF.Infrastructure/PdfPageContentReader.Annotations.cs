@@ -19,6 +19,17 @@ public sealed partial class PdfPageContentReader
         CancellationToken cancellationToken = default)
     {
         var reader = await OpenAsync(sourceName, content, password, cancellationToken).ConfigureAwait(false);
+        return ReadAnnotations(reader, range);
+    }
+
+    /// <summary>Reads the annotations of a range from a document that is already open.</summary>
+    /// <param name="reader">The opened document.</param>
+    /// <param name="range">The pages to read.</param>
+    /// <returns>The annotations of the range.</returns>
+    internal static PdfReadResult<PdfAnnotationInfo> ReadAnnotations(PdfFileReader reader, PageRange range)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+
         var warnings = new List<PdfWarning>();
 
         NoteClosedEncryption(reader, warnings);

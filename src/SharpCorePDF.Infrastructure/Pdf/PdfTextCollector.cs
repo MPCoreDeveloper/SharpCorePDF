@@ -34,7 +34,12 @@ internal sealed class PdfTextCollector
     private readonly PdfFileReader reader;
     private readonly int pageNumber;
     private readonly List<PdfWarning> warnings;
+    private readonly Dictionary<PdfDictionary, Dictionary<string, PdfFont>>? fontCache;
     private readonly List<PdfGlyph> glyphs = [];
+
+    // The list the current Collect fills: the collector's own, or a caller-owned one when a read walks
+    // several pages and would rather not copy each page's glyphs into the shared list afterwards.
+    private List<PdfGlyph> sink = [];
     private readonly HashSet<string> reported = new(StringComparer.Ordinal);
     private readonly HashSet<long> formsInProgress = [];
 
@@ -42,24 +47,42 @@ internal sealed class PdfTextCollector
     /// <param name="reader">The document.</param>
     /// <param name="pageNumber">The one-based number of the page being read.</param>
     /// <param name="warnings">The list that receives a remark per font that could not be read.</param>
-    public PdfTextCollector(PdfFileReader reader, int pageNumber, List<PdfWarning> warnings)
+    /// <param name="fontCache">
+    /// The fonts already read for a resource dictionary of this document, shared over the pages of one
+    /// read, or <see langword="null"/> to read every page's fonts afresh. A caller that walks several
+    /// pages of one open document passes a shared cache so the /ToUnicode map and the width table of a
+    /// shared font are read once for the read rather than once per page.
+    /// </param>
+    public PdfTextCollector(
+        PdfFileReader reader,
+        int pageNumber,
+        List<PdfWarning> warnings,
+        Dictionary<PdfDictionary, Dictionary<string, PdfFont>>? fontCache = null)
     {
         this.reader = reader;
         this.pageNumber = pageNumber;
         this.warnings = warnings;
+        this.fontCache = fontCache;
     }
 
     /// <summary>Collects the glyphs a page's content draws.</summary>
     /// <param name="content">The decoded content of the page, its streams concatenated.</param>
     /// <param name="resources">The resources in scope, which may be <see langword="null"/>.</param>
-    /// <returns>The glyphs, in drawing order.</returns>
-    public List<PdfGlyph> Collect(byte[] content, PdfDictionary? resources)
+    /// <param name="target">
+    /// The list that receives the glyphs, or <see langword="null"/> for the collector's own list. A read
+    /// that walks several pages of one open document passes the list of the whole read, so the glyphs of
+    /// page two do not travel through a per-page list and an <c>AddRange</c> on the way.
+    /// </param>
+    /// <returns>The list the glyphs were added to, in drawing order.</returns>
+    public List<PdfGlyph> Collect(byte[] content, PdfDictionary? resources, List<PdfGlyph>? target = null)
     {
         ArgumentNullException.ThrowIfNull(content);
 
+        sink = target ?? glyphs;
+
         Walk(content, resources, PdfMatrix.Identity, 0);
 
-        return glyphs;
+        return sink;
     }
 
     /// <summary>Walks one content stream, and every form it paints.</summary>
@@ -78,7 +101,7 @@ internal sealed class PdfTextCollector
         int depth,
         TextState? inherited = null)
     {
-        var fonts = PdfFontDecoder.Load(reader, resources);
+        var fonts = LoadFonts(reader, resources);
         var saved = new Stack<(PdfMatrix PageTransform, TextState Text)>();
         var state = inherited?.Copy() ?? new TextState();
 
@@ -181,6 +204,32 @@ internal sealed class PdfTextCollector
         }
     }
 
+    /// <summary>Reads the fonts of a resource dictionary, reusing the read of a dictionary seen before.</summary>
+    /// <param name="reader">The document.</param>
+    /// <param name="resources">The resources in scope.</param>
+    /// <returns>The fonts the dictionary names.</returns>
+    /// <remarks>
+    /// Pages of one document usually inherit the same resource dictionary, and a form usually inherits
+    /// its page's, so the same resolved dictionary comes back page after page. The cache is keyed by
+    /// that instance: a font table is built where it is read, not where it is shared from.
+    /// </remarks>
+    private Dictionary<string, PdfFont> LoadFonts(PdfFileReader reader, PdfDictionary? resources)
+    {
+        if (resources is null || fontCache is null)
+        {
+            return PdfFontDecoder.Load(reader, resources);
+        }
+
+        if (!fontCache.TryGetValue(resources, out var fonts))
+        {
+        
+            fonts = PdfFontDecoder.Load(reader, resources);
+            fontCache[resources] = fonts;
+        }
+
+        return fonts;
+    }
+
     /// <summary>Moves to the start of the next line, as <c>T*</c> and the quote operators do.</summary>
     /// <param name="state">The text state to move.</param>
     private static void NextLine(TextState state)
@@ -232,7 +281,7 @@ internal sealed class PdfTextCollector
             {
                 var (x, y) = ToPage(state.PageTransform, state.TextMatrix, 0d, state.Rise);
 
-                glyphs.Add(new PdfGlyph
+                sink.Add(new PdfGlyph
                 {
                     Text = text,
                     PageNumber = pageNumber,

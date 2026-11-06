@@ -1,0 +1,7 @@
+<Solution>
+  <!--
+    A separate restore/build boundary. Do not add this project to SharpCorePDF.slnx: PdfPig and
+    PDFsharp are comparison subjects, not dependencies of the product, its tests or its examples.
+  -->
+  <Project Path="SharpCorePDF.Competitive/SharpCorePDF.Competitive.csproj" />
+</Solution>

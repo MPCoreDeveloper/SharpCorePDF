@@ -24,6 +24,11 @@ internal sealed class PdfFont
 {
     private readonly Dictionary<int, double> widths;
 
+    /// <summary>The widths of a one-byte font laid out by code, or <see langword="null"/> for a composite
+    /// font or one with no width table of its own: the hot path of a page walk indexes this array instead
+    /// of hashing every code it decodes.</summary>
+    private readonly double[]? widthTable;
+
     /// <summary>Initializes a new instance of the <see cref="PdfFont"/> class.</summary>
     /// <param name="resourceName">The name the resources give the font, without the leading slash.</param>
     /// <param name="baseFont">The base font the font dictionary states.</param>
@@ -57,6 +62,22 @@ internal sealed class PdfFont
         Encoding = encoding;
         this.widths = widths;
         FailureReason = failureReason;
+
+        if (codeLength == 1 && widths.Count > 0)
+        {
+            var table = new double[256];
+            Array.Fill(table, defaultWidth);
+
+            foreach (var (code, width) in widths)
+            {
+                if (code is >= 0 and < 256)
+                {
+                    table[code] = width;
+                }
+            }
+
+            widthTable = table;
+        }
     }
 
     /// <summary>Gets the name the resources give the font, without the leading slash.</summary>
@@ -111,18 +132,32 @@ internal sealed class PdfFont
             return false;
         }
 
-        var length = Math.Min(CodeLength, bytes.Length - offset);
-        var code = 0;
+        int code;
 
-        for (var index = 0; index < length; index++)
+        if (widthTable is not null)
         {
-            code = (code << 8) | bytes[offset + index];
+            // A one-byte font with a width table of its own: the common case of a simple font on an
+            // ordinary page, and the case a hot walk should not hash for every glyph it places.
+            code = bytes[offset];
+            consumed = 1;
+            width = widthTable[code];
+        }
+        else
+        {
+            var length = Math.Min(CodeLength, bytes.Length - offset);
+
+            code = 0;
+
+            for (var index = 0; index < length; index++)
+            {
+                code = (code << 8) | bytes[offset + index];
+            }
+
+            consumed = length;
+            width = widths.TryGetValue(code, out var stated) ? stated : DefaultWidth;
         }
 
-        consumed = length;
-        width = widths.TryGetValue(code, out var stated) ? stated : DefaultWidth;
-
-        if (FailureReason is not null || length < CodeLength)
+        if (FailureReason is not null || consumed < CodeLength)
         {
             return false;
         }

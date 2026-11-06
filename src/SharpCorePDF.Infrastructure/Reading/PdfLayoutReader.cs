@@ -1,4 +1,5 @@
 using SharpCorePDF.Application.Ports;
+using SharpCorePDF.Domain.Ports;
 using SharpCorePDF.Domain.ReadModels;
 using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure.Reading.Exporters;
@@ -21,7 +22,8 @@ namespace SharpCorePDF.Infrastructure.Reading;
 /// </para>
 /// <para>
 /// Nothing here writes, renders or decodes an image; the object is stateless and can be shared between
-/// threads, because each call opens its own read of the stream it is given.
+/// threads, because each call opens its own read of the stream it is given. A caller that will ask more
+/// than one question about the same document opens a session instead and reuses that parse.
 /// </para>
 /// </remarks>
 public sealed class PdfLayoutReader : IPdfPageLayoutReader
@@ -123,5 +125,16 @@ public sealed class PdfLayoutReader : IPdfPageLayoutReader
         LayoutExportWriter.Write(blocks, read.Pages, format, destination);
 
         return blocks;
+    }
+
+    /// <inheritdoc />
+    public async Task<IPdfLayoutSession> OpenAsync(
+        string sourceName,
+        Stream content,
+        string? password = null,
+        CancellationToken cancellationToken = default)
+    {
+        var document = await reader.OpenAsync(sourceName, content, password, cancellationToken).ConfigureAwait(false);
+        return new PdfLayoutSession(document);
     }
 }

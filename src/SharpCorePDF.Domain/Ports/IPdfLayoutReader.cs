@@ -185,4 +185,28 @@ public interface IPdfLayoutReader
         PdfLayoutOptions? options = null,
         string? password = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Opens a document for several layout reads without paying the open cost again.</summary>
+    /// <param name="source">The content to read.</param>
+    /// <param name="password">The user or owner password, when the document is encrypted.</param>
+    /// <param name="cancellationToken">A token to cancel the open.</param>
+    /// <returns>A session that answers letters, words, blocks, links and exports from the same parse.</returns>
+    /// <remarks>
+    /// <para>
+    /// A one-shot read opens the source, answers and forgets the parse. A session is the same answers
+    /// for a caller that already knows it will ask more than once — letters of one range, then words of
+    /// another, then an export — without reading the cross-reference table again. Dispose the session
+    /// when the questions are done; the content source is not disposed with it.
+    /// </para>
+    /// <para>
+    /// A session is not thread-safe. Open a second session for a second concurrent reader of the same
+    /// source.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="Exceptions.PdfSourceFormatException">The content is not a readable PDF document.</exception>
+    Task<IPdfLayoutSession> OpenAsync(
+        IPdfContentSource source,
+        string? password = null,
+        CancellationToken cancellationToken = default);
 }

@@ -84,6 +84,7 @@ page, running footer and bookmarks stay in step.
 | [`migration/pdfsharp.md`](migration/pdfsharp.md) | Moving from PDFsharp/PdfSharpCore: the substitution table, what does not survive the move, and the parity rows that are not covered yet. |
 | [`migration/pdfpig.md`](migration/pdfpig.md) | Moving from PdfPig/UglyToad: pages are selected rather than enumerated, `password:` on every call, and a refused resource is a warning rather than a throw. |
 | [`parity.md`](parity.md) | The 1.1 capability scorecard: reference behaviour, SharpCorePDF outcome, owner, named test and external validation command for every “Must” row. |
+| [`competitive-scoreboard.md`](competitive-scoreboard.md) | How to measure against pinned PdfPig and PDFsharp builds without shipping them: harness boundary, scenarios, label conventions, and the current local baseline. |
 | [`parity/README.md`](parity/README.md) | The fixture corpus: manifest, provenance, licence, regeneration command and the integrity test. |
 | [`api/1.1-api-review.md`](api/1.1-api-review.md) | The Phase 0 API review: placement, immutability, naming, dependency and platform rules for the 1.1 surface. |
 | [`measurements.md`](measurements.md) | The recorded cost of a merge, of a content read and of writing a page — allocations, wall time, throughput, retained heap and output bytes — and the performance and memory budgets they are read against. |
