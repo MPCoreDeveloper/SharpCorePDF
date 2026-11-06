@@ -186,8 +186,47 @@ public sealed partial class PdfLayoutReaderTests
     }
 
     /// <summary>
-    /// A letter whose end sits to the left of its start runs right to left, and its width is negative: the
-    /// direction is derived from the baseline, not from the character.
+    /// A Type1 font that states no <c>/Encoding</c> and no <c>/ToUnicode</c> is read through the encoding
+    /// its own program declares: the document states what each code means only there, which is the shape a
+    /// pdfTeX subset of a Computer Modern math font has.
+    /// </summary>
+    /// <remarks>
+    /// The fixture's program maps 65 to <c>A</c>, 66 to <c>B</c> and 200 to a bullet; 200 is outside what
+    /// <c>StandardEncoding</c> says the code means, so a read that fell back on the specification's default
+    /// would lose the bullet and report the font as unmapped.
+    /// </remarks>
+    [Fact]
+    public async Task Reads_a_Type1_font_through_the_encoding_its_program_states()
+    {
+        var source = Source(PdfContentFixtures.TextType1BuiltInEncoding(), "type1.pdf");
+
+        var result = await Reader().ReadLettersAsync(source, PageRange.All, cancellationToken: Token);
+
+        Assert.Equal(["A", "B", "\u2022"], result.Items.Select(letter => letter.Value));
+        Assert.Empty(result.Warnings);
+    }
+
+    /// <summary>
+    /// A Type1 font's program states its encoding only when the document states none: a font dictionary that
+    /// carries <c>/WinAnsiEncoding</c> keeps it, and the code the two disagree about is read the way the
+    /// document says.
+    /// </summary>
+    [Fact]
+    public async Task Keeps_the_encoding_the_document_states_over_the_one_the_program_states()
+    {
+        var source = Source(
+            PdfContentFixtures.TextType1BuiltInEncoding(stateDictionaryEncoding: true),
+            "type1-encoded.pdf");
+
+        var result = await Reader().ReadLettersAsync(source, PageRange.All, cancellationToken: Token);
+
+        Assert.Equal(["A", "B", "\u00C8"], result.Items.Select(letter => letter.Value));
+        Assert.Empty(result.Warnings);
+    }
+
+    /// <summary>
+    /// Derives the direction of a letter from the two baseline points it reports: a letter whose end sits to
+    /// the left of its start runs right to left, and its width is negative.
     /// </summary>
     [Fact]
     public void Derives_the_direction_from_the_baseline()

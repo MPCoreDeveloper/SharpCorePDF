@@ -189,9 +189,12 @@ internal sealed class PdfFont
 /// <c>Tf</c> selects it, so a broken font costs a warning and not the page.
 /// </para>
 /// <para>
-/// Nothing here reads the font program. The widths, the encoding and the <c>/ToUnicode</c> map live in
-/// the font dictionary, and those are exactly the three things text placement and text decoding need;
-/// an embedded program would be needed to draw a glyph, which this library does not do.
+/// The widths, the encoding and the <c>/ToUnicode</c> map live in the font dictionary, and those are
+/// exactly the three things text placement and text decoding need. The one part of an embedded program
+/// this library reads is the clear-text header of a Type1 font, and only when the document states no
+/// encoding at all: a pdfTeX subset of a Computer Modern math font puts its encoding there and nowhere
+/// else (see <see cref="PdfType1Encoding"/>). The encrypted part of the program, which carries the
+/// outlines, is never read, because drawing a glyph is not something this library does.
 /// </para>
 /// </remarks>
 internal static class PdfFontDecoder
@@ -259,6 +262,14 @@ internal static class PdfFontDecoder
         else if (!TryReadEncoding(reader, dictionary, out encoding, out var unsupported))
         {
             failure = unsupported;
+        }
+        else if (reader.Resolve(dictionary.Get("Encoding")) is null
+            && PdfType1Encoding.TryRead(reader, dictionary) is { } builtIn)
+        {
+            // The document states no /Encoding, so what its codes mean is stated only in the font program's
+            // own header — the case of a pdfTeX subset of a Computer Modern math or symbol font. The
+            // program's table wins over the StandardEncoding the absence of a dictionary entry implies.
+            encoding = builtIn;
         }
 
         var widths = isComposite

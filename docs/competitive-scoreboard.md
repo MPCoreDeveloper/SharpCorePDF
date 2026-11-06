@@ -170,15 +170,20 @@ reproduced every row with no `LockMismatch`.
 | Completed | 11/11 | 11/11 |
 | Errors / timeouts | 0 / 0 | 0 / 0 |
 | Median open+extract per file | 36.5 ms (41.2 on re-run) | 157.2 ms (120.9 on re-run) |
-| Letters read, summed over the corpus | 1 798 632 | 1 798 648 |
-| Files whose letter count differs | 1 of 11 (`arxiv-bert.pdf`, 16 fewer) | — |
+| Letters read, summed over the corpus | 1 798 648 | 1 798 648 |
+| Files whose letter count differs | 0 of 11 | — |
+| Warnings raised | 1 (a USCIS form) | not reported by the adapter |
 
 What the sample says, and does not say:
 
-- **Character-level agreement is the headline.** Both engines find the same glyphs on ten of eleven real
-  documents; the exception is 16 glyphs in a 54 000-letter paper, where SharpCorePDF also reports 8
-  warnings, and one USCIS form adds one more (PdfPig's adapter reports no warnings by construction, so
-  the warning column is not a cross-engine metric).
+- **Character-level agreement is now exact.** The first run of this leg found 16 glyphs SharpCorePDF
+  missed in a 54 000-letter paper, plus eight `TextUnreadable` warnings. The cause was structural: those
+  glyphs are drawn with pdfTeX subsets of the Computer Modern math fonts, which state no `/Encoding` and
+  no `/ToUnicode`, so what their codes mean is stated only in the clear-text header of the embedded Type1
+  program. The reader now reads that header when the document states no encoding, and the glyph table now
+  knows the mathematical and Greek names those programs use — after the fix both engines read 1 798 648
+  letters on the same bytes, and one warning remains, on a USCIS form. PdfPig's adapter reports no
+  warnings by construction, so the warning column is not a cross-engine metric.
 - **Word counts are not comparable across engines**, exactly as on the labelled corpus: IRS field text is
   drawn character by character and SharpCorePDF groups it as one word per glyph (7 927/7 927) while
   PdfPig merges it (2 232), and on arXiv paper one SharpCorePDF under-splits (5 106 vs 7 162). Neither is

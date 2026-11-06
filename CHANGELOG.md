@@ -22,6 +22,17 @@ against an empty feed.
 
 ### Added
 
+- **A Type1 font's own encoding is read when the document states none, so LaTeX formulas are no longer
+  lost.** A pdfTeX subset of a Computer Modern math or symbol font states neither `/Encoding` nor
+  `/ToUnicode`: what its codes mean exists only in the clear-text header of the embedded Type1 program, as
+  a run of `dup <code> /<glyph> put` lines or a `StandardEncoding def` statement. That header is now read
+  (the encrypted part of the program still never is), and the glyph table now knows the mathematical and
+  Greek names these fonts use. The gap was found by the external-corpus leg — 16 glyphs and eight
+  `TextUnreadable` warnings on one arXiv paper — and closed to zero: both engines now read 1 798 648
+  letters on the same eleven documents. The manual's claim that the reader never consults an embedded font
+  program is corrected accordingly, and a fixture pins the precedence: a dictionary that states an
+  encoding keeps it.
+
 - **The first external-corpus leg is recorded, not just the synthetic one.** Eleven public-domain documents
   (IRS forms and Publication 15, USCIS AcroForms, two arXiv LaTeX papers, NIST SP 800-53r5) were fetched
   locally, pinned by a SHA-256 manifest and scored through the hash-locked robustness leg by both engines:

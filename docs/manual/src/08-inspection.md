@@ -342,9 +342,14 @@ fewer words plus that warning, never as invented characters, and the blocks from
 are still returned. A page with nothing readable on it contributes no block, which keeps "this page has no
 text" and "this page's text could not be read" two different answers.
 
-The read does not run OCR, does not consult the embedded font program, and does not reflow. It reports the
-text the document draws and where it draws it; anything beyond that — hyphenation, reading order across
-columns, what a table means — is the caller's decision, made on the geometry this read returns.
+The read does not run OCR, does not reflow, and draws nothing. The only part of an embedded font program it
+reads is the clear-text header of a Type1 font — a run of <c>dup &lt;code&gt; /&lt;glyph&gt; put</c> lines or a
+statement that the encoding is <c>StandardEncoding</c> — and only when the font's dictionary states no
+encoding at all. A pdfTeX subset of a Computer Modern math or symbol font is the case that needs it: its
+encoding exists nowhere but there, so without it a formula reads as no text. The encrypted part of the
+program, which a renderer needs to draw, is never read. Beyond that the read reports the text the document
+draws and where it draws it; hyphenation, reading order across columns and what a table means are the
+caller's decisions, made on the geometry this read returns.
 
 `PdfPageDetail` does not carry text, so an index that needs both text and images calls `ReadTextAsync` for
 the page beside the enumeration, rather than paying for a text read of the whole range.

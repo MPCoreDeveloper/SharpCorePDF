@@ -1626,7 +1626,58 @@ internal static class PdfContentFixtures
     }
 
     /// <summary>
-    /// One page of two rows that exactly touch, each row drawn as two strings: the row-band order must keep
+    /// One page drawn with a Type1 font that states no <c>/Encoding</c> and no <c>/ToUnicode</c> in its
+    /// dictionary: what its codes mean is stated only in the clear-text header of the font program it
+    /// embeds, which is the shape a pdfTeX subset of a Computer Modern math font has.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    /// <remarks>
+    /// The program below is a header only — everything a reader of text needs. Code 65 is <c>A</c>, 66 is
+    /// <c>B</c>, and code 200 is a bullet through the program's own table, which no dictionary of the
+    /// document states.
+    /// </remarks>
+    /// <param name="stateDictionaryEncoding">
+    /// When <see langword="true"/> the font dictionary states <c>/WinAnsiEncoding</c>, so the two statements
+    /// of what code 200 means disagree: the dictionary says <c>È</c> and the program says a bullet.
+    /// </param>
+    public static byte[] TextType1BuiltInEncoding(bool stateDictionaryEncoding = false)
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+
+        var header = Encoding.Latin1.GetBytes(
+            "%!PS-AdobeFont-1.0: TestType1 001.001\n"
+            + "/FontName /TestType1 def\n"
+            + "/Encoding 256 array\n"
+            + "0 1 255 {1 index exch /.notdef put} for\n"
+            + "dup 65 /A put\n"
+            + "dup 66 /B put\n"
+            + "dup 200 /bullet put\n"
+            + "readonly def\n"
+            + "currentfile eexec\n");
+
+        var program = builder.AddStream($"/Length1 {header.Length}", header);
+        var descriptor = builder.Add(
+            $"<< /Type /FontDescriptor /FontName /TestType1 /Flags 4 /FontBBox [0 0 1000 1000] "
+            + $"/ItalicAngle 0 /Ascent 800 /Descent -200 /CapHeight 700 /StemV 80 "
+            + $"/FontFile {program} 0 R >>");
+        var font = builder.Add(
+            $"<< /Type /Font /Subtype /Type1 /BaseFont /TestType1 /FontDescriptor {descriptor} 0 R"
+            + (stateDictionaryEncoding ? " /Encoding /WinAnsiEncoding >>" : " >>"));
+
+        var content = builder.Add(Content("BT /F1 12 Tf 1 0 0 1 72 700 Tm <4142C8> Tj ET"));
+
+        builder.Set(page, TextPage(pages, $"/F1 {font} 0 R", content));
+        builder.Set(pages, PageTree(page));
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+
     /// the second row in a band of its own rather than folding it into the first.
     /// </summary>
     /// <remarks>
