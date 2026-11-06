@@ -56,6 +56,18 @@ internal static class PageContentWriter
                 case TransformOperation transform:
                     content.Transform(ToPdfMatrix(transform.Matrix, page.Height));
                     break;
+
+                case ColorSpaceOperation colorSpace:
+                    var state = new GraphicsState(content);
+                    state.SetColorSpaceName(colorSpace.Name, fill: !colorSpace.Stroke);
+                    state.SetColorComponents(colorSpace.Components, fill: !colorSpace.Stroke);
+                    break;
+
+                case SelectedColourPathOperation selected:
+                    // No colour operator: the path is painted with whatever the last selection stated.
+                    content.Append(ToPdfPath(selected.Path, page.Height));
+                    content.WriteOperator(selected.Stroke ? "S" : "f");
+                    break;
             }
         }
 

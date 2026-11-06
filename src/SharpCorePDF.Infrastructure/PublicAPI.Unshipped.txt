@@ -1,2 +1,6 @@
 #nullable enable
 SharpCorePDF.Infrastructure.Reading.PdfLayoutReader.OpenAsync(string! sourceName, System.IO.Stream! content, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.Ports.IPdfLayoutSession!>!
+SharpCorePDF.Infrastructure.PdfPageCanvas.SetFillColor(string! colorSpaceName, System.Collections.Generic.IReadOnlyList<double>! components) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.SetStrokeColor(string! colorSpaceName, System.Collections.Generic.IReadOnlyList<double>! components) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.FillPath(SharpCorePDF.Domain.ValueObjects.PdfPath! path) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfPageCanvas.StrokePath(SharpCorePDF.Domain.ValueObjects.PdfPath! path) -> SharpCorePDF.Infrastructure.PdfPageCanvas!

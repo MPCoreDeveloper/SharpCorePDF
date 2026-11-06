@@ -157,6 +157,27 @@ The writer emits the path, then the style, then the painting operator. That orde
 the style at the moment the path is painted — and it has a consequence worth knowing: the stream cannot be
 read as "set the style, then draw", and a shape that has already been painted cannot be restyled.
 
+## Painting in a colour space of your own
+
+A `PdfPaint` carries a device colour, so it cannot state a separation, a device-N space or a pattern. For
+those the canvas exposes the selection operators and a way to paint with what they selected:
+
+```csharp
+canvas
+    .SetFillColor("DeviceCMYK", [0.10, 0.20, 0.30, 0.40])   // cs then scn
+    .FillPath(square)                                        // f, with no colour operator of its own
+    .SetStrokeColor("/Cs1", [0.25])                          // CS then SCN — a name the resources define
+    .StrokePath(line);                                       // S
+```
+
+`SetFillColor` and `SetStrokeColor` write `cs`/`CS` and `scn`/`SCN`; `FillPath` and `StrokePath` paint
+without writing a colour, so the selection stands. Every other drawing call states its own paint and
+therefore wins over a selection — `DrawRectangle(rectangle, paint: somePaint)` after `SetFillColor` paints
+`somePaint`, because no API can know which of the two you meant. The name is written as you state it, so it
+must already be a legal PDF name: a resource name such as `Cs1`, or `DeviceGray`, `DeviceRGB`, `DeviceCMYK`.
+A name that would need `#` escaping is refused rather than escaped, and so is a colour with no component or a
+component that is not finite.
+
 ## Clipping
 
 `SetClip` restricts everything drawn afterwards to the inside of a path — the usual way to crop a
@@ -265,6 +286,8 @@ over a photograph hides it, and a translucent one tints it.
 | `DrawEllipse(bounds, fill?, stroke?)` | An ellipse fitted to a box as four cubic Béziers. |
 | `DrawPath(path, fill?, stroke?)` | Any path of move, line, cubic, quadratic and close segments. |
 | `SetClip(path, fillRule?)` | Restricts everything afterwards to the inside of a path. |
+| `SetFillColor(name, components)` / `SetStrokeColor(name, components)` | Selects a colour space by name (`cs`/`CS`) and sets its colour (`scn`/`SCN`). |
+| `FillPath(path)` / `StrokePath(path)` | Paints a path with the colour the selection stated, writing no colour of its own. |
 | `SetTransform(matrix)` | Concatenates a canvas-space transform; affects paths, text and images. |
 | `SaveState()` / `RestoreState()` | Brackets any change of paint, stroke, clip or transform. |
 | `PdfPaint(color, alpha?, fillRule?, colorSpace?)` | A device colour, its opacity, the fill rule and the space. |

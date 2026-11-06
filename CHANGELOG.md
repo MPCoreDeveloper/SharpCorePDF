@@ -22,6 +22,16 @@ against an empty feed.
 
 ### Added
 
+- **A page can paint in a colour space the caller names.** `PdfPageCanvas.SetFillColor` and `SetStrokeColor`
+  write the selection set — `cs`/`CS` then `scn`/`SCN` — and `FillPath`/`StrokePath` paint with what they
+  selected, writing no colour operator of their own; that pair is what makes a separation, a device-N space or
+  a pattern reachable, because a `PdfPaint` carries a device colour and every other drawing call states its
+  own paint. An explicit paint still wins over a selection, a name a PDF name cannot state (`#`, a delimiter,
+  whitespace, or nothing after the slash) is refused at the call site, and so is a colour with no component
+  or one that is not finite. This closes the last `Partial` row of the creation parity matrix: `docs/parity.md`
+  row 2 is now Evidenced with six new tests and a `validate-pdf.py` run over a page whose content stream is
+  `/DeviceCMYK cs`, `scn`, `f`, `/DeviceGray CS`, `SCN`, `S` (`qpdf check: no problems`).
+
 - **The harness reports informational notes apart from warnings, so a decrypted document no longer looks
   damaged.** A file that is encrypted with an empty user password is read in full; the remark saying so was
   being counted as a warning, which put the external corpus's last remaining "warning" in the wrong column.

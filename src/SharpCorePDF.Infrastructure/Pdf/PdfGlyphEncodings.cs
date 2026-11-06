@@ -126,7 +126,6 @@ internal static class PdfGlyphEncodings
         ["approxequal"] = '\u2248',
         ["similar"] = '\u223C',
         ["proportional"] = '\u221D',
-        ["minus"] = '\u2212',
         ["asteriskmath"] = '\u2217',
         ["circleplus"] = '\u2295',
         ["circlemultiply"] = '\u2297',

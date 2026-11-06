@@ -104,6 +104,90 @@ internal sealed partial class GraphicsState
         builder.WriteOperator(fill ? "scn" : "SCN");
     }
 
+    /// <summary>Selects a colour space a caller names and writes <c>cs</c> or <c>CS</c>.</summary>
+    /// <param name="name">The name, with or without its leading slash.</param>
+    /// <param name="fill">Whether the non-stroking or the stroking colour space is selected.</param>
+    /// <remarks>
+    /// The name is written as the caller states it, so it must already be a legal PDF name: a resource name
+    /// such as <c>Cs1</c>, or one of the device names <c>DeviceGray</c>, <c>DeviceRGB</c> or <c>DeviceCMYK</c>.
+    /// A name that needs <c>#</c> escaping is refused rather than escaped silently, because the caller is the
+    /// only one that knows what the name refers to.
+    /// </remarks>
+    /// <exception cref="ArgumentException">The name is blank or is not a legal PDF name.</exception>
+    public void SetColorSpaceName(string name, bool fill = true) =>
+        builder.WriteNameOperator(fill ? "cs" : "CS", LegalColorSpaceName(name));
+
+    /// <summary>Returns the name a colour-space selection may carry, or refuses it.</summary>
+    /// <param name="name">The name, with or without its leading slash.</param>
+    /// <returns>The name without its leading slash.</returns>
+    /// <remarks>
+    /// The name is written as the caller states it, so it must already be a legal PDF name: a resource name
+    /// such as <c>Cs1</c>, or one of the device names <c>DeviceGray</c>, <c>DeviceRGB</c> or <c>DeviceCMYK</c>.
+    /// A name that needs <c>#</c> escaping is refused rather than escaped silently, because the caller is the
+    /// only one that knows what the name refers to.
+    /// </remarks>
+    /// <exception cref="ArgumentException">The name is blank or is not a legal PDF name.</exception>
+    internal static string LegalColorSpaceName(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        var trimmed = name[0] == '/' ? name[1..] : name;
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(trimmed);
+
+        var illegal = trimmed.FirstOrDefault(character =>
+            char.IsWhiteSpace(character)
+            || char.IsControl(character)
+            || character is '#' or '(' or ')' or '<' or '>' or '[' or ']' or '{' or '}' or '/' or '%');
+
+        if (illegal != '\0')
+        {
+            throw new ArgumentException(
+                $"The colour space name '{name}' is not a legal PDF name: it contains '{illegal}', which a name may not state without escaping.",
+                nameof(name));
+        }
+
+        return trimmed;
+    }
+
+    /// <summary>Sets the colour components in the selected colour space and writes <c>scn</c> or <c>SCN</c>.</summary>
+    /// <param name="components">The components the selected space states, at least one, all finite.</param>
+    /// <param name="fill">Whether the non-stroking or the stroking colour is set.</param>
+    /// <remarks>
+    /// The operator is <c>scn</c> rather than <c>sc</c> because a named space may be a separation or a
+    /// device-N space, which <c>scn</c> states and <c>sc</c> does not. The count is the space's own — one for a
+    /// gray or a separation, three for RGB, four for CMYK, more for device-N — so it is not validated here.
+    /// </remarks>
+    /// <exception cref="ArgumentException">No component is given or one is not finite.</exception>
+    public void SetColorComponents(IReadOnlyList<double> components, bool fill = true)
+    {
+        ArgumentNullException.ThrowIfNull(components);
+
+        ValidateColorComponents(components);
+
+        WriteComponents(components);
+        builder.Write(" ");
+        builder.WriteOperator(fill ? "scn" : "SCN");
+    }
+
+    /// <summary>Refuses a colour whose components no space could state.</summary>
+    /// <param name="components">The components.</param>
+    /// <exception cref="ArgumentException">No component is given or one is not finite.</exception>
+    internal static void ValidateColorComponents(IReadOnlyList<double> components)
+    {
+        ArgumentNullException.ThrowIfNull(components);
+
+        if (components.Count == 0)
+        {
+            throw new ArgumentException("A colour in a selected space states at least one component.", nameof(components));
+        }
+
+        if (components.Any(component => !double.IsFinite(component)))
+        {
+            throw new ArgumentException("A colour component must be finite.", nameof(components));
+        }
+    }
+
     private static string ColorSpaceName(PdfColorSpace colorSpace) => colorSpace switch
     {
         PdfColorSpace.DeviceGray => "DeviceGray",

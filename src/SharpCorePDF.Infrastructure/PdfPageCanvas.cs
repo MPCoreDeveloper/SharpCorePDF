@@ -318,6 +318,72 @@ public sealed class PdfPageCanvas
         return this;
     }
 
+    /// <summary>Fills a path with the colour the current selection states.</summary>
+    /// <param name="path">The path, in the canvas's top-left coordinate system.</param>
+    /// <returns>This canvas, so calls chain.</returns>
+    /// <remarks>
+    /// This is the partner of <see cref="SetFillColor"/>: the colour operator is not written here, so the fill
+    /// takes the colour and the space the previous selection stated. Every other drawing call states its own
+    /// paint and therefore wins over a selection, which is why a caller that painted in a named space uses
+    /// this method rather than <see cref="DrawRectangle"/>.
+    /// </remarks>
+    public PdfPageCanvas FillPath(PdfPath path)
+    {
+        operations.Add(new SelectedColourPathOperation(path, Stroke: false));
+
+        return this;
+    }
+
+    /// <summary>Strokes a path with the colour the current selection states.</summary>
+    /// <param name="path">The path, in the canvas's top-left coordinate system.</param>
+    /// <returns>This canvas, so calls chain.</returns>
+    /// <remarks>The partner of <see cref="SetStrokeColor"/>; see <see cref="FillPath"/> for why it exists.</remarks>
+    public PdfPageCanvas StrokePath(PdfPath path)
+    {
+        operations.Add(new SelectedColourPathOperation(path, Stroke: true));
+
+        return this;
+    }
+
+    /// <summary>Selects a colour space by name and sets the colour a fill paints with.</summary>
+    /// <param name="colorSpaceName">
+    /// The name of the space, with or without its leading slash: a device space such as <c>DeviceCMYK</c>, or
+    /// a resource name the page's resources define.
+    /// </param>
+    /// <param name="components">The components the space states, at least one, all finite.</param>
+    /// <returns>This canvas, so calls chain.</returns>
+    /// <remarks>
+    /// The call writes the selection set: <c>cs</c> selects the non-stroking space and <c>scn</c> sets the
+    /// colour in it. It exists for a space a paint cannot state — a separation, a device-N space, a pattern —
+    /// because a <see cref="SharpCorePDF.Domain.ValueObjects.PdfPaint"/> carries a device colour only.
+    /// </remarks>
+    /// <exception cref="ArgumentException">The name is not a legal PDF name or a component is not finite.</exception>
+    public PdfPageCanvas SetFillColor(string colorSpaceName, IReadOnlyList<double> components)
+    {
+        GraphicsState.LegalColorSpaceName(colorSpaceName);
+        GraphicsState.ValidateColorComponents(components);
+
+        operations.Add(new ColorSpaceOperation(colorSpaceName, [.. components], Stroke: false));
+
+        return this;
+    }
+
+    /// <summary>Selects a colour space by name and sets the colour a stroke paints with.</summary>
+    /// <param name="colorSpaceName">The name of the space, with or without its leading slash.</param>
+    /// <param name="components">The components the space states, at least one, all finite.</param>
+    /// <returns>This canvas, so calls chain.</returns>
+    /// <remarks>The stroking counterpart of <see cref="SetFillColor"/>: <c>CS</c> then <c>SCN</c>.</remarks>
+    /// <exception cref="ArgumentException">The name is not a legal PDF name or a component is not finite.</exception>
+    public PdfPageCanvas SetStrokeColor(string colorSpaceName, IReadOnlyList<double> components)
+    {
+        GraphicsState.LegalColorSpaceName(colorSpaceName);
+        GraphicsState.ValidateColorComponents(components);
+
+        operations.Add(new ColorSpaceOperation(colorSpaceName, [.. components], Stroke: true));
+
+        return this;
+    }
+
     /// <summary>Draws an image at an explicit size, detecting the format from its bytes.</summary>
     /// <param name="image">The bytes of a PNG, JPEG, BMP or GIF file.</param>
     /// <param name="x">The x coordinate of the top-left corner, in points from the left edge.</param>
@@ -541,3 +607,14 @@ internal sealed record ClipOperation(
 /// <summary>A transform concatenated onto the current one (<c>cm</c>).</summary>
 /// <param name="Matrix">The transform, in the canvas's top-left coordinate system.</param>
 internal sealed record TransformOperation(SharpCorePDF.Domain.ValueObjects.PdfMatrix Matrix) : IPageOperation;
+
+/// <summary>A colour space selected by name.</summary>
+/// <param name="Name">The name, with or without its leading slash.</param>
+/// <param name="Components">The components the space states.</param>
+/// <param name="Stroke">Whether the stroking (<c>CS</c>/<c>SCN</c>) or non-stroking (<c>cs</c>/<c>scn</c>) space is selected.</param>
+internal sealed record ColorSpaceOperation(string Name, IReadOnlyList<double> Components, bool Stroke) : IPageOperation;
+
+/// <summary>A path painted with the colour the current selection states.</summary>
+/// <param name="Path">The path.</param>
+/// <param name="Stroke">Whether it is stroked (<c>S</c>) or filled (<c>f</c>).</param>
+internal sealed record SelectedColourPathOperation(PdfPath Path, bool Stroke) : IPageOperation;

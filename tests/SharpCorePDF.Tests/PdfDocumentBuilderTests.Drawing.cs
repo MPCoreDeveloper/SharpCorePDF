@@ -19,6 +19,125 @@ public sealed partial class PdfDocumentBuilderTests
 
     private static PdfStroke Outline() => new(PdfPaint.Black, width: 1.5, dashArray: [4, 2]);
 
+    /// <summary>
+    /// A fill in a space the caller names reaches the page as the selection set: <c>cs</c> selects the
+    /// non-stroking space and <c>scn</c> sets the colour in it.
+    /// </summary>
+    [Fact]
+    public void Writes_a_fill_in_a_named_colour_space_as_cs_and_scn()
+    {
+        var bytes = PdfDocumentBuilder.Create()
+            .AddPage(PdfPageSize.A4, page => page.SetFillColor("DeviceCMYK", [0.1, 0.2, 0.3, 0.4]))
+            .ToArray();
+
+        var content = Content(bytes);
+
+        Assert.Contains("/DeviceCMYK cs\n", content);
+        Assert.Contains("0.1 0.2 0.3 0.4 scn\n", content);
+    }
+
+    /// <summary>
+    /// The stroking counterpart: <c>CS</c> then <c>SCN</c>, and a name stated with its slash is written once.
+    /// </summary>
+    [Fact]
+    public void Writes_a_stroke_in_a_named_colour_space_as_CS_and_SCN()
+    {
+        var bytes = PdfDocumentBuilder.Create()
+            .AddPage(PdfPageSize.A4, page => page.SetStrokeColor("/Cs1", [0.25]))
+            .ToArray();
+
+        var content = Content(bytes);
+
+        Assert.Contains("/Cs1 CS\n", content);
+        Assert.Contains("0.25 SCN\n", content);
+    }
+
+    /// <summary>
+    /// A name the writer cannot state without escaping is refused at the call site: the caller is the only
+    /// one that knows what its name refers to.
+    /// </summary>
+    [Fact]
+    public void Refuses_a_colour_space_name_a_pdf_name_cannot_state()
+    {
+        var spaced = Assert.Throws<ArgumentException>(() =>
+            PdfDocumentBuilder.Create()
+                .AddPage(PdfPageSize.A4, page => page.SetFillColor("My Space", [0.5])));
+
+        Assert.Contains("not a legal PDF name", spaced.Message, StringComparison.Ordinal);
+
+        Assert.Throws<ArgumentException>(() =>
+            PdfDocumentBuilder.Create()
+                .AddPage(PdfPageSize.A4, page => page.SetStrokeColor("/Bad#Name", [0.5])));
+
+        Assert.Throws<ArgumentException>(() =>
+            PdfDocumentBuilder.Create()
+                .AddPage(PdfPageSize.A4, page => page.SetFillColor(string.Empty, [0.5])));
+
+        Assert.Throws<ArgumentException>(() =>
+            PdfDocumentBuilder.Create()
+                .AddPage(PdfPageSize.A4, page => page.SetStrokeColor("/", [0.5])));
+    }
+
+    /// <summary>
+    /// A path filled with <c>FillPath</c> after a selection paints in the selected space: the fill operator
+    /// follows the selection with no colour operator between them, which is what makes a separation or a
+    /// device-N colour reach the page at all.
+    /// </summary>
+    [Fact]
+    public void Fills_a_path_with_the_colour_the_selection_states()
+    {
+        var path = new PdfPath([new PdfPathSegment.MoveTo(new PdfPoint(10, 10)), new PdfPathSegment.LineTo(new PdfPoint(60, 60))]);
+
+        var bytes = PdfDocumentBuilder.Create()
+            .AddPage(PdfPageSize.A4, page => page
+                .SetFillColor("DeviceCMYK", [0.1, 0.2, 0.3, 0.4])
+                .FillPath(path))
+            .ToArray();
+
+        var content = Content(bytes);
+
+        Assert.Contains("/DeviceCMYK cs\n0.1 0.2 0.3 0.4 scn\n", content);
+        Assert.DoesNotContain(" rg", content);
+        var afterSelection = content[content.IndexOf("scn", StringComparison.Ordinal)..];
+
+        Assert.Contains("f", afterSelection, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// An explicit paint wins over a selection: drawing a rectangle with a paint writes that paint's colour,
+    /// because no API can know which of the two the caller meant.
+    /// </summary>
+    [Fact]
+    public void Lets_an_explicit_paint_win_over_the_selection()
+    {
+        var bytes = PdfDocumentBuilder.Create()
+            .AddPage(PdfPageSize.A4, page => page
+                .SetFillColor("DeviceCMYK", [0.1, 0.2, 0.3, 0.4])
+                .DrawRectangle(new PdfRectangle(10, 10, 60, 60), new PdfPaint(PdfColor.Black), stroke: null))
+            .ToArray();
+
+        var content = Content(bytes);
+
+        Assert.Contains("0 0 0 rg", content);
+    }
+
+    /// <summary>A colour with no component, or one that is not a number, is refused at the call site.</summary>
+    [Fact]
+    public void Refuses_a_colour_that_states_no_usable_component()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            PdfDocumentBuilder.Create()
+                .AddPage(PdfPageSize.A4, page => page.SetFillColor("DeviceGray", [])));
+
+        Assert.Throws<ArgumentException>(() =>
+            PdfDocumentBuilder.Create()
+                .AddPage(PdfPageSize.A4, page => page.SetStrokeColor("DeviceGray", [double.NaN])));
+
+        Assert.Throws<ArgumentException>(() =>
+            PdfDocumentBuilder.Create()
+                .AddPage(PdfPageSize.A4, page => page.SetFillColor("DeviceGray", [double.PositiveInfinity])));
+    }
+
     private static string Content(byte[] bytes) => Encoding.Latin1.GetString(bytes);
 
     /// <summary>The operands of the one line in the stream that ends with an operator.</summary>
