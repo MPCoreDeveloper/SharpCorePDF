@@ -61,6 +61,7 @@ public sealed class PdfLexerTests
     [InlineData("/A#20B", "A B")]
     [InlineData("/A#23B", "A#B")]
     [InlineData("/a#2fb", "a/b")]
+    [InlineData("/A#41", "AA")]
     [InlineData("/Name#", "Name#")]
     [InlineData("/A#zz", "A#zz")]
     [InlineData("/", "")]

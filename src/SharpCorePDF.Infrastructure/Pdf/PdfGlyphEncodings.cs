@@ -319,11 +319,11 @@ internal static class PdfGlyphEncodings
         switch (name)
         {
             case null or "" or "WinAnsiEncoding":
-                table = BuildWinAnsi();
+                table = WinAnsi;
                 return true;
 
             case "StandardEncoding":
-                table = BuildStandard();
+                table = Standard;
                 return true;
 
             default:
@@ -331,6 +331,21 @@ internal static class PdfGlyphEncodings
                 return false;
         }
     }
+
+    /// <summary>
+    /// The <c>WinAnsiEncoding</c> table, built once: every code it maps is a constant of the
+    /// specification, so a second copy would say exactly what this one says.
+    /// </summary>
+    /// <remarks>
+    /// The table is shared by every font that states this encoding and must not be changed. The one
+    /// caller that needs to change it — an encoding dictionary's <c>/Differences</c> — copies it first.
+    /// Building a 256-entry table per font decoded was the alternative, and it allocated a string per
+    /// mapped code to repeat what the previous font had already said.
+    /// </remarks>
+    private static readonly string?[] WinAnsi = BuildWinAnsi();
+
+    /// <summary>The <c>StandardEncoding</c> table, built once, for the same reason.</summary>
+    private static readonly string?[] Standard = BuildStandard();
 
     /// <summary>Resolves a glyph name to the character it names.</summary>
     /// <param name="name">The glyph name, without the leading slash.</param>

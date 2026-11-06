@@ -1,6 +1,7 @@
 using SharpCorePDF.Application.Extensions;
 using SharpCorePDF.Domain.Ports;
 using SharpCorePDF.Domain.ValueObjects;
+using SharpCorePDF.Infrastructure.Pdf;
 
 namespace SharpCorePDF.Tests;
 
@@ -116,6 +117,33 @@ public sealed partial class PdfContentReaderTests
         Assert.Equal("éZ", word.Text);
         Assert.Equal(["é", "Z"], word.Glyphs.Select(glyph => glyph.Text));
         Assert.Empty(result.Warnings);
+    }
+
+    /// <summary>
+    /// A font's <c>/Differences</c> changes a copy of the shared base table, so the next font that
+    /// states the same base encoding still reads the characters that encoding states.
+    /// </summary>
+    /// <remarks>
+    /// The base table is built once and handed to every font that names it, which is what makes the
+    /// read cheap; the copy on the <c>/Differences</c> path is what makes it safe. This test fails if
+    /// that copy is ever dropped: after the read, code 65 of <c>WinAnsiEncoding</c> would be é for
+    /// every font in the process, not A.
+    /// </remarks>
+    [Fact]
+    public async Task Does_not_change_the_shared_base_encoding_table()
+    {
+        Assert.True(PdfGlyphEncodings.TryGetBaseEncoding("WinAnsiEncoding", out var before));
+        Assert.Equal("A", before[65]);
+
+        var source = Source(PdfContentFixtures.TextDifferences(), "differences.pdf");
+
+        var result = await Reader().ReadTextAsync(source, PageRange.All, cancellationToken: Token);
+
+        Assert.Equal("éZ", Assert.Single(Assert.Single(result.Items).Words).Text);
+
+        Assert.True(PdfGlyphEncodings.TryGetBaseEncoding("WinAnsiEncoding", out var after));
+        Assert.Same(before, after);
+        Assert.Equal("A", after[65]);
     }
 
     /// <summary>

@@ -246,7 +246,7 @@ internal sealed class PdfTextCollector
     /// the advance of an unreadable glyph would slide the rest of the line into the space it occupies,
     /// which would place readable text where the document does not draw it.
     /// </remarks>
-    private void Show(TextState state, byte[] bytes)
+    private void Show(TextState state, ReadOnlyMemory<byte> bytes)
     {
         var font = state.Font;
 
@@ -275,7 +275,7 @@ internal sealed class PdfTextCollector
 
         while (offset < bytes.Length)
         {
-            var hasText = font.TryDecodeGlyph(bytes, offset, out var text, out var consumed, out var width);
+            var hasText = font.TryDecodeGlyph(bytes.Span, offset, out var text, out var consumed, out var width);
 
             if (consumed <= 0)
             {
@@ -324,24 +324,21 @@ internal sealed class PdfTextCollector
     /// <summary>Shows an array of strings and spacing adjustments, as <c>TJ</c> does.</summary>
     /// <param name="state">The text state the array is shown in.</param>
     /// <param name="items">The numbers and strings of the array, in the order they were written.</param>
-    private void ShowArray(TextState state, List<object> items)
+    private void ShowArray(TextState state, List<TjItem> items)
     {
         foreach (var item in items)
         {
-            switch (item)
+            if (item.Kind == TjItemKind.Number)
             {
-                case double adjustment:
-                    // A thousandth of a unit of text space in the negative direction of the writing.
-                    state.TextMatrix = Advance(
-                        state.TextMatrix,
-                        -adjustment / 1000d * state.FontSize * state.HorizontalScale);
+                // A thousandth of a unit of text space in the negative direction of the writing.
+                state.TextMatrix = Advance(
+                    state.TextMatrix,
+                    -item.Number / 1000d * state.FontSize * state.HorizontalScale);
 
-                    break;
-
-                case byte[] shown:
-                    Show(state, shown);
-                    break;
+                continue;
             }
+
+            Show(state, item.Bytes);
         }
     }
 

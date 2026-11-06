@@ -119,10 +119,8 @@ internal sealed class PdfFont
     /// <see langword="false"/> result: the caller has to advance past a glyph it cannot read, or every
     /// character after it would be placed as if it were not there.
     /// </remarks>
-    public bool TryDecodeGlyph(byte[] bytes, int offset, out string text, out int consumed, out double width)
+    public bool TryDecodeGlyph(ReadOnlySpan<byte> bytes, int offset, out string text, out int consumed, out double width)
     {
-        ArgumentNullException.ThrowIfNull(bytes);
-
         text = string.Empty;
         width = DefaultWidth;
 
@@ -407,12 +405,17 @@ internal static class PdfFontDecoder
             baseName = stated.Value;
         }
 
-        if (!PdfGlyphEncodings.TryGetBaseEncoding(baseName, out var table))
+        if (!PdfGlyphEncodings.TryGetBaseEncoding(baseName, out var template))
         {
             encoding = null;
             failure = $"states the base encoding /{baseName}, which this library does not implement";
             return false;
         }
+
+        // The base table is shared by every font that states the same encoding, and this is the one
+        // caller that changes it: the change is made to a copy, so a /Differences array in this font
+        // cannot re-map a code for the next one.
+        var table = (string?[])template.Clone();
 
         if (reader.ResolveArray(entries.Get("Differences")) is { } differences)
         {

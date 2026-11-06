@@ -5,6 +5,14 @@
     <AssemblyName>SharpCorePDF.Infrastructure</AssemblyName>
     <Title>SharpCorePDF.Infrastructure</Title>
     <Description>Self-contained PDF engine for SharpCorePDF: reader (classic cross-reference tables, cross-reference streams and object streams), writer, the merging engine, and the authoring builder that writes pages, text with standard or embedded TrueType fonts, and PNG images. Depends on nothing but the .NET base class library.</Description>
+
+    <!--
+      The byte-scan kernels in Pdf/SimdByteScan.cs take a pointer into the caller's buffer so the
+      AVX2/SSE2/NEON intrinsics can load a vector without a copy. That is the only unsafe code in the
+      library: every kernel is a private method of one internal class, and each falls back to a scalar
+      loop when the hardware or the span length does not justify a vector.
+    -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,5 +1,4 @@
-using System.Globalization;
-using System.Text;
+using System.Buffers.Text;
 
 namespace SharpCorePDF.Infrastructure.Pdf;
 
@@ -267,9 +266,15 @@ internal sealed partial class PdfLexer
     /// <returns>The number token.</returns>
     private PdfToken CreateNumberToken(int start, bool sawExponent)
     {
-        var text = Encoding.Latin1.GetString(data, start, Position - start);
+        var span = data.AsSpan(start, Position - start);
 
-        if (!sawExponent && long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integer))
+        // The digits are parsed in place: a document's cross-reference table, its dictionaries and its
+        // content streams are mostly numbers, and copying each one into a string first is a garbage
+        // cost the parse never needed. The parser is a prefix parser, so a form that is not consumed to
+        // the last byte is not this token's number: "3.25" is a real, not the integer 3.
+        if (!sawExponent
+            && Utf8Parser.TryParse(span, out long integer, out var integerConsumed)
+            && integerConsumed == span.Length)
         {
             return new PdfToken
             {
@@ -284,9 +289,12 @@ internal sealed partial class PdfLexer
 
         // PDF has no exponent form, so a number that carries one is a real here, and text that does not
         // parse at all is read as zero rather than as a broken token.
-        var real = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
-            ? parsed
-            : 0d;
+        _ = Utf8Parser.TryParse(span, out double real, out var realConsumed);
+
+        if (realConsumed != span.Length)
+        {
+            real = 0d;
+        }
 
         return new PdfToken
         {

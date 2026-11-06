@@ -47,24 +47,20 @@ internal static class WordExtractor
             };
         }
 
-        var pageItems = new List<PdfGlyph>(Math.Min(items.Count, 256));
+        var pageStart = 0;
         var pageNumber = items[0].PageNumber;
 
-        for (var index = 0; index < items.Count; index++)
+        for (var index = 1; index < items.Count; index++)
         {
-            var glyph = items[index];
-
-            if (glyph.PageNumber != pageNumber)
+            if (items[index].PageNumber != pageNumber)
             {
-                words.AddRange(GroupPage(pageItems, options));
-                pageItems.Clear();
-                pageNumber = glyph.PageNumber;
+                GroupPage(items, pageStart, index, options, words);
+                pageStart = index;
+                pageNumber = items[index].PageNumber;
             }
-
-            pageItems.Add(glyph);
         }
 
-        words.AddRange(GroupPage(pageItems, options));
+        GroupPage(items, pageStart, items.Count, options, words);
 
         return new()
         {
@@ -74,22 +70,43 @@ internal static class WordExtractor
     }
 
     /// <summary>Groups the glyphs of one page into words.</summary>
-    /// <param name="items">The glyphs of one page, in drawing order.</param>
+    /// <param name="items">The glyphs of the read, in drawing order.</param>
+    /// <param name="start">The inclusive start of the page in the read.</param>
+    /// <param name="end">The exclusive end of the page in the read.</param>
     /// <param name="options">The order and the distances to group by.</param>
-    /// <returns>The words of the page.</returns>
-    private static List<PdfWord> GroupPage(List<PdfGlyph> items, PdfWordExtractionOptions options)
+    /// <param name="words">The list that receives the words of the page.</param>
+    /// <remarks>
+    /// The raw strategy groups the page where it lies: no copy, and the caller's drawing order is what
+    /// the words describe. The page's own order has to sort, and sorting the caller's list would
+    /// reorder a result it already holds, so that path works on a copy of the page alone.
+    /// </remarks>
+    private static void GroupPage(
+        IReadOnlyList<PdfGlyph> items,
+        int start,
+        int end,
+        PdfWordExtractionOptions options,
+        List<PdfWord> words)
     {
-        if (items.Count == 0)
+        if (end <= start)
         {
-            return [];
+            return;
         }
 
-        if (options.Strategy != PdfWordExtractionStrategy.Raw)
+        if (options.Strategy == PdfWordExtractionStrategy.Raw)
         {
-            InPageOrder(items, options);
+            Group(items, start, end, options, words);
+            return;
         }
 
-        return Group(items, options);
+        var page = new List<PdfGlyph>(end - start);
+
+        for (var index = start; index < end; index++)
+        {
+            page.Add(items[index]);
+        }
+
+        InPageOrder(page, options);
+        Group(page, 0, page.Count, options, words);
     }
 
     /// <summary>
@@ -174,15 +191,21 @@ internal static class WordExtractor
     }
 
     /// <summary>Groups a sequence of glyphs into words by the gap and baseline rules.</summary>
-    /// <param name="items">The glyphs of one page, in the order the strategy selected.</param>
+    /// <param name="items">The glyphs, in the order the strategy selected.</param>
+    /// <param name="start">The inclusive start of the run to group.</param>
+    /// <param name="end">The exclusive end of the run to group.</param>
     /// <param name="options">The rules to group by.</param>
-    /// <returns>The words, in the same order.</returns>
-    private static List<PdfWord> Group(List<PdfGlyph> items, PdfWordExtractionOptions options)
+    /// <param name="words">The list that receives the words, in the same order.</param>
+    private static void Group(
+        IReadOnlyList<PdfGlyph> items,
+        int start,
+        int end,
+        PdfWordExtractionOptions options,
+        List<PdfWord> words)
     {
-        var words = new List<PdfWord>();
-        var runStart = 0;
+        var runStart = start;
 
-        for (var index = 0; index < items.Count; index++)
+        for (var index = start; index < end; index++)
         {
             var glyph = items[index];
 
@@ -208,9 +231,7 @@ internal static class WordExtractor
             }
         }
 
-        AddWord(items, runStart, items.Count, words);
-
-        return words;
+        AddWord(items, runStart, end, words);
     }
 
     /// <summary>Adds the glyphs of one run as a word.</summary>
@@ -223,7 +244,7 @@ internal static class WordExtractor
     /// each glyph's two baseline points and the usual ascender and descender of the em, which is exactly
     /// what <see cref="PdfLetter.BoundingBox"/> says — one rectangle per word rather than one per glyph.
     /// </remarks>
-    private static void AddWord(List<PdfGlyph> items, int start, int end, List<PdfWord> words)
+    private static void AddWord(IReadOnlyList<PdfGlyph> items, int start, int end, List<PdfWord> words)
     {
         var count = end - start;
 

@@ -176,6 +176,8 @@ internal static class PdfContentScanner
                 return;
             }
 
+            // A comment runs to the end of its line, and that line ending is whitespace the next
+            // iteration skips.
             while (index < data.Length && data[index] is not ((byte)'\n' or (byte)'\r'))
             {
                 index++;
@@ -194,31 +196,7 @@ internal static class PdfContentScanner
             index++;
         }
 
-        var raw = System.Text.Encoding.Latin1.GetString(data, start, index - start);
-
-        return raw.IndexOf('#') < 0 ? raw : DecodeNameEscapes(raw);
-    }
-
-    private static string DecodeNameEscapes(string raw)
-    {
-        var builder = new System.Text.StringBuilder(raw.Length);
-        var position = 0;
-
-        while (position < raw.Length)
-        {
-            if (raw[position] == '#' && position + 2 < raw.Length
-                && byte.TryParse(raw.AsSpan(position + 1, 2), System.Globalization.NumberStyles.HexNumber, null, out var value))
-            {
-                builder.Append((char)value);
-                position += 3;
-                continue;
-            }
-
-            builder.Append(raw[position]);
-            position++;
-        }
-
-        return builder.ToString();
+        return PdfNameDecoder.Decode(data.AsSpan(start, index - start));
     }
 
     private static string ReadKeyword(byte[] data, ref int index)
@@ -230,7 +208,7 @@ internal static class PdfContentScanner
             index++;
         }
 
-        return System.Text.Encoding.Latin1.GetString(data, start, index - start);
+        return PdfKeywords.Read(data.AsSpan(start, index - start));
     }
 
     private static bool IsNumberStart(byte value) =>
@@ -270,12 +248,11 @@ internal static class PdfContentScanner
 
         value = 0d;
 
+        // Parsed over the bytes the scan already bounded: see the note in PdfTextScanner, which reads
+        // numbers the same way for the same reason, including the full-consumption check.
         return sawDigit
-            && double.TryParse(
-                System.Text.Encoding.Latin1.GetString(data, start, index - start),
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture,
-                out value);
+            && System.Buffers.Text.Utf8Parser.TryParse(data.AsSpan(start, index - start), out value, out var consumed)
+            && consumed == index - start;
     }
 
     private static void SkipLiteralString(byte[] data, ref int index)
@@ -566,21 +543,33 @@ internal static class PdfContentScanner
             }
         }
 
-        for (var scan = start + 1; scan + 1 < data.Length; scan++)
+        // The data between the header and the terminator can be hundreds of kilobytes, so the search for
+        // the E of EI is a vector one: a byte loop over image data spends a branch per byte on a run
+        // that is almost never a terminator, which is exactly the shape this kernel is for.
+        var scan = start + 1;
+
+        while (scan + 1 < data.Length)
         {
-            if (data[scan] != (byte)'E' || data[scan + 1] != (byte)'I')
+            var found = SimdByteScan.IndexOf(data.AsSpan(scan), (byte)'E');
+
+            if (found < 0)
             {
-                continue;
+                break;
             }
 
-            if (!PdfLexer.IsWhitespace(data[scan - 1]) || !IsInlineDelimiter(data, scan + 2))
+            scan += found;
+
+            if (scan + 1 < data.Length
+                && data[scan + 1] == (byte)'I'
+                && PdfLexer.IsWhitespace(data[scan - 1])
+                && IsInlineDelimiter(data, scan + 2))
             {
-                continue;
+                end = scan - 1;
+                next = scan + 2;
+                return true;
             }
 
-            end = scan - 1;
-            next = scan + 2;
-            return true;
+            scan++;
         }
 
         end = start;

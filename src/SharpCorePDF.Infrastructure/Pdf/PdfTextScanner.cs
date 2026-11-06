@@ -1,3 +1,5 @@
+using System.Buffers.Text;
+
 namespace SharpCorePDF.Infrastructure.Pdf;
 
 /// <summary>
@@ -23,8 +25,11 @@ internal sealed class PdfTextOperation
     /// <summary>Gets the numeric operands, in the order they were written.</summary>
     public List<double> Numbers { get; } = [];
 
-    /// <summary>Gets the strings shown or named by the operator, in the order they were written.</summary>
-    public List<byte[]> Strings { get; } = [];
+    /// <summary>
+    /// Gets the strings shown or named by the operator, in the order they were written. Most are a
+    /// slice of the stream itself: a string with no escape is the bytes between its parentheses.
+    /// </summary>
+    public List<ReadOnlyMemory<byte>> Strings { get; } = [];
 
     /// <summary>Gets the name operands, in the order they were written, without the leading slash.</summary>
     public List<string> Names { get; } = [];
@@ -33,7 +38,53 @@ internal sealed class PdfTextOperation
     /// Gets the items of an array operand — the numbers and strings of a <c>TJ</c> — in the order they
     /// were written, or <see langword="null"/> when the operator takes no array.
     /// </summary>
-    public List<object>? Items { get; set; }
+    public List<TjItem>? Items { get; set; }
+}
+
+/// <summary>The two kinds of value a <c>TJ</c> array can carry.</summary>
+internal enum TjItemKind : byte
+{
+    /// <summary>A spacing adjustment, in thousandths of a unit of text space.</summary>
+    Number,
+
+    /// <summary>A string to show.</summary>
+    String,
+}
+
+/// <summary>
+/// One item of a <c>TJ</c> array: a spacing adjustment or a string.
+/// </summary>
+/// <remarks>
+/// A struct rather than <see cref="object"/>, because the array is rebuilt for every <c>TJ</c> a page
+/// states and boxing a number or a slice per item is the allocation this type exists to remove.
+/// </remarks>
+internal readonly struct TjItem
+{
+    private TjItem(TjItemKind kind, double number, ReadOnlyMemory<byte> bytes)
+    {
+        Kind = kind;
+        Number = number;
+        Bytes = bytes;
+    }
+
+    /// <summary>Gets the kind of value this item carries.</summary>
+    public TjItemKind Kind { get; }
+
+    /// <summary>Gets the spacing adjustment, when <see cref="Kind"/> is <see cref="TjItemKind.Number"/>.</summary>
+    public double Number { get; }
+
+    /// <summary>Gets the string to show, when <see cref="Kind"/> is <see cref="TjItemKind.String"/>.</summary>
+    public ReadOnlyMemory<byte> Bytes { get; }
+
+    /// <summary>Creates a spacing adjustment.</summary>
+    /// <param name="value">The adjustment in thousandths of a unit of text space.</param>
+    /// <returns>The item.</returns>
+    public static TjItem FromNumber(double value) => new(TjItemKind.Number, value, default);
+
+    /// <summary>Creates a string to show.</summary>
+    /// <param name="bytes">The raw bytes of the string.</param>
+    /// <returns>The item.</returns>
+    public static TjItem FromString(ReadOnlyMemory<byte> bytes) => new(TjItemKind.String, 0d, bytes);
 }
 
 /// <summary>
@@ -54,6 +105,9 @@ internal sealed class PdfTextOperation
 /// </remarks>
 internal static class PdfTextScanner
 {
+    /// <summary>The capacity a decoded string buffer starts with; the pool grows it when a string is longer.</summary>
+    private const int InitialStringCapacity = 32;
+
     /// <summary>Scans a content stream.</summary>
     /// <param name="data">The decoded bytes of the content stream.</param>
     /// <returns>The operators, in the order the stream states them.</returns>
@@ -71,7 +125,7 @@ internal static class PdfTextScanner
         var numbers = operation.Numbers;
         var strings = operation.Strings;
         var names = operation.Names;
-        List<object>? items = null;
+        List<TjItem>? items = null;
 
         while (index < data.Length)
         {
@@ -182,6 +236,8 @@ internal static class PdfTextScanner
                 return;
             }
 
+            // A comment runs to the end of its line, and that line ending is whitespace the next
+            // iteration skips.
             while (index < data.Length && data[index] is not ((byte)'\n' or (byte)'\r'))
             {
                 index++;
@@ -200,35 +256,7 @@ internal static class PdfTextScanner
             index++;
         }
 
-        var raw = System.Text.Encoding.Latin1.GetString(data, start, index - start);
-
-        if (raw.IndexOf('#') < 0)
-        {
-            return raw;
-        }
-
-        var builder = new System.Text.StringBuilder(raw.Length);
-        var position = 0;
-
-        while (position < raw.Length)
-        {
-            if (raw[position] == '#' && position + 2 < raw.Length
-                && byte.TryParse(
-                    raw.AsSpan(position + 1, 2),
-                    System.Globalization.NumberStyles.HexNumber,
-                    System.Globalization.CultureInfo.InvariantCulture,
-                    out var value))
-            {
-                builder.Append((char)value);
-                position += 3;
-                continue;
-            }
-
-            builder.Append(raw[position]);
-            position++;
-        }
-
-        return builder.ToString();
+        return PdfNameDecoder.Decode(data.AsSpan(start, index - start));
     }
 
     private static string ReadKeyword(byte[] data, ref int index)
@@ -240,7 +268,7 @@ internal static class PdfTextScanner
             index++;
         }
 
-        return System.Text.Encoding.Latin1.GetString(data, start, index - start);
+        return PdfKeywords.Read(data.AsSpan(start, index - start));
     }
 
     private static bool IsNumberStart(byte value) =>
@@ -280,24 +308,60 @@ internal static class PdfTextScanner
 
         value = 0d;
 
+        // The scan already bounded the number, so it is parsed where it lies rather than copied into
+        // a string first: a content stream carries a number before almost every operator, and the
+        // digits are ASCII, which Utf8Parser reads in place. Full consumption is required because the
+        // parser is a prefix parser: "3.25" read as a long would otherwise report 3.
         return sawDigit
-            && double.TryParse(
-                System.Text.Encoding.Latin1.GetString(data, start, index - start),
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture,
-                out value);
+            && Utf8Parser.TryParse(data.AsSpan(start, index - start), out value, out var consumed)
+            && consumed == index - start;
     }
 
     /// <summary>Reads a literal string, decoding its escapes and its balanced parentheses.</summary>
     /// <param name="data">The stream.</param>
     /// <param name="index">The position of the opening parenthesis; moved past the closing one.</param>
-    /// <returns>The bytes of the string.</returns>
-    private static byte[] ReadLiteralString(byte[] data, ref int index)
+    /// <returns>The bytes of the string, as a slice of the stream when it needs no decoding.</returns>
+    private static ReadOnlyMemory<byte> ReadLiteralString(byte[] data, ref int index)
     {
         index++;
 
-        var bytes = new List<byte>(32);
+        var start = index;
+
+        // The common string has no escape, no nested parenthesis and no bare carriage return: what it
+        // holds is the bytes between its parentheses, so it is a slice of the stream and costs nothing.
+        while (index < data.Length)
+        {
+            var current = data[index];
+
+            if (current == (byte)')')
+            {
+                var length = index - start;
+                index++;
+                return data.AsMemory(start, length);
+            }
+
+            if (current is (byte)'\\' or (byte)'(' or (byte)'\r')
+            {
+                return ReadEscapedLiteralString(data, ref index, start);
+            }
+
+            index++;
+        }
+
+        return ReadEscapedLiteralString(data, ref index, start);
+    }
+
+    /// <summary>Reads a literal string that has to be decoded, into a pooled buffer.</summary>
+    /// <param name="data">The stream.</param>
+    /// <param name="index">The position of the first byte that needs decoding.</param>
+    /// <param name="start">The position just past the opening parenthesis.</param>
+    /// <returns>The decoded bytes, as an exactly sized array.</returns>
+    private static ReadOnlyMemory<byte> ReadEscapedLiteralString(byte[] data, ref int index, int start)
+    {
+        using var bytes = new PooledByteBuffer(InitialStringCapacity);
         var depth = 1;
+
+        index = start;
 
         while (index < data.Length)
         {
@@ -312,7 +376,7 @@ internal static class PdfTextScanner
             if (current == (byte)'(')
             {
                 depth++;
-                bytes.Add(current);
+                bytes.WriteByte(current);
                 continue;
             }
 
@@ -325,7 +389,7 @@ internal static class PdfTextScanner
                     break;
                 }
 
-                bytes.Add(current);
+                bytes.WriteByte(current);
                 continue;
             }
 
@@ -337,17 +401,17 @@ internal static class PdfTextScanner
                     index++;
                 }
 
-                bytes.Add((byte)'\n');
+                bytes.WriteByte((byte)'\n');
                 continue;
             }
 
-            bytes.Add(current);
+            bytes.WriteByte(current);
         }
 
-        return [.. bytes];
+        return bytes.ToExactArray();
     }
 
-    private static void ReadEscape(byte[] data, ref int index, List<byte> bytes)
+    private static void ReadEscape(byte[] data, ref int index, PooledByteBuffer bytes)
     {
         if (index >= data.Length)
         {
@@ -359,23 +423,23 @@ internal static class PdfTextScanner
         switch (escaped)
         {
             case (byte)'n':
-                bytes.Add((byte)'\n');
+                bytes.WriteByte((byte)'\n');
                 break;
 
             case (byte)'r':
-                bytes.Add((byte)'\r');
+                bytes.WriteByte((byte)'\r');
                 break;
 
             case (byte)'t':
-                bytes.Add((byte)'\t');
+                bytes.WriteByte((byte)'\t');
                 break;
 
             case (byte)'b':
-                bytes.Add((byte)'\b');
+                bytes.WriteByte((byte)'\b');
                 break;
 
             case (byte)'f':
-                bytes.Add((byte)'\f');
+                bytes.WriteByte((byte)'\f');
                 break;
 
             case (byte)'\r':
@@ -405,11 +469,11 @@ internal static class PdfTextScanner
                     index++;
                 }
 
-                bytes.Add((byte)value);
+                bytes.WriteByte((byte)value);
                 break;
 
             default:
-                bytes.Add(escaped);
+                bytes.WriteByte(escaped);
                 break;
         }
     }
@@ -418,43 +482,71 @@ internal static class PdfTextScanner
     /// <param name="data">The stream.</param>
     /// <param name="index">The position of the opening angle bracket; moved past the closing one.</param>
     /// <returns>The bytes of the string.</returns>
-    private static byte[] ReadHexString(byte[] data, ref int index)
+    /// <remarks>
+    /// The digits are counted before the bytes are written, so the result is one array of exactly the
+    /// right size rather than a growing list and the array copied out of it.
+    /// </remarks>
+    private static ReadOnlyMemory<byte> ReadHexString(byte[] data, ref int index)
     {
         index++;
 
-        var bytes = new List<byte>(16);
-        var high = -1;
+        var first = index;
+        var digits = 0;
+        var end = data.Length;
 
-        while (index < data.Length && data[index] != (byte)'>')
+        for (var cursor = index; cursor < data.Length; cursor++)
         {
-            var digit = HexValue(data[index++]);
+            if (data[cursor] == (byte)'>')
+            {
+                end = cursor + 1;
+                break;
+            }
+
+            if (HexValue(data[cursor]) >= 0)
+            {
+                digits++;
+            }
+        }
+
+        index = end;
+
+        var bytes = new byte[(digits + 1) / 2];
+        var written = 0;
+        var pending = -1;
+
+        for (var cursor = first; cursor < end; cursor++)
+        {
+            var current = data[cursor];
+
+            if (current == (byte)'>')
+            {
+                break;
+            }
+
+            var digit = HexValue(current);
 
             if (digit < 0)
             {
                 continue;
             }
 
-            if (high < 0)
+            if (pending < 0)
             {
-                high = digit;
+                pending = digit;
                 continue;
             }
 
-            bytes.Add((byte)((high << 4) | digit));
-            high = -1;
+            bytes[written++] = (byte)((pending << 4) | digit);
+            pending = -1;
         }
 
-        if (index < data.Length)
+        if (pending >= 0)
         {
-            index++;
+            // An odd number of digits is treated as if the last digit were followed by a zero.
+            bytes[written] = (byte)(pending << 4);
         }
 
-        if (high >= 0)
-        {
-            bytes.Add((byte)(high << 4));
-        }
-
-        return [.. bytes];
+        return bytes;
     }
 
     private static int HexValue(byte value) => value switch
@@ -469,11 +561,11 @@ internal static class PdfTextScanner
     /// <param name="data">The stream.</param>
     /// <param name="index">The position of the opening bracket; moved past the closing one.</param>
     /// <returns>The items of the array, as <see cref="double"/> values and <see cref="byte"/> arrays.</returns>
-    private static List<object> ReadArray(byte[] data, ref int index)
+    private static List<TjItem> ReadArray(byte[] data, ref int index)
     {
         index++;
 
-        var items = new List<object>();
+        var items = new List<TjItem>(8);
 
         while (index < data.Length)
         {
@@ -494,7 +586,7 @@ internal static class PdfTextScanner
 
             if (current == (byte)'(')
             {
-                items.Add(ReadLiteralString(data, ref index));
+                items.Add(TjItem.FromString(ReadLiteralString(data, ref index)));
                 continue;
             }
 
@@ -506,7 +598,7 @@ internal static class PdfTextScanner
                 }
                 else
                 {
-                    items.Add(ReadHexString(data, ref index));
+                    items.Add(TjItem.FromString(ReadHexString(data, ref index)));
                 }
 
                 continue;
@@ -516,7 +608,7 @@ internal static class PdfTextScanner
             {
                 if (TryReadNumber(data, ref index, out var number))
                 {
-                    items.Add(number);
+                    items.Add(TjItem.FromNumber(number));
                 }
                 else
                 {
@@ -657,9 +749,20 @@ internal static class PdfTextScanner
             index++;
         }
 
+        // The data between ID and EI can be hundreds of kilobytes, so the search for the E of EI is a
+        // vector one: see the note on the same search in PdfContentScanner.
         while (index + 1 < data.Length)
         {
-            if (data[index] == (byte)'E' && data[index + 1] == (byte)'I'
+            var found = SimdByteScan.IndexOf(data.AsSpan(index), (byte)'E');
+
+            if (found < 0)
+            {
+                break;
+            }
+
+            index += found;
+
+            if (index + 1 < data.Length && data[index + 1] == (byte)'I'
                 && index > 0 && PdfLexer.IsWhitespace(data[index - 1])
                 && (index + 2 >= data.Length || PdfLexer.IsWhitespaceOrDelimiter(data[index + 2])))
             {

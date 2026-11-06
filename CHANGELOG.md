@@ -20,6 +20,32 @@ against an empty feed.
 
 ## [Unreleased]
 
+### Performance
+
+- **The scan allocates less and runs faster on the work a reader does.** Seven changes, each measured
+  on the same 200-page fixture with `DOTNET_gcServer=1` in an isolated process: a number is parsed in
+  place with `Utf8Parser` instead of being copied into a string first (the three scanners and the
+  token lexer); a literal string that needs no decoding is a slice of the stream rather than a list and
+  a copy, and one that does is decoded into a pooled buffer; a hexadecimal string is one array of the
+  right size rather than a growing list and an array copied out of it; an operator keyword comes from a
+  cached set keyed by its packed bytes instead of a fresh string per operator; a `TJ` item is a struct
+  rather than a boxed `object`; the two base-encoding tables are built once and copied only by the one
+  caller that changes them (`/Differences`); and the word grouping reads a range of the glyph list
+  instead of copying a page at a time. Extract allocations fell from 35 028 to 33 183 KiB (−5.3 %),
+  median cold extract from 75.2 to 57.8 ms (−23 %) and warm from 68.8 to 58.3 ms (−15 %) over five
+  runs; the external corpus still reads **1 852 569 letters on both engines**, so none of it moved a
+  byte of text.
+- **The vector byte scan is used where a run is bulk, and was measured out of where it is not.** A new
+  internal `SimdByteScan` finds a byte with AVX2 (32 bytes), SSE2/NEON (16 bytes) or a scalar loop, in
+  the shape this team uses elsewhere: a platform check, one kernel per instruction set, a scalar tail.
+  Applied to the whitespace and keyword scan that runs before every token it was **slower** — 75.2 to
+  97.6 ms — because those runs are one to three bytes and a 32-byte compare of six to sixteen values
+  costs more than the three byte branches it replaces. That use was reverted, the set-shaped kernels
+  written for it lost their last caller and were removed with it, and the single-byte kernel stays for
+  the inline-image `EI` search, where the run between `ID` and `EI` is hundreds of kilobytes. The lesson
+  is recorded in `docs/mutation-testing.md` rather than remembered: vectorising a per-token decision is
+  a loss.
+
 ### Changed
 
 - **The external corpus the scoreboard cites is larger, and the numbers are fresh.** Two documents join it: a

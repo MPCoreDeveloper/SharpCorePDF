@@ -133,6 +133,38 @@ Engines: SharpCorePDF `1.4.0+a08cc3fd…` (tree under test), PdfPig `0.1.16+a7bb
 4. **Create and merge leads hold**, full-embed vs subset size caveat on create.
 5. **Correctness unchanged** (tied on characters/words/order; box convention still unfair to PdfPig).
 
+### The scan pass (2026-11-06, the work behind the next version)
+
+Seven changes to the content scan and the word grouping, measured on the same fixture, the same mode
+(`DOTNET_gcServer=1`, per-engine process, 2 warm-ups / 5 iterations) and the same work counts
+(200 pages, 16 400 words, 69 492 letters). The left column is the release-cite reading above; the right
+is the same command after the pass.
+
+| Scenario | Before | After | Change |
+| --- | ---: | ---: | ---: |
+| text-200-all (cold median) | 75.2 ms | **57.8 ms** | −23 % |
+| text-200-all-warm (median) | 68.8 ms | **58.3 ms** | −15 % |
+| Allocations, cold extract | 35 028 KiB | **33 183 KiB** | −5.3 % |
+| Allocations, block segmentation | 38 059 KiB | **36 214 KiB** | −4.8 % |
+| External corpus letters, both engines | 1 852 569 | **1 852 569** | unchanged |
+
+The block-segmentation row is the one to read with care: its median has read 73–100 ms across four runs
+on this workstation, and the 73.4 ms of the last run is inside that band rather than a win. The text rows
+and the allocation columns are the stable reads, and the corpus row is the one that says nothing about
+the text moved.
+
+What moved the numbers: `Utf8Parser` over the number span instead of a string per operand, literal
+strings as slices of the stream, one array per hexadecimal string instead of a list plus a copy, operator
+keywords from a cached set, `TJ` items as a struct instead of boxed objects, the base-encoding tables
+built once, and word grouping over a range instead of a per-page copy.
+
+What did **not** move them: a vectorised whitespace and keyword scan (AVX2/SSE2/NEON, in the shape this
+team uses elsewhere). Applied before every token it measured 97.6 ms — slower than the 75.2 ms it
+replaced — because those runs are one to three bytes. It was reverted from the per-token path and kept
+where the run is bulk, the inline-image `EI` search. `docs/mutation-testing.md` records the measurement
+and the reading.
+
+
 ### Release-cite isolation (per-engine process, server GC)
 
 Each engine in its own process with DOTNET_gcServer=1, 2 warm-ups / 5 iterations, run 2026-11-06:

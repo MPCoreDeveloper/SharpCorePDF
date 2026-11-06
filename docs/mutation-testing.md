@@ -624,3 +624,29 @@ and no `ignore` was added. The two test files lose one assertion each and gain a
 survivor is recorded, so the next reader of a refusal test is not left wondering why its whitespace case looks
 weaker than the null cases above it. The suite is still 1010 tests, green on both legs.
 
+
+## The seventh record: the scan pass, and what the vector scan was worth
+
+The 2026-11-06 performance pass changed how a content stream is scanned and how its glyphs become words.
+Four scopes were read; a fifth is recorded as blocked rather than as passed.
+
+| Reading | Scope | Tested mutants | Score | The survivors, read |
+| --- | --- | --- | --- | --- |
+| seventh-a | `**/SimdByteScan*.cs`, as first written — the single-byte kernel and the two set kernels | 195 | 46.24 % | 2791 mutants are compile errors — the intrinsics and their `Vector256` constants do not survive Stryker's edit — and 74 are `NoCoverage` in the AdvSimd kernels, which cannot run on this x64 machine. The survivors that are not either are dispatch and lane-count changes that only choose *which* path answers: every path returns the same answer, which is exactly what the property test over lengths 0–300 asserts. A mutation that makes the vector loop never run falls through to the scalar tail and agrees. When the per-token use was measured out, the two set kernels had no caller left and were removed; the file that ships is the single-byte `IndexOf` the inline-image search uses, and this reading describes the version that still had them |
+| seventh-b | `**/PdfTextScanner.cs`, first reading | 340 | 51.34 % | the inline-image path and the literal names were uncovered: `SkipInlineImage` was never exercised by a text read, and `true`/`false`/`null` were skipped by a branch no test reached |
+| seventh-c | `**/PdfTextScanner.cs`, after two tests | 343 | 59.12 % | the two tests added for that reading — a stream whose inline image contains a false `EI` and then the real one, and a stream that states the literal names before an operator — moved the score by 7.78 points and left the remaining survivors in error-tolerance branches (`index <= data.Length`, the delimiter switch) that a well-formed stream never takes |
+| seventh-d | `**/WordExtractor.cs` | 119 | 79.34 % | 23 survivors: the two `ArgumentNullException.ThrowIfNull` guards (no test passes null), two capacity expressions (`end - start` mutated to `end + start`, which only sizes a list), the `SameLine` tolerance at its boundary (`<` for `<=`, `*` for `/`), and `Math.Max` for `Math.Min` of the two font sizes. The last three are real gaps in the fixtures — every glyph of the sample document is drawn at one size and on one baseline — and are recorded rather than papered over |
+| seventh-e | `**/PdfGlyphEncodings.cs` | — | not read | blocked: a test server from the killed run above held `tests/SharpCorePDF.Tests/bin/Release` and the solution build could not copy into it. The full suite was run from a separate output path instead (2178 tests, green on both legs), and the file's behaviour is covered by the decoding tests |
+
+### What the vector scan taught
+
+The SIMD kernels were written in the shape this team uses elsewhere, and then measured on the work they
+were meant to speed up. Applied to the whitespace skip and the keyword scan — the two calls that run before
+every token — the extraction median went from 75.2 ms to 97.6 ms while allocations fell: the runs there are
+one to three bytes, and 32 bytes of six to sixteen comparisons is more work than the three branches it
+replaced. That use was reverted. The kernels remain in `PdfTextScanner.SkipInlineImage` and
+`PdfContentScanner.TryFindEndOfInlineData`, where the run between `ID` and `EI` is hundreds of kilobytes.
+
+The record is kept because the next person to reach for a vector in this scanner will otherwise make the
+same measurement twice. A vector is for a run, not for a token.
+
