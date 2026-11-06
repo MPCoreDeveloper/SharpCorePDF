@@ -1626,6 +1626,80 @@ internal static class PdfContentFixtures
     }
 
     /// <summary>
+    /// One page of two rows that exactly touch, each row drawn as two strings: the row-band order must keep
+    /// the second row in a band of its own rather than folding it into the first.
+    /// </summary>
+    /// <remarks>
+    /// 10pt glyphs occupy <c>Y - 2</c> to <c>Y + 8</c>, so a row at 690 has its top exactly on the bottom of
+    /// a row at 700. The content is meant to be read with the raw segmentation, which keeps each string a
+    /// block: the default segmentation would merge the two rows of a column into one block by their leading,
+    /// and then no band rule is on trial.
+    /// </remarks>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] TextTouchingRows()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+
+        var font = builder.Add(
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+
+        var content = builder.Add(Content(
+            "BT /F1 10 Tf "
+            + "1 0 0 1 300 700 Tm (Top) Tj "
+            + "1 0 0 1 72 690 Tm (Bottom) Tj "
+            + "ET"));
+
+        builder.Set(page, TextPage(pages, $"/F1 {font} 0 R", content));
+        builder.Set(pages, PageTree(page));
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
+    /// One page laid out as a two-column table of three rows, with the second row drawn right cell first and
+    /// the third row exactly touching the second: the row-band order must read each row left to right from
+    /// the top, and must not merge the touching row into the one above it.
+    /// </summary>
+    /// <remarks>
+    /// Every glyph is 10pt, so a line occupies <c>Y - 2</c> to <c>Y + 8</c>: the rows at 700, 650 and 640
+    /// put the bottom of row two (648) exactly on the top of row three, which is the boundary the band rule
+    /// has to decide with a strict comparison rather than a generous one.
+    /// </remarks>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] TextTableBands()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+
+        var font = builder.Add(
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+
+        var content = builder.Add(Content(
+            "BT /F1 10 Tf "
+            + "1 0 0 1 72 700 Tm (Alpha) Tj "
+            + "1 0 0 1 300 700 Tm (Beta) Tj "
+            + "1 0 0 1 300 650 Tm (Charlie) Tj "
+            + "1 0 0 1 72 650 Tm (Delta) Tj "
+            + "1 0 0 1 300 640 Tm (Foxtrot) Tj "
+            + "1 0 0 1 72 640 Tm (Echo) Tj "
+            + "ET"));
+
+        builder.Set(page, TextPage(pages, $"/F1 {font} 0 R", content));
+        builder.Set(pages, PageTree(page));
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
     /// One page whose text runs right to left: a horizontal scaling of minus one hundred percent turns the
     /// advance of every glyph round, so the baseline of the run goes towards the left edge.
     /// </summary>

@@ -196,8 +196,14 @@ before a release cite.
 - A genuinely **external** corpus sample (Common Crawl / SAFEDOCS subset) for the hash-locked leg. The
   mechanism and a synthetic local sample (13/13 both engines) are in place; the external bytes stay
   operator-supplied, hash-locked and uncommitted.
-- A **multi-cell / multi-line** table fixture to pin the row-band order's band-extent and within-band tie
-  behaviour (mutation survivors in `ReadingOrderer.Bands` name exactly that gap).
+- ~~A multi-cell table fixture~~ **landed (2026-11-06)**: three tests pin the row-band order on a real
+  two-column, three-row page — the default segmentation merges tightly-led rows into one block per column
+  (documented in the fixture), the raw segmentation keeps each string a block, and a touching row whose
+  left edge contradicts the row above proves the band comparison is strict. `ReadingOrderer` mutation
+  score 64.7% -> 67.7%; two survivors remain and are recorded as shape limits rather than gaps: a band
+  whose blocks differ in height with a later block between the two bottoms (needs mixed font sizes in one
+  band), and two blocks at identical x inside one band (the default segmentation merges those rows before
+  the order ever sees them).
 
 ## Governance note
 

@@ -9,6 +9,93 @@ namespace SharpCorePDF.Tests;
 public sealed partial class PdfLayoutReaderTests
 {
     /// <summary>
+    /// A row whose top exactly meets the bottom of the row above it starts a new band: the comparison is
+    /// strict, so touching rows are read one after the other rather than folded into one band and sorted by
+    /// position. The raw segmentation is used because it keeps each drawn string its own block — the default
+    /// segmentation merges the two tight rows of a column into one block by their leading.
+    /// </summary>
+    /// <returns>A task that completes when the page has been read and compared.</returns>
+    [Fact]
+    public async Task Keeps_a_row_that_touches_the_one_above_it_in_a_band_of_its_own()
+    {
+        var source = Source(PdfContentFixtures.TextTouchingRows(), "touching.pdf");
+
+        var blocks = await Reader().ReadBlocksAsync(
+            source,
+            PageRange.All,
+            new PdfLayoutOptions
+            {
+                Segmentation = PdfPageSegmentationStrategy.Raw,
+                ReadingOrder = PdfReadingOrderStrategy.RowBands,
+            },
+            cancellationToken: Token);
+
+        var order = string.Join(
+            '|',
+            blocks.Items
+                .OrderBy(block => block.ReadingOrder)
+                .Select(block => block.Text.Replace(" ", string.Empty)));
+
+        // The row above is drawn to the right of the row below, so an order that folded a touching block into
+        // the band above it would print Bottom before Top: the strict comparison keeps them two bands.
+        Assert.Equal("Top|Bottom", order);
+    }
+
+    /// <summary>
+    /// The row-band order reads a two-column table one row at a time, left to right, and keeps the row that
+    /// touches the one above it in a band of its own rather than merging the two.
+    /// </summary>
+    /// <remarks>
+    /// The fixture draws row two right cell first, so an order that followed the content would print
+    /// <c>Charlie</c> before <c>Delta</c>, and it puts row three's top exactly on row two's bottom, so a
+    /// band rule that accepted a touching block would fold six cells into one band and sort them all by
+    /// position instead of by row.
+    /// </remarks>
+    /// <returns>A task that completes when the page has been read and compared.</returns>
+    [Fact]
+    public async Task Reads_a_table_row_by_row_and_keeps_a_touching_row_in_its_own_band()
+    {
+        var source = Source(PdfContentFixtures.TextTableBands(), "bands.pdf");
+
+        var blocks = await Reader().ReadBlocksAsync(
+            source,
+            PageRange.All,
+            new PdfLayoutOptions { ReadingOrder = PdfReadingOrderStrategy.RowBands },
+            cancellationToken: Token);
+
+        var order = string.Join(
+            '|',
+            blocks.Items
+                .OrderBy(block => block.ReadingOrder)
+                .Select(block => block.Text.Replace(" ", string.Empty)));
+
+        Assert.Equal("Alpha|Beta|Delta\nEcho|Charlie\nFoxtrot", order);
+    }
+
+    /// <summary>
+    /// The same fixture under the default order proves the two strategies really differ: column-aware order
+    /// reads the left column before the right, which is what a two-column page needs and what a table does
+    /// not.
+    /// </summary>
+    /// <returns>A task that completes when the page has been read and compared.</returns>
+    [Fact]
+    public async Task Reads_the_same_table_column_by_column_with_the_default_order()
+    {
+        var source = Source(PdfContentFixtures.TextTableBands(), "bands.pdf");
+
+        var blocks = await Reader().ReadBlocksAsync(source, PageRange.All, cancellationToken: Token);
+
+        var order = string.Join(
+            '|',
+            blocks.Items
+                .OrderBy(block => block.ReadingOrder)
+                .Select(block => block.Text.Replace(" ", string.Empty)));
+
+        Assert.Equal("Alpha|Delta\nEcho|Beta|Charlie\nFoxtrot", order);
+        Assert.Equal(PdfReadingOrderStrategy.ColumnAware, blocks.ReadingOrderStrategy);
+    }
+
+    /// <summary>
     /// The default segmentation groups the lines of a paragraph into one block, and the block carries the
     /// words it was grouped from, the area it covers and its position on the page.
     /// </summary>

@@ -22,6 +22,13 @@ against an empty feed.
 
 ### Added
 
+- **Row-band order and the segmentation interplay it lives in are pinned by tests.** A three-row
+  two-column fixture shows the row-band read (`Alpha, Beta` before `Delta, Charlie`), the same page read
+  column by column under the default, and a raw segmentation that keeps each drawn string a block; a
+  touching row whose left edge contradicts the row above proves the band comparison is strict. The
+  fixture also documents that the default segmentation merges tightly-led rows of a column into one block
+  by leading, which is why the boundary needs the raw segmentation to be observable at all.
+
 - **A row-band reading order, for documents known to be tables.** `PdfReadingOrderStrategy.RowBands` reads
   a page as horizontal bands — the blocks that overlap vertically, left to right, before the band below
   them — which is the order a table's cells are read in. The labelled table now reads `Item, Quantity,
