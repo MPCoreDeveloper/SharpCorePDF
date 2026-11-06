@@ -188,3 +188,11 @@ throws `ArgumentException`, both at the call rather than after a full read.
 
 The `extract-layout` example runs the whole of this chapter against the sample document: blocks in reading
 order, the letters of page 1, and all four exports written to disk with their sizes reported.
+
+## What an export says about itself
+
+A PAGE XML document states two times its schema requires, `Created` and `LastChange`. They are written at a
+fixed instant (the epoch) because an export has to stay byte-for-byte reproducible: two reads of one page
+must compare equal, which is a property the export tests pin. A caller that needs the real timestamps writes
+them itself; the exporter will not invent the moment it happened to run.
+

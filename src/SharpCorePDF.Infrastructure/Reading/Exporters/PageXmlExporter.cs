@@ -42,6 +42,19 @@ internal static class PageXmlExporter
         Start(writer, "Creator");
         writer.WriteString("SharpCorePDF");
         End(writer);
+
+        // The PAGE schema requires a creation and a last-change time, and an export has to stay byte-for-byte
+        // reproducible so two reads of one page can be compared or stored. The epoch is the one instant that says
+        // "these elements are required, and this exporter does not know when the document was made": a caller
+        // that wants the real time stamps it itself.
+        Start(writer, "Created");
+        writer.WriteString("1970-01-01T00:00:00");
+        End(writer);
+
+        Start(writer, "LastChange");
+        writer.WriteString("1970-01-01T00:00:00");
+        End(writer);
+
         End(writer);
 
         foreach (var page in pages)

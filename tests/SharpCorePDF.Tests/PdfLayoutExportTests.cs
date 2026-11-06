@@ -242,6 +242,22 @@ public sealed class PdfLayoutExportTests
         Assert.Equal(first, second);
     }
 
+    /// <summary>
+    /// A PAGE XML document carries the two times its schema requires, at a fixed instant so the export stays
+    /// reproducible: the schema run of 2026-11-06 rejected a document that stated a creator and no times, and
+    /// the times cannot be "now" without making two reads of one page differ.
+    /// </summary>
+    /// <returns>A task that completes when the document has been checked.</returns>
+    [Fact]
+    public async Task Writes_the_metadata_times_the_page_schema_requires()
+    {
+        var bytes = await ExportAsync(PdfContentFixtures.Text(), PdfLayoutFormat.PageXml);
+        var xml = Encoding.UTF8.GetString(bytes);
+
+        Assert.Contains("<Created>1970-01-01T00:00:00</Created>", xml, StringComparison.Ordinal);
+        Assert.Contains("<LastChange>1970-01-01T00:00:00</LastChange>", xml, StringComparison.Ordinal);
+    }
+
     /// <summary>Text a markup document would read as structure is escaped, not written as structure.</summary>
     /// <param name="format">The format under test.</param>
     /// <returns>A task that completes when the document has been checked.</returns>

@@ -20,6 +20,15 @@ against an empty feed.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A PAGE XML export is schema-valid.** The first run of the schema check the parity matrix asks for
+  (ALTO 4.2 and PAGE XML 2019-07-15 against the published `.xsd` files with `lxml`) rejected the PAGE
+  document: its `<Metadata>` stated a creator and neither of the two times the schema requires. `Created`
+  and `LastChange` are now written at a fixed instant - the export stays byte-for-byte reproducible, which
+  another test already pins - and both documents validate. `docs/parity.md` row 16 moves to Evidenced with
+  the run recorded and the new test named.
+
 ### Added
 
 - **A page can paint in a colour space the caller names.** `PdfPageCanvas.SetFillColor` and `SetStrokeColor`
