@@ -55,6 +55,8 @@ internal static class PerformanceRunner
                 (await adapter.ExtractAsync(text, new PageSelection(1, 10), token)).WorkSummary()),
             new Scenario("create-10x20-truetype", adapter => adapter.SupportsCreation, async (adapter, token) =>
                 (await adapter.CreateAsync(10, 20, token)).WorkSummary()),
+            new Scenario("text-200-all-blocks-docstrum", adapter => adapter.SupportsBlocks, async (adapter, token) =>
+                (await adapter.ExtractBlocksAsync(text, PageSelection.All, token)).WorkSummary()),
             new Scenario("merge-10x10", adapter => adapter.SupportsMerge, async (adapter, token) =>
                 (await adapter.MergeAsync(mergeSources, token)).WorkSummary()),
         };

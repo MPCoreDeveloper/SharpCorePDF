@@ -24,3 +24,10 @@ locally) and a changed byte is reported as `LockMismatch` without any engine ope
 the default extraction row. Correctness reports two box columns: label-convention agreement and a
 convention-free IoU, because PdfPig's ink boxes can disagree with the label convention while still
 overlapping the characters.
+
+`--engine <name>` runs a single adapter in its own process; with `DOTNET_gcServer=1` that is the
+release-cite recipe in `docs/competitive-scoreboard.md`. `text-200-all-blocks-docstrum` compares block
+segmentation (each engine's Docstrum) and reports blocks and words inside them, not a word count to line
+up with the extraction rows. `scripts/sample-corpus.ps1` rebuilds a deterministic local robustness sample
+from repository assets, writes its SHA-256 lock and scores it — synthetic by design, never presented as
+an external corpus.

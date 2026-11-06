@@ -22,6 +22,16 @@ against an empty feed.
 
 ### Added
 
+- **Block segmentation is a measured row, and one engine per process is the cite recipe.** The harness now
+  compares each engine's Docstrum as a block producer (`text-200-all-blocks-docstrum`: equal output of
+  200 blocks and 16 400 words on the fixture) and accepts `--engine <name>` so a release-cite run puts one
+  adapter in a process of its own. Under `DOTNET_gcServer=1` with that isolation the warm extraction rows
+  sit within a few milliseconds of each other while cold extraction and block segmentation lead. A
+  deterministic local robustness sample can be rebuilt from repository assets with
+  `scripts/sample-corpus.ps1`, which writes its SHA-256 lock before scoring it (synthetic by design, never
+  presented as an external corpus). Harness and docs only — no product package changed. See
+  `docs/competitive-scoreboard.md`.
+
 - **A convention-free box overlap column in the competitive scorer.** The labelled scoring now reports
   intersection-over-union per matched character beside the label-convention agreement, so a coordinate
   convention and a miss are distinguishable: on the current corpus PdfPig scores 0% against the label

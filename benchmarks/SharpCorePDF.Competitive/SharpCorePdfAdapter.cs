@@ -21,6 +21,7 @@ internal sealed class SharpCorePdfAdapter : EngineAdapter
     public override bool SupportsExtraction => true;
     public override bool SupportsCreation => true;
     public override bool SupportsMerge => true;
+    public override bool SupportsBlocks => true;
 
     public override async ValueTask<ExtractionObservation> ExtractAsync(
         byte[] content,
@@ -73,6 +74,27 @@ internal sealed class SharpCorePdfAdapter : EngineAdapter
             words,
             result.Warnings.Count);
     }
+    public override async ValueTask<BlockObservation> ExtractBlocksAsync(
+        byte[] content,
+        PageSelection selection,
+        CancellationToken cancellationToken)
+    {
+        var range = selection.PageCount is { } count
+            ? PageRange.FromTo(selection.FirstPage, selection.FirstPage + count - 1)
+            : PageRange.All;
+        var source = new PdfByteArraySource(content, "competitive.pdf");
+        var result = await reader.ReadBlocksAsync(
+            source,
+            range,
+            new PdfLayoutOptions { Segmentation = PdfPageSegmentationStrategy.Docstrum },
+            cancellationToken: cancellationToken);
+
+        return new BlockObservation(
+            result.Items.Count == 0 ? 0 : result.Items.Max(block => block.PageNumber) - selection.FirstPage + 1,
+            result.Items.Count,
+            result.Items.Sum(block => block.Words.Count));
+    }
+
     public override async ValueTask<WriteObservation> CreateAsync(
         int pages,
         int linesPerPage,

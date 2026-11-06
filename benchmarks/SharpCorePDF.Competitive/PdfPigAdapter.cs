@@ -1,6 +1,7 @@
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.PageSegmenter;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 using UglyToad.PdfPig.Writer;
 
@@ -17,6 +18,7 @@ internal sealed class PdfPigAdapter : EngineAdapter
     public override bool SupportsExtraction => true;
     public override bool SupportsCreation => true;
     public override bool SupportsMerge => true;
+    public override bool SupportsBlocks => true;
 
     public override ValueTask<ExtractionObservation> ExtractAsync(
         byte[] content,
@@ -114,6 +116,34 @@ internal sealed class PdfPigAdapter : EngineAdapter
             Math.Max(0, lastPage - selection.FirstPage + 1),
             words,
             0));
+    }
+
+    public override ValueTask<BlockObservation> ExtractBlocksAsync(
+        byte[] content,
+        PageSelection selection,
+        CancellationToken cancellationToken)
+    {
+        using var document = PdfDocument.Open(content);
+        var segmenter = DocstrumBoundingBoxes.Instance;
+        var lastPage = selection.PageCount is { } count
+            ? Math.Min(document.NumberOfPages, selection.FirstPage + count - 1)
+            : document.NumberOfPages;
+        var blocks = 0;
+        var words = 0;
+
+        for (var pageNumber = selection.FirstPage; pageNumber <= lastPage; pageNumber++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var pageWords = document.GetPage(pageNumber).GetWords().ToArray();
+
+            blocks += segmenter.GetBlocks(pageWords).Count;
+            words += pageWords.Length;
+        }
+
+        return ValueTask.FromResult(new BlockObservation(
+            Math.Max(0, lastPage - selection.FirstPage + 1),
+            blocks,
+            words));
     }
 
     public override async ValueTask<WriteObservation> CreateAsync(

@@ -14,7 +14,8 @@ internal sealed record CliOptions(
     bool WriteRobustnessLock,
     int RobustnessLimit,
     long RobustnessMaxBytes,
-    double RobustnessTimeoutSeconds)
+    double RobustnessTimeoutSeconds,
+    string? Engine)
 {
     public static CliOptions Parse(string[] args)
     {
@@ -30,6 +31,7 @@ internal sealed record CliOptions(
         var limit = 50;
         var maxBytes = 5L * 1024 * 1024;
         var timeoutSeconds = 5d;
+        string? engine = null;
 
         for (var index = 0; index < args.Length; index++)
         {
@@ -62,6 +64,9 @@ internal sealed record CliOptions(
                     break;
                 case "--write-robustness-lock":
                     writeRobustnessLock = true;
+                    break;
+                case "--engine":
+                    engine = Require(args, ref index, argument);
                     break;
                 case "--robustness-limit":
                     limit = int.Parse(Require(args, ref index, argument), CultureInfo.InvariantCulture);
@@ -99,7 +104,8 @@ internal sealed record CliOptions(
             writeRobustnessLock,
             limit,
             maxBytes,
-            timeoutSeconds);
+            timeoutSeconds,
+            engine);
     }
 
     private static string Require(string[] args, ref int index, string name)
@@ -134,6 +140,7 @@ internal sealed record CliOptions(
               --robustness-limit <n>             Maximum files from the folder (default: 50)
               --robustness-max-bytes <n>         Skip larger files (default: 5242880)
               --robustness-timeout-seconds <n>   Per-file timeout; a timeout stops the robustness leg
+              --engine <name>                    Measure one engine only (one engine per process, the release-cite recipe)
               --help                             Show this text
 
             Read benchmarks/SharpCorePDF.Competitive/THIRD-PARTY.md before redistributing this harness.

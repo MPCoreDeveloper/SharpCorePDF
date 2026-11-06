@@ -72,6 +72,13 @@ internal sealed record WriteObservation(long OutputBytes, int? PageCount)
         $"pages={(PageCount?.ToString() ?? "not reported")}; outputBytes={OutputBytes}";
 }
 
+/// <summary>What a block read produced: how many blocks, and how many words inside them.</summary>
+internal sealed record BlockObservation(int PagesInspected, int Blocks, int Words)
+{
+    public string WorkSummary() =>
+        $"pages={PagesInspected}; blocks={Blocks}; words={Words}";
+}
+
 internal abstract class EngineAdapter
 {
     protected EngineAdapter(string name, Assembly assembly)
@@ -87,6 +94,24 @@ internal abstract class EngineAdapter
     public virtual bool SupportsExtraction => false;
     public virtual bool SupportsCreation => false;
     public virtual bool SupportsMerge => false;
+
+    /// <summary>Gets a value indicating whether this adapter can segment a page into blocks.</summary>
+    public virtual bool SupportsBlocks => false;
+
+    /// <summary>
+    /// Reads the blocks of a document with the Docstrum segmentation, for the block-level comparison.
+    /// </summary>
+    /// <remarks>
+    /// Both engines ship a Docstrum: SharpCorePDF's is a <c>PdfPageSegmentationStrategy</c> value, PdfPig's
+    /// is a page segmenter that takes the words of a page. The row compares them as block producers on the
+    /// same document — it is not a word-level row, so its work counts are the blocks and the words inside
+    /// them, never a word count to compare with the extraction rows.
+    /// </remarks>
+    public virtual ValueTask<BlockObservation> ExtractBlocksAsync(
+        byte[] content,
+        PageSelection selection,
+        CancellationToken cancellationToken) =>
+        throw new NotSupportedException($"{Name} has no block-segmentation adapter.");
 
     public virtual ValueTask<ExtractionObservation> ExtractAsync(
         byte[] content,

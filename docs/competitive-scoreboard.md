@@ -41,6 +41,18 @@ dotnet run -c Release --project .\benchmarks\SharpCorePDF.Competitive -- `
 Useful switches: `--skip-correctness`, `--skip-performance`, `--warmups`, `--iterations`,
 `--capture` (one unmeasured create/merge PDF per writer), `--robustness <folder>`,
 `--robustness-lock <manifest.json>`, `--write-robustness-lock`.
+`--engine <name>` measures one adapter in a process of its own.
+
+For a number that goes into release notes, run each engine in its own process under server GC, then
+read the two reports side by side:
+
+```powershell
+$env:DOTNET_gcServer = '1'
+dotnet run -c Release --project .\benchmarks\SharpCorePDF.Competitive -- --output artifacts\cite-sc  `
+  --warmups 2 --iterations 5 --skip-correctness --engine SharpCorePDF
+dotnet run -c Release --project .\benchmarks\SharpCorePDF.Competitive -- --output artifacts\cite-pig `
+  --warmups 2 --iterations 5 --skip-correctness --engine PdfPig
+```
 
 ## Scenarios
 
@@ -53,6 +65,7 @@ Useful switches: `--skip-correctness`, `--skip-performance`, `--warmups`, `--ite
 | `create-10x20-truetype` | SharpCorePDF, PdfPig, PDFsharp | Ten A4 pages, twenty lines, same supplied TrueType bytes and text |
 | `merge-10x10` | SharpCorePDF, PdfPig, PDFsharp | Ten generated ten-page sources |
 | `text-200-all-nearest-neighbour-alt` | PdfPig only | Named alternate word rule; its work counts differ from the default row by design |
+| `text-200-all-blocks-docstrum` | SharpCorePDF, PdfPig | Block segmentation: each engine's Docstrum over the same document; work is blocks and the words inside them |
 | External robustness | SharpCorePDF, PdfPig | Open + word extract on a caller-supplied, hash-lockable folder (opt-in) |
 
 Performance rows report median/p95/min–max wall time, median allocated bytes, an approximate managed
@@ -116,6 +129,38 @@ Engines: SharpCorePDF `1.4.0+a08cc3fd…` (tree under test), PdfPig `0.1.16+a7bb
 3. **Pages 1–10 cold leads consistently** (~1.1 ms vs ~2.9 ms) with equal work.
 4. **Create and merge leads hold**, full-embed vs subset size caveat on create.
 5. **Correctness unchanged** (tied on characters/words/order; box convention still unfair to PdfPig).
+
+### Release-cite isolation (per-engine process, server GC)
+
+Each engine in its own process with DOTNET_gcServer=1, 2 warm-ups / 5 iterations, run 2026-11-06:
+
+| Scenario | SharpCorePDF | PdfPig |
+| --- | ---: | ---: |
+| text-200-all (cold) | **75.9 ms** / 35 MB | 201.7 ms / 55 MB |
+| text-200-all-warm | 48.8 ms / 35 MB | 45.1 ms / 56 MB |
+| text-200-all-blocks-docstrum | **74.2 ms** / 38 MB | 199.7 ms / 138 MB |
+
+Server GC changes the picture enough that it is the mode a release note must name: warm extraction is
+within a few milliseconds of parity here, cold extraction and block segmentation lead, and PdfPig is block
+row allocates 3.6x what its word row does. Work counts remain equal on every row.
+
+### Block segmentation (Docstrum, workflow GC, 1 warm-up / 3 iterations)
+
+| Engine | Blocks | Words in blocks | Median ms | Allocated |
+| --- | ---: | ---: | ---: | ---: |
+| SharpCorePDF | 200 | 16 400 | **117.9** | 38 MB |
+| PdfPig | 200 | 16 400 | 198.3 | 138 MB |
+
+Equal segmentation output (200 blocks, 16 400 words) on both sides: this is a block-producing comparison,
+not a word row, and PdfPig is Docstrum costs about 3.6x the memory of its own word path.
+
+### Local robustness sample (synthetic, from repository assets)
+
+The script benchmarks/SharpCorePDF.Competitive/scripts/sample-corpus.ps1 rebuilds a deterministic sample (13 PDFs: the labelled parity
+fixtures plus any generated fixture or capture already under artifacts/) and pins it with a SHA-256 lock.
+Latest run: **SharpCorePDF 13/13 completed, PdfPig 13/13 completed**, no errors or timeouts; median
+per-file open and extract 15.3 ms vs 54.8 ms. This is a synthetic sample and is not an external corpus:
+a genuinely external subset stays operator-supplied, hash-locked and uncommitted.
 
 ### Captured writer validation
 

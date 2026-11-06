@@ -20,6 +20,19 @@ EngineAdapter[] adapters =
     new PdfSharpAdapter(font),
 ];
 
+// One engine per process is the release-cite recipe: the filter runs a single adapter in a process of
+// its own, so one engine's heap, GC mode and JIT state cannot colour another engine's numbers.
+if (options.Engine is { } engineName)
+{
+    adapters = [.. adapters.Where(adapter => string.Equals(adapter.Name, engineName, StringComparison.OrdinalIgnoreCase))];
+
+    if (adapters.Length == 0)
+    {
+        Console.Error.WriteLine($"No adapter named '{engineName}'. Known engines: SharpCorePDF, PdfPig, PDFsharp.");
+        return 2;
+    }
+}
+
 Console.WriteLine($"Competitive harness output: {output}");
 Console.WriteLine(
     string.Create(
