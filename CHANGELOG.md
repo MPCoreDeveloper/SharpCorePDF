@@ -22,6 +22,13 @@ against an empty feed.
 
 ### Added
 
+- **A row-band reading order, for documents known to be tables.** `PdfReadingOrderStrategy.RowBands` reads
+  a page as horizontal bands — the blocks that overlap vertically, left to right, before the band below
+  them — which is the order a table's cells are read in. The labelled table now reads `Item, Quantity,
+  Price` then `Widget, 2, 10.00` under it, and a corpus test pins that. The default stays `ColumnAware`:
+  the same order applied to a two-column page would interleave its columns line by line, so the previous
+  characterisation of the default remains correct and is kept as the record of what the default does.
+
 - **Block segmentation is a measured row, and one engine per process is the cite recipe.** The harness now
   compares each engine's Docstrum as a block producer (`text-200-all-blocks-docstrum`: equal output of
   200 blocks and 16 400 words on the fixture) and accepts `--engine <name>` so a release-cite run puts one

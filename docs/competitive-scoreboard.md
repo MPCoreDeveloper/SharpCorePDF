@@ -86,7 +86,10 @@ alternate iterations. Warm-ups sit outside the measured samples.
   zeroes it. On the current labelled corpus PdfPig scores **40.83%** here against 0% on the label
   column — which is what separates a coordinate convention from a miss.
 - **Reading order** is concordant matched-word pairs. The labelled `table` document is still scored
-  here; the product's own layout suite also records a known column-by-column table limitation
+  here; the default order is column-aware, and the product's layout suite records the column-by-column
+  table read as a characterisation. `PdfReadingOrderStrategy.RowBands` is the opt-in that reads a table
+  row by row (asserted by `Table_page_reads_row_by_row_with_the_row_band_order`), so the limitation is a
+  default, not a missing capability
   separately in `docs/parity.md`.
 
 ## Baseline run (local, 2026-11-05, post zero-copy + session + WordExtractor + font cache + scanner reuse)
@@ -190,9 +193,11 @@ before a release cite.
   cost is the per-glyph record itself, which is the product contract, not waste. What the attempt did
   surface is a real test gap: character spacing, word spacing and horizontal scaling had no assertion, so
   `PdfTextCollector` scored 41.9% under mutation. A spacing fixture and test now pin them (46.6%).
-- An actual external robustness **sample** to run through the now hash-locked leg (completion rate only;
-  no invented accuracy labels).
-- Server-GC and multi-process isolation when a number is cited in release notes.
+- A genuinely **external** corpus sample (Common Crawl / SAFEDOCS subset) for the hash-locked leg. The
+  mechanism and a synthetic local sample (13/13 both engines) are in place; the external bytes stay
+  operator-supplied, hash-locked and uncommitted.
+- A **multi-cell / multi-line** table fixture to pin the row-band order's band-extent and within-band tie
+  behaviour (mutation survivors in `ReadingOrderer.Bands` name exactly that gap).
 
 ## Governance note
 

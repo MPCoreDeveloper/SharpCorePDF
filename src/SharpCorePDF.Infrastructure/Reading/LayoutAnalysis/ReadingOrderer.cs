@@ -29,7 +29,55 @@ internal static class ReadingOrderer
     public static List<List<PdfWord>> Order(
         IReadOnlyList<List<PdfWord>> blocks,
         PdfReadingOrderStrategy strategy) =>
-        strategy == PdfReadingOrderStrategy.Raw ? [.. blocks] : Columns(blocks);
+        strategy switch
+        {
+            PdfReadingOrderStrategy.Raw => [.. blocks],
+            PdfReadingOrderStrategy.RowBands => Bands(blocks),
+            _ => Columns(blocks),
+        };
+
+    /// <summary>Orders blocks as horizontal bands, each band left to right.</summary>
+    /// <param name="blocks">The blocks a segmentation produced.</param>
+    /// <returns>The blocks, ordered row by row.</returns>
+    /// <remarks>
+    /// A band is one row: a block joins the band it overlaps vertically, and the band is read left to
+    /// right before the next band starts, which is the order a table's cells are read in. This is a
+    /// deliberate alternative to <see cref="Columns"/>, never a replacement for it — a two-column page is
+    /// read column by column, and reading it by bands would interleave the columns line by line.
+    /// </remarks>
+    private static List<List<PdfWord>> Bands(IReadOnlyList<List<PdfWord>> blocks)
+    {
+        var items = blocks
+            .Where(block => block.Count > 0)
+            .Select(block => (Block: block, Bounds: TextGeometry.Bounds(block)))
+            .OrderByDescending(item => item.Bounds.Top)
+            .ThenBy(item => item.Bounds.Left)
+            .ToList();
+        var ordered = new List<List<PdfWord>>();
+
+        for (var start = 0; start < items.Count;)
+        {
+            var bottom = items[start].Bounds.Bottom;
+            var end = start + 1;
+
+            while (end < items.Count && items[end].Bounds.Top > bottom)
+            {
+                bottom = Math.Min(bottom, items[end].Bounds.Bottom);
+                end++;
+            }
+
+            ordered.AddRange(items
+                .Skip(start)
+                .Take(end - start)
+                .OrderBy(item => item.Bounds.Left)
+                .ThenByDescending(item => item.Bounds.Top)
+                .Select(item => item.Block));
+
+            start = end;
+        }
+
+        return ordered;
+    }
 
     /// <summary>Orders blocks as the columns of the page, left to right.</summary>
     /// <param name="blocks">The blocks a segmentation produced.</param>

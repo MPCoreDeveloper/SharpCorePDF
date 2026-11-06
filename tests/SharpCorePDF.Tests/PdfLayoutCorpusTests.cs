@@ -131,6 +131,40 @@ public sealed class PdfLayoutCorpusTests
             + "exception in Meets_SC_004_on_the_labelled_corpus, and raise the SC-004 reading-order claim.");
     }
 
+    /// <summary>
+    /// The labelled table read with the row-band order: the cells of a row before the cells of the next,
+    /// which is the order the labels record. The default stays column-aware — a two-column page needs it —
+    /// so this is an opt-in a caller selects when it knows the document is tabular.
+    /// </summary>
+    /// <returns>A task that completes when the page has been read and compared.</returns>
+    [Fact]
+    public async Task Table_page_reads_row_by_row_with_the_row_band_order()
+    {
+        var bytes = await File.ReadAllBytesAsync(
+            Path.Combine(Labels, $"{CharacterisedTablePage}.pdf"), Token);
+
+        var blocks = await Reader().ReadBlocksAsync(
+            new PdfByteArraySource(bytes, $"{CharacterisedTablePage}.pdf"),
+            PageRange.All,
+            new PdfLayoutOptions { ReadingOrder = PdfReadingOrderStrategy.RowBands },
+            cancellationToken: Token);
+
+        var ordered = blocks.Items
+            .OrderBy(block => block.ReadingOrder)
+            .Select(block => Normalize(block.Text))
+            .ToArray();
+
+        // The cells of the table, in the order the read reports them: a row at a time, which is the order
+        // the labels record. The heading above the table is segmented its own way and is not asserted here.
+        string[] cells = ["Item", "Quantity", "Price", "Widget", "2", "10.00", "Gadget", "1", "25.00"];
+
+        Assert.Equal(cells, ordered.Where(cells.Contains));
+        Assert.Equal(
+            Enumerable.Range(1, blocks.Items.Count),
+            blocks.Items.OrderBy(block => block.ReadingOrder).Select(block => block.ReadingOrder));
+        Assert.All(blocks.Items, block => Assert.Equal(PdfReadingOrderStrategy.RowBands, blocks.ReadingOrderStrategy));
+    }
+
     [Fact]
     public void Labelled_subset_carries_a_document_and_a_label_file_for_every_name()
     {

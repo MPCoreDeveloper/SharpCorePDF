@@ -59,10 +59,14 @@ segmentation groups them in the page's order. A caller does not state that twice
 | --- | --- |
 | `Raw` | Reports the blocks in the order the segmentation produced them, which for a raw segmentation is the order the content stream draws them |
 | `ColumnAware` | Reports the columns of a page left to right, and the blocks of a column top to bottom. A heading that spans the columns is read before the columns it spans |
+| `RowBands` | Reports the page as horizontal bands: the blocks that overlap vertically are read left to right before the band below them. It is the order a table is read in |
 
 `ColumnAware` is the default because it is the order a reader takes a page in. `Raw` is the one a caller
 wants when it compares a read against the producer, or when the file's drawing order is itself the thing
-under investigation.
+under investigation. `RowBands` is a deliberate choice for a document known to be tabular: the same
+two-column page read by bands would interleave its columns line by line, which is why it is never the
+default. A table page read with `RowBands` gives its cells row by row —
+`Item, Quantity, Price` before `Widget, 2, 10.00` — while `ColumnAware` gives a column at a time.
 
 ## Keeping ink that is not prose
 

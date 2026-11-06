@@ -30,4 +30,13 @@ public enum PdfReadingOrderStrategy
     /// columns it spans. This is the default, because it is the order a reader takes a page in.
     /// </summary>
     ColumnAware = 1,
+
+    /// <summary>
+    /// Report the page as horizontal bands: every block whose vertical span overlaps its neighbours is
+    /// read left to right before the band below it is read. It is the order a table is read in — a row of
+    /// cells before the next row — and it is a deliberate choice, not a better default: a two-column page
+    /// read this way interleaves its columns line by line, which is why <see cref="ColumnAware"/> stays the
+    /// default and a caller that knows its document is a table selects this order instead.
+    /// </summary>
+    RowBands = 2,
 }
