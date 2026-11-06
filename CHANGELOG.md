@@ -22,6 +22,15 @@ against an empty feed.
 
 ### Added
 
+- **The first external-corpus leg is recorded, not just the synthetic one.** Eleven public-domain documents
+  (IRS forms and Publication 15, USCIS AcroForms, two arXiv LaTeX papers, NIST SP 800-53r5) were fetched
+  locally, pinned by a SHA-256 manifest and scored through the hash-locked robustness leg by both engines:
+  11/11 completed for each, no errors or timeouts, median open+extract 36.5 ms (SharpCorePDF) against
+  157.2 ms (PdfPig), and identical letter counts on ten of eleven files — the exception being 16 glyphs
+  of a 54 000-letter paper where SharpCorePDF reports 8 warnings. Word counts stay non-comparable across
+  engines, as they are everywhere else. The corpus and its manifest live under gitignored `artifacts/`;
+  the harness still downloads nothing.
+
 - **Row-band order and the segmentation interplay it lives in are pinned by tests.** A three-row
   two-column fixture shows the row-band read (`Alpha, Beta` before `Delta, Charlie`), the same page read
   column by column under the default, and a raw segmentation that keeps each drawn string a block; a
