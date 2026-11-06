@@ -57,6 +57,14 @@ against an empty feed.
 
 ### Changed
 
+- **Text advance is computed once per glyph, and character/word spacing and Tz are now asserted.** The
+  text walk derives the em-scaled width once and shares it between the glyph box and the advance, and
+  tests a space without a string comparison; the measured effect is nil on the competitive fixture
+  (allocation medians byte-identical, wall time inside its noise band), so this is a clarity change, not
+  a speed one. What it surfaced is real: no test pinned <c>Tc</c>/<c>Tw</c>/<c>Tz</c>, so the collector
+  scored 41.9% under mutation; a spacing fixture and test (`Moves_letters_by_the_character_word_spacing_and_scaling_it_is_drawn_with`)
+  now pin the arithmetic at 100/104/110 points and the collector scores 46.6%.
+
 - **The glyph walk no longer copies its own output.** Pages append straight into the read's glyph list
   (no per-page list plus `AddRange`), and the result of a glyph walk is handed over as built instead of
   being copied into a defensive list. Extract allocations fell again (36 → 34 MB on the competitive

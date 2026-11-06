@@ -1594,6 +1594,38 @@ internal static class PdfContentFixtures
     }
 
     /// <summary>
+    /// One page whose text is drawn with character spacing, word spacing and horizontal scaling: the
+    /// spacing widens the advance of every letter and of the space, and the scaling halves both the width
+    /// a glyph states and the advance it makes.
+    /// </summary>
+    /// <remarks>
+    /// Helvetica states no <c>/Widths</c>, so every glyph of this fixture is the default half em: 6pt at
+    /// 12pt, and 3pt once <c>Tz 50</c> halves it. The three letters sit at 100, 104 and 110 points from
+    /// the origin, which is what the advance arithmetic (<c>Tc</c>, <c>Tw</c>, <c>Tz</c>) must produce.
+    /// </remarks>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] TextSpacing()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+
+        var font = builder.Add(
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+
+        var content = builder.Add(Content(
+            "BT /F1 12 Tf 2 Tc 4 Tw 50 Tz 1 0 0 1 100 700 Tm (A B) Tj ET"));
+
+        builder.Set(page, TextPage(pages, $"/F1 {font} 0 R", content));
+        builder.Set(pages, PageTree(page));
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
     /// One page whose text runs right to left: a horizontal scaling of minus one hundred percent turns the
     /// advance of every glyph round, so the baseline of the run goes towards the left edge.
     /// </summary>
@@ -1617,6 +1649,7 @@ internal static class PdfContentFixtures
 
         return builder.Build(catalog);
     }
+
 
     /// <summary>Gets the compressed bytes the object graph fixture writes into its stream.</summary>
     public static byte[] GraphStreamData { get; } =

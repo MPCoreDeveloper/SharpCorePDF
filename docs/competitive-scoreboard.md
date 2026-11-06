@@ -184,8 +184,12 @@ before a release cite.
 
 - A PdfPig Docstrum **block-level** row (its Docstrum is a page segmenter, not a word rule, so it needs
   a blocks scenario rather than a word row).
-- Remaining per-code decode cuts (string sharing across shows, scan micro-paths) on
-  `text-200-all(-warm)`; the copy-removal slice landed here.
+- ~~Remaining per-code decode cuts~~ **closed as exhausted (2026-11-06)**: caching the text state per show
+  and testing the space without a string compare left allocation medians byte-identical (35 028 KiB) and
+  moved cold extraction inside its own noise band (71.5-95.8 ms across runs, before: 75.9). The remaining
+  cost is the per-glyph record itself, which is the product contract, not waste. What the attempt did
+  surface is a real test gap: character spacing, word spacing and horizontal scaling had no assertion, so
+  `PdfTextCollector` scored 41.9% under mutation. A spacing fixture and test now pin them (46.6%).
 - An actual external robustness **sample** to run through the now hash-locked leg (completion rate only;
   no invented accuracy labels).
 - Server-GC and multi-process isolation when a number is cited in release notes.

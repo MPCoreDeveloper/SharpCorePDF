@@ -267,6 +267,11 @@ internal sealed class PdfTextCollector
         }
 
         var offset = 0;
+        var fontSize = state.FontSize;
+        var horizontalScale = state.HorizontalScale;
+        var characterSpacing = state.CharacterSpacing;
+        var wordSpacing = state.WordSpacing;
+        var rise = state.Rise;
 
         while (offset < bytes.Length)
         {
@@ -277,9 +282,15 @@ internal sealed class PdfTextCollector
                 break;
             }
 
+            // One em-scaled width serves both the glyph's box and the advance it makes: the advance is the
+            // same width plus the character spacing (and the word spacing for a space), all of it scaled by
+            // Tz, which is what a viewer applies before it moves the text matrix.
+            var unitWidth = width * fontSize;
+            var scaledWidth = unitWidth * horizontalScale;
+
             if (hasText)
             {
-                var (x, y) = ToPage(state.PageTransform, state.TextMatrix, 0d, state.Rise);
+                var (x, y) = ToPage(state.PageTransform, state.TextMatrix, 0d, rise);
 
                 sink.Add(new PdfGlyph
                 {
@@ -287,8 +298,8 @@ internal sealed class PdfTextCollector
                     PageNumber = pageNumber,
                     X = x,
                     Y = y,
-                    Width = width * state.FontSize * state.HorizontalScale,
-                    FontSize = state.FontSize,
+                    Width = scaledWidth,
+                    FontSize = fontSize,
                     FontName = font.ResourceName,
                     BaseFont = font.BaseFont,
                 });
@@ -298,13 +309,17 @@ internal sealed class PdfTextCollector
                 Report($"font:{font.ResourceName}", DescribeUnmapped(font));
             }
 
-            var advance = ((width * state.FontSize) + state.CharacterSpacing)
-                + (text == " " ? state.WordSpacing : 0d);
+            var advance = (unitWidth + characterSpacing + (IsSpace(text) ? wordSpacing : 0d)) * horizontalScale;
 
-            state.TextMatrix = Advance(state.TextMatrix, advance * state.HorizontalScale);
+            state.TextMatrix = Advance(state.TextMatrix, advance);
             offset += consumed;
         }
     }
+
+    /// <summary>Decides whether a decoded code is the single space the word spacing applies to.</summary>
+    /// <param name="text">The text of the code.</param>
+    /// <returns><see langword="true"/> when the code is one space character.</returns>
+    private static bool IsSpace(string text) => text.Length == 1 && text[0] == ' ';
 
     /// <summary>Shows an array of strings and spacing adjustments, as <c>TJ</c> does.</summary>
     /// <param name="state">The text state the array is shown in.</param>

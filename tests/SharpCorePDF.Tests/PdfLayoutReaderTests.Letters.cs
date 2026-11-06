@@ -150,6 +150,42 @@ public sealed partial class PdfLayoutReaderTests
     }
 
     /// <summary>
+    /// Character spacing, word spacing and horizontal scaling move the letters as the specification says:
+    /// the spacing widens the advance of every letter and of a space, and the scaling halves both the width
+    /// a letter states and the advance it makes.
+    /// </summary>
+    /// <remarks>
+    /// Helvetica states no <c>/Widths</c>, so every glyph here is half an em: 6 points at 12pt and 3 once
+    /// <c>Tz 50</c> applies. <c>2 Tc</c> widens every advance by 2 scaled points and <c>4 Tw</c> widens the
+    /// space's advance by 4 more, which puts the three letters at 100, 104 and 110.
+    /// </remarks>
+    [Fact]
+    public async Task Moves_letters_by_the_character_word_spacing_and_scaling_it_is_drawn_with()
+    {
+        var source = Source(PdfContentFixtures.TextSpacing(), "spacing.pdf");
+
+        var result = await Reader().ReadLettersAsync(source, PageRange.All, cancellationToken: Token);
+
+        Assert.Equal(["A", " ", "B"], result.Items.Select(letter => letter.Value));
+        Assert.Empty(result.Warnings);
+
+        var a = result.Items[0];
+        var space = result.Items[1];
+        var b = result.Items[2];
+
+        Assert.Equal(100d, a.StartBaseLine.X, 0.001d);
+        Assert.Equal(3d, a.Width, 0.001d);
+
+        Assert.Equal(104d, space.StartBaseLine.X, 0.001d);
+        Assert.Equal(3d, space.Width, 0.001d);
+        Assert.True(space.IsWhitespace);
+
+        Assert.Equal(110d, b.StartBaseLine.X, 0.001d);
+        Assert.Equal(3d, b.Width, 0.001d);
+        Assert.Equal(700d, b.StartBaseLine.Y, 0.001d);
+    }
+
+    /// <summary>
     /// A letter whose end sits to the left of its start runs right to left, and its width is negative: the
     /// direction is derived from the baseline, not from the character.
     /// </summary>
