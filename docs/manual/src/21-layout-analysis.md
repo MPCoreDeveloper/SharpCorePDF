@@ -63,7 +63,8 @@ segmentation groups them in the page's order. A caller does not state that twice
 
 `ColumnAware` is the default because it is the order a reader takes a page in. `Raw` is the one a caller
 wants when it compares a read against the producer, or when the file's drawing order is itself the thing
-under investigation. `RowBands` is a deliberate choice for a document known to be tabular: the same
+under investigation. `RowBands` arrived in `1.5.0`; it is a deliberate choice for a document known to be
+tabular: the same
 two-column page read by bands would interleave its columns line by line, which is why it is never the
 default. A table page read with `RowBands` gives its cells row by row —
 `Item, Quantity, Price` before `Widget, 2, 10.00` — while `ColumnAware` gives a column at a time.
@@ -135,7 +136,8 @@ The library groups glyphs; it does not interpret a document. What that means in 
 
 The cost of a call is one walk of the pages you selected and one pass over their content streams; the
 grouping is a pass over glyphs already in memory. A one-shot call also opens the source, so a tool that
-shows several readings of the same pages opens a session once and asks it several times — one open, a walk
-per question (Chapter 20, *One open, several questions*). The grouping itself is recomputed for each
+shows several readings of the same pages opens a session once and asks it several times — one open, and a
+walk per range the first time that range is asked for, because a session keeps the glyphs of its two most
+recent ranges (Chapter 20, *One open, several questions*). The grouping itself is recomputed for each
 question, which is what makes two strategies comparable: only the rule changes, never the glyphs. The
 recorded cost of a read is in [`docs/measurements.md`](../measurements.md).

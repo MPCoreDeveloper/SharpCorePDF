@@ -1,7 +1,7 @@
 # 1. What SharpCorePDF Is
 
-SharpCorePDF is a PDF **merging**, **inspection**, **authoring** and **editing** library for .NET. It
-answers four questions:
+SharpCorePDF is a PDF **creation, editing and reading** library for .NET. It
+answers six questions:
 
 1. *What is in this document?* — page count, page sizes, rotation, metadata, outlines, annotations,
    form fields, embedded files, encryption and the warnings the reader had to record.
@@ -11,14 +11,21 @@ answers four questions:
    place, written in memory and merged in front of the rest (Chapter 12).
 4. *How do I change an existing document without editing its content?* — rotate, delete, move or
    duplicate pages and override document information, written to a new file (Chapter 14).
+5. *What does this page say, and where does it say it?* — the letters, the words and the blocks, in the
+   reading order the caller selects, with the links a page carries, exported as ALTO, PAGE XML, hOCR or
+   SVG text (Chapter 20); the segmentation and order rules are Chapter 21, and the object graph and
+   content operators behind them are Chapter 22.
+6. *Can this document be trusted, and can it be archived?* — a signature appended as an incremental
+   revision and validated with integrity and trust reported apart (Chapter 23), and an archival copy
+   written to a PDF/A profile (Chapter 24).
 
 Everything else in the API exists to make those operations predictable: an immutable plan, value
 objects for the inputs, read models for the outputs, typed exceptions for the failures, and warnings
 for the decisions that are not failures.
 
-## Four use cases, one engine
+## One engine behind all of them
 
-Merging, inspection, authoring and editing share the same reader and writer. A merge inspects every
+Merging, inspection, authoring, editing and reading share the same reader and writer. A merge inspects every
 source anyway — it has to know the page count before it can resolve `"2-5"` — so inspection is not a
 separate code path with its own interpretation of a damaged file. If `InspectAsync` reports four
 pages, the merge that follows sees the same four pages and the same warnings. An authored page is
@@ -103,8 +110,8 @@ own and depends on the four layers, so one `dotnet add package SharpCorePDF` is 
 | Package | Contains | Reference it when |
 | --- | --- | --- |
 | `SharpCorePDF.Domain` | Plan, sources, value objects, read models, ports, exceptions, warnings | You build plans in a domain project that must not depend on the engine |
-| `SharpCorePDF.Application` | Merge and inspection use cases, convenience extensions | You need the services without the concrete engine |
-| `SharpCorePDF.Infrastructure` | Reader, engine, file and memory sources, engine options, the authoring builder | You construct the engine yourself instead of using DI |
+| `SharpCorePDF.Application` | The use cases behind the ports — merge, edit, inspect, read, sign, validate, archive — and the convenience extensions | You need the services without the concrete engine |
+| `SharpCorePDF.Infrastructure` | Reader, engine, file and memory sources, engine options, the authoring builder, the signer and the archival writer | You construct the engine yourself instead of using DI |
 | `SharpCorePDF.DependencyInjection` | `AddSharpCorePDF()` and configuration binding | You register the library in a `IServiceCollection` |
 | `SharpCorePDF` | Dependencies on all four | You just want the library |
 

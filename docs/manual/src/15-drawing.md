@@ -3,7 +3,8 @@
 Chapter 12 starts a page from nothing: text in a standard or an embedded font, PNG, JPEG, BMP and GIF
 images, and a document written to bytes. This chapter is the rest of that surface — the shapes. Lines,
 rectangles, ellipses and arbitrary paths, the paint and stroke style applied to them, clipping, transforms
-and the saved graphics state. All of it shipped in `1.1.0`.
+and the saved graphics state all shipped in `1.1.0`; the colour-space selection in *Painting in a colour
+space of your own* arrived in `1.5.0`.
 
 Every call appends operators to the page's content stream in the order you make it, so the calls read like
 the drawing they produce: the background first, the shapes that cover it after. There is no scene graph, no

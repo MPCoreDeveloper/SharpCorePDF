@@ -546,6 +546,12 @@ The manual beside the packages is the `1.5.0` edition: 26 chapters, **120 pages 
 from the tagged tree with `tools/SharpCorePDF.Manual` and checked by its own verifier (`check : ok`); the
 `1.4.0`, `1.3.0`, `1.2.0` and `1.1.0` editions stay as those releases shipped them.
 
+A review after the release corrected three statements in the manual sources — Chapter 1 now names reading
+and trust among the questions the library answers, Chapter 15 states that colour-space selection arrived in
+`1.5.0` rather than with the rest of the drawing surface, and Chapter 21 no longer says a session walks the
+pages once per question, because it keeps the glyphs of its two most recent ranges. The edition committed
+after the tag carries those corrections; the file in the tag is what `1.5.0` shipped.
+
 What remains open, and is not a gate this record can close from here:
 
 1. **The `quickstart.md` run (T104).** Follow the quickstart on the version to be shipped in a clean

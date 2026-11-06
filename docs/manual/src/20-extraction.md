@@ -178,6 +178,9 @@ throws `ArgumentException`, both at the call rather than after a full read.
 
 ## One open, several questions
 
+**Release**: `OpenAsync` and `IPdfLayoutSession` arrived in `1.5.0`; the one-shot members this chapter
+opened with are unchanged, and a caller that asks once keeps using them.
+
 Every member above is a one-shot read: it opens the source, answers, and forgets the parse. A caller that
 already knows it will ask more than once — the letters of one range, then the words of another, then an
 export — pays for the cross-reference table and the page tree on every call. `OpenAsync` returns a session

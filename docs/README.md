@@ -21,7 +21,7 @@ long-form reference for the API.
 | Chapter | What it covers |
 | --- | --- |
 | [Preface](manual/src/00-preface.md) | Who the manual is for, how it is organised, and the conventions every chapter uses. |
-| [1. What SharpCorePDF Is](manual/src/01-what-it-is.md) | The four use cases, what a merge guarantees, and what "no third-party engine" means. |
+| [1. What SharpCorePDF Is](manual/src/01-what-it-is.md) | The six questions the library answers — merging, inspection, authoring, editing, reading and trust — what a merge guarantees, and what "no third-party engine" means. |
 | [2. What SharpCorePDF Is Not](manual/src/02-what-it-is-not.md) | The deliberate boundary: no layout engine, no page-content rewriting yet, rendering, conversion, OCR or PDF/A validation. |
 | [3. Installation and First Merge](manual/src/03-installation.md) | Install the package, register the services, merge two files, and read the result. |
 | [4. The Merge Plan](manual/src/04-mergeplan-basics.md) | How a plan is built, why source order is the merge order, and how validation and reuse work. |

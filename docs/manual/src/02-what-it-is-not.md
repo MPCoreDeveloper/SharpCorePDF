@@ -41,9 +41,12 @@ structures a PDF/A profile requires (Chapter 24). Neither rewrites what a page p
 The 1.1 parity plan extended editing to page content, annotations, forms and page geometry. Page geometry
 and the page-level operations shipped in `1.1.0`; annotation and form authoring, text layout and the
 remaining image formats shipped in `1.2.0`, and an edit can now record a page of another document over or
-under a page of the source. What an edit still does not do is rewrite the operators a page already carries:
-a layer is added beside them. The capabilities that stay outside the product at every release —
-rendering, conversion, OCR, conformance validation, services and CLIs — are the sections below.
+under a page of the source. The releases since stayed inside that boundary: `1.3` to `1.5` widened
+**reading** — the reusable session, the row-band order, MacRoman-encoded fonts — and **drawing** (a colour
+space the caller names) rather than the editing model. What an edit still does not do is rewrite the
+operators a page already carries: a layer is added beside them. The capabilities that stay outside the
+product at every release — rendering, conversion, OCR, conformance validation, services and CLIs — are the
+sections below.
 
 **Use instead:** a viewer/editor SDK for interactive editing, and a redaction product when content has to be
 removed. If the change is which pages the document contains, in what order, with what rotation and within
