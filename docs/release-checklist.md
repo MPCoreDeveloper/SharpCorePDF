@@ -517,40 +517,42 @@ editions stay as those releases shipped them.
 
 
 
-## Preparing `1.5.0` (2026-11-06, nothing tagged or pushed)
+## `1.5.0` (2026-11-06, tagged and published)
 
-The parity work of 2026-11-06 closed every open row of `docs/parity.md` — no `Partial`, no `Planned` — and the
-capability it added is the first surface growth since `1.4.0`. This section states what is ready for the next
-version and what that version still needs, so the state is readable without re-deriving it.
+The parity work of 2026-11-06 closed every open row of `docs/parity.md` — no `Partial`, no `Planned` — and
+this is the first surface growth since `1.4.0`: a reusable layout session, a row-band reading order and
+colour-space painting. The scan pass lowered allocations and both extraction rows, and the packages now
+declare trim and Native AOT compatibility.
 
-What is ready in the tree:
+What shipped is in the tree as the tag names it:
 
-| Gate | State, uncommitted to a version | Evidence |
+| Gate | State at `1.5.0` | Evidence |
 | --- | --- | --- |
-| G1 — the surface | **Sixteen entries, all declared in `PublicAPI.Unshipped.txt`** | four canvas calls (`PdfPageCanvas.SetFillColor`/`SetStrokeColor`/`FillPath`/`StrokePath`), nine in `Domain` (the `IPdfLayoutSession` type, its six members and `IPdfLayoutReader.OpenAsync`, beside `PdfReadingOrderStrategy.RowBands`), two in `Application` and one in `Infrastructure` (the `OpenAsync` each reader gained); nothing shipped was removed or retyped, so the shipped surface is a subset. RS0016 holds because each entry is declared; the move into `Shipped.txt` happens in the release commit, as it did at `1.4.0` |
-| G3 — notes | **Drafted** | `CHANGELOG.md` `## [Unreleased]` holds `Added` (the colour-space selection set), `Changed` (the larger external corpus) and `Fixed` (the PAGE XML schema defect); `PackageReleaseNotes` in `src/Directory.Build.props` still carries the `1.4.0` summary and is written in the bump commit |
+| G1 — the surface | **Sixteen entries, moved into `PublicAPI.Shipped.txt` in the release commit** | four canvas calls (`PdfPageCanvas.SetFillColor`/`SetStrokeColor`/`FillPath`/`StrokePath`), nine in `Domain` (the `IPdfLayoutSession` type, its six members and `IPdfLayoutReader.OpenAsync`, beside `PdfReadingOrderStrategy.RowBands`), two in `Application` and one in `Infrastructure` (the `OpenAsync` each reader gained); nothing shipped was removed or retyped, so the shipped surface is a subset. RS0016 holds because each entry is declared; the move into `Shipped.txt` happens in the release commit, as it did at `1.4.0` |
+| G3 — notes | **Written** | `CHANGELOG.md` holds `## [1.5.0] - 2026-11-06`, and `PackageReleaseNotes` in `src/Directory.Build.props` carries the 1.5.0 summary |
 | G9 — quality gate | **Green on the working tree** | 2204 tests on both legs (net10.0 and net11.0), the `Release` build clean, `validate-pdf.py` clean on the fixtures, mutation recorded per touched file (`PdfTextScanner` 59.12 %, `WordExtractor` 80.16 % after the string pass, `PdfObjectParser.Streams` + `PdfFilters.Predictors` 80.58 %, `DerEncoding` 70.51 % after the tag/length tests, `PdfPageContentReader.Glyphs` 23.81 %, `SimdByteScan` 46.24 %, each with the survivors read) |
 | Native AOT and trimming | **Claimed and proven** | every package sets `IsTrimmable`/`IsAotCompatible` and builds clean under the trim, AOT and single-file analyzers; `examples/SharpCorePDF.AotSmoke` publishes with `PublishAot` and runs — win-x64 locally (3.3 MB binary, `aot=True`, exit 0) and linux-x64 in the `native-aot` job of `ci.yml`; the configuration-binding overload carries `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`, and `docs/aot.md` records the proof |
 | parity | **No open row** | `docs/parity.md` reports 7 `Evidenced`, 9 `Met`, 5 out of scope, 0 `Partial`/`Planned` |
+| G0 — the id | **Closed** | the five ids are unchanged since `1.0.0`; `1.5.0` adds a version to an id the project owns |
+| G2 — the shipped leg | **Unchanged: both legs ship** | `lib/net10.0` and `lib/net11.0` in every package; narrowing stays on the backlog |
+| G4 — symbols and reproducible binaries | **Still partly** | no `.snupkg` is packed and nothing is code-signed, as at every earlier release; `<Deterministic>` is set and the compiled output is stable run to run |
+| G5 — trusted publishing | **Unchanged, outside the tree** | the policy and `NUGET_USERNAME` live on nuget.org and in the repository settings; `1.5.0` needed no new subject |
+| G6 — a dry run on the commit to be tagged | **Yes, 2026-11-06 — `publish: false`, run `42273034914`** | dispatched on `main` after `ci.yml` finished on `a6aec60`; sonar-gate and publish both `success`, the push steps correctly skipped |
+| G7 — the tag equals `<Version>` | **Yes — `v1.5.0` on `a6aec60`, `<Version>` 1.5.0** | an annotated tag whose message is `SharpCorePDF 1.5.0`, on the commit whose analysis was the newest on `main` |
+| G8 — the packages install | **Pushed; feed read pending** | run `42273457091` pushed all five packages (`201 Created` each, "Your package was pushed" five times); the flat-container read still served 1.4.0 when this line was written, so re-read `api.nuget.org/v3-flatcontainer/<id>/index.json` before citing an install |
+| G9 — the quality gate on the tagged commit | **Green on `a6aec60`** | `ci.yml` run `42271813308`: sonar token, build/test/analyse, **Tests on arm64** and **Native AOT smoke** all `success` — the arm64 leg is the first execution of the AdvSimd kernel and the linux-arm64 AOT proof |
 
-What the release still needs, in the order the earlier releases used, none of which an unattended run can do:
+The manual beside the packages is the `1.5.0` edition: 26 chapters, **120 pages and 226 bookmarks**, built
+from the tagged tree with `tools/SharpCorePDF.Manual` and checked by its own verifier (`check : ok`); the
+`1.4.0`, `1.3.0`, `1.2.0` and `1.1.0` editions stay as those releases shipped them.
 
-1. **The version bump.** `<Version>`, `AssemblyVersion`, `FileVersion` and `PackageReleaseNotes` in
-   `src/Directory.Build.props`, plus renaming `## [Unreleased]` to `## [1.5.0] - <date>` and moving the sixteen
-   unshipped entries into their `PublicAPI.Shipped.txt` files.
-2. **The manual edition.** A candidate edition is written beside the older ones from the working tree:
-   `docs/SharpCorePDF-Manual-1.5.0.pdf`, 26 chapters, **120 pages and 226 bookmarks**, carrying the new
-   *One open, several questions* section (Chapter 20) and the row-band and named-colour-space text
-   (Chapters 21 and 15). The released edition is rebuilt from the tagged sources — the file is replaced,
-   not added to — so anything that moves between this tree and the tag is re-measured rather than assumed.
-3. **The `quickstart.md` run (T104).** Follow the quickstart on the version to be shipped, in a clean
-   directory, and record what it prints.
-4. **The dry run (G6) and the install check (G8).** `publish.yml` with `publish: false` on the commit to be
-   tagged, then a clean `net10.0` console app against the published packages once the feed serves them.
-5. **`qpdf` on the machine.** Still not installed here, which is why the `1.4.0` G8 cell says the `1.2.0`
-   `qpdf check` was not repeated; `docs/tools/validate-pdf.py` drives it and would restore that step.
+What remains open, and is not a gate this record can close from here:
 
-Two of the caveats the earlier sections carry still hold and are worth repeating rather than discovering again:
-`G4` is still partly answered (no `.snupkg`, nothing code-signed), and the external corpus remains skewed to US
-federal forms plus arXiv — the two documents added on 2026-11-06 widen the *shapes* it covers (linearised, and
-image-only with no text layer) but not the *population*.
+1. **The install check from the feed (G8) and the `quickstart.md` run (T104).** The packages are pushed; a
+   clean `net10.0` console app against `1.5.0` is the read to take once indexing finishes.
+2. **`qpdf` on the machine.** Still not installed here, so the `1.2.0` `qpdf check` was not repeated;
+   `docs/tools/validate-pdf.py` drives it and would restore that step.
+3. **`G4`.** No symbol package and no code signing, unchanged since `1.0.0`.
+4. **The corpus population.** Seventeen documents now cover the shapes the scoreboard named — two web
+   samples, a rasterised scan and a broken XFA — but a random web slice and a captured scan remain
+   collection work rather than engineering.
