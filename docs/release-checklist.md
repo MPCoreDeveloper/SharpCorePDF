@@ -539,7 +539,7 @@ What shipped is in the tree as the tag names it:
 | G5 — trusted publishing | **Unchanged, outside the tree** | the policy and `NUGET_USERNAME` live on nuget.org and in the repository settings; `1.5.0` needed no new subject |
 | G6 — a dry run on the commit to be tagged | **Yes, 2026-11-06 — `publish: false`, run `42273034914`** | dispatched on `main` after `ci.yml` finished on `a6aec60`; sonar-gate and publish both `success`, the push steps correctly skipped |
 | G7 — the tag equals `<Version>` | **Yes — `v1.5.0` on `a6aec60`, `<Version>` 1.5.0** | an annotated tag whose message is `SharpCorePDF 1.5.0`, on the commit whose analysis was the newest on `main` |
-| G8 — the packages install | **Pushed; feed read pending** | run `42273457091` pushed all five packages (`201 Created` each, "Your package was pushed" five times); the flat-container read still served 1.4.0 when this line was written, so re-read `api.nuget.org/v3-flatcontainer/<id>/index.json` before citing an install |
+| G8 — the packages install | **Yes, 2026-11-06 — the feed serves 1.5.0 and an install works** | all five ids are listed at 1.5.0 by `v3-flatcontainer` and `registration5-semver1`; a clean `net10.0` console app that referenced `SharpCorePDF 1.5.0` authored two pages, merged them and read them back (`pages=2 bytes=1348`, `G8: ok`, exit 0). It needs `Microsoft.Extensions.DependencyInjection` for `BuildServiceProvider()`, the same finding `1.2.0`'s G8 recorded and the quickstart states |
 | G9 — the quality gate on the tagged commit | **Green on `a6aec60`** | `ci.yml` run `42271813308`: sonar token, build/test/analyse, **Tests on arm64** and **Native AOT smoke** all `success` — the arm64 leg is the first execution of the AdvSimd kernel and the linux-arm64 AOT proof |
 
 The manual beside the packages is the `1.5.0` edition: 26 chapters, **120 pages and 226 bookmarks**, built
@@ -548,8 +548,8 @@ from the tagged tree with `tools/SharpCorePDF.Manual` and checked by its own ver
 
 What remains open, and is not a gate this record can close from here:
 
-1. **The install check from the feed (G8) and the `quickstart.md` run (T104).** The packages are pushed; a
-   clean `net10.0` console app against `1.5.0` is the read to take once indexing finishes.
+1. **The `quickstart.md` run (T104).** Follow the quickstart on the version to be shipped in a clean
+   directory and record what it prints; the install half of G8 is done above.
 2. **`qpdf` on the machine.** Still not installed here, so the `1.2.0` `qpdf check` was not repeated;
    `docs/tools/validate-pdf.py` drives it and would restore that step.
 3. **`G4`.** No symbol package and no code signing, unchanged since `1.0.0`.
