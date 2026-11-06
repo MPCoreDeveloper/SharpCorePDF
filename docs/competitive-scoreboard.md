@@ -139,9 +139,11 @@ Each engine in its own process with DOTNET_gcServer=1, 2 warm-ups / 5 iterations
 
 | Scenario | SharpCorePDF | PdfPig |
 | --- | ---: | ---: |
-| text-200-all (cold) | **75.9 ms** / 35 MB | 201.7 ms / 55 MB |
-| text-200-all-warm | 48.8 ms / 35 MB | 45.1 ms / 56 MB |
-| text-200-all-blocks-docstrum | **74.2 ms** / 38 MB | 199.7 ms / 138 MB |
+| text-200-all (cold) | **75.2 ms** / 35 MB | 227.4 ms (min 99.7) / 56 MB |
+| text-200-all-warm | 68.8 ms / 35 MB | **50.6 ms** / 55 MB |
+| text-200-all-blocks-docstrum | **75.9 ms** / 38 MB | 209.1 ms / 138 MB |
+| create-10x20-truetype | **4.0 ms** / 0.8 MB | 12.6 ms / 9.7 MB |
+| merge-10x10 | **1.7 ms** / 1.6 MB | 17.8 ms / 22 MB |
 
 Server GC changes the picture enough that it is the mode a release note must name: warm extraction is
 within a few milliseconds of parity here, cold extraction and block segmentation lead, and PdfPig is block
@@ -159,19 +161,20 @@ not a word row, and PdfPig is Docstrum costs about 3.6x the memory of its own wo
 
 ### External corpus leg (first sample, 2026-11-06)
 
-Eleven public-domain documents fetched by the operator into `artifacts/`, never committed: six IRS forms
-and IRS Publication 15, two USCIS forms (AcroForm-heavy), two arXiv papers (LaTeX output) and NIST
-SP 800-53r5 (5.8 MB). Lock manifest SHA-256
-`d1b18571b60689e50bb60fa823693307484f3466619128001f8d4cdd1a4692de`; a second run against the same lock
+Thirteen documents fetched and produced by the operator into `artifacts/`, never committed: six IRS forms
+and IRS Publication 15, two USCIS forms (AcroForm-heavy), two arXiv papers (LaTeX output), NIST SP 800-53r5
+(5.8 MB), a linearised copy of one arXiv paper (`qpdf --linearize` through pikepdf) and an image-only A4
+page standing in for a scan. Lock manifest SHA-256
+`fca6dd1783903cca62ca1b44ba36280bb6754421562068775c079d8c925dab5b`; a second run against the same lock
 reproduced every row with no `LockMismatch`.
 
 | Measure | SharpCorePDF | PdfPig |
 | --- | ---: | ---: |
-| Completed | 11/11 | 11/11 |
+| Completed | 13/13 | 13/13 |
 | Errors / timeouts | 0 / 0 | 0 / 0 |
-| Median open+extract per file | 36.5 ms (41.2 on re-run) | 157.2 ms (120.9 on re-run) |
-| Letters read, summed over the corpus | 1 798 648 | 1 798 648 |
-| Files whose letter count differs | 0 of 11 | — |
+| Median open+extract per file | 37.9 ms (29.1 on re-run) | 124.3 ms (125.3 on re-run) |
+| Letters read, summed over the corpus | 1 852 569 | 1 852 569 |
+| Files whose letter count differs | 0 of 13 | — |
 | Readability warnings | **0** | not reported by the adapter |
 | Notes (informational) | 1 — a USCIS form opened with an empty user password and read decrypted | — |
 
@@ -193,8 +196,11 @@ What the sample says, and does not say:
   ground truth; the labelled corpus remains the place word segmentation is scored.
 - **Timing favours SharpCorePDF by roughly 3-4x** on this sample, which is the opposite of the early
   synthetic cold-open result and closer to what the server-GC isolated runs showed.
-- **Caveats, stated plainly:** n = 11, and the sample is skewed to US federal forms plus arXiv rather
-  than a random slice of the web. Downloading, hashing and scoring was an operator step; the harness
+- **The linearised and image-only additions behave.** The linearised copy reads the same 53 921 letters as
+  its original on both engines with no warning, and the image-only page yields no text on either engine and
+  raises nothing - "this page has no text" stays distinct from "this page could not be read".
+- **Caveats, stated plainly:** n = 13, and the sample is skewed to US federal forms plus arXiv rather
+  than a random slice of the web; the image-only page is one the library wrote, not a captured scan. Downloading, hashing and scoring was an operator step; the harness
   itself still downloads nothing. A scanned document, a linearised file or a broken XFA form is not in
   this sample and would be the next thing to add.
 

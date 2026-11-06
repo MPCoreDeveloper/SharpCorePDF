@@ -20,6 +20,18 @@ against an empty feed.
 
 ## [Unreleased]
 
+### Changed
+
+- **The external corpus the scoreboard cites is larger, and the numbers are fresh.** Two documents join it: a
+  linearised copy of one arXiv paper (`qpdf --linearize` through `pikepdf`) and an image-only A4 page the
+  library writes itself, standing in for a scan — the two shapes the earlier sample did not contain. Both
+  engines read 13 of 13 files, the letters are still identical to the character (1 852 569 on each), the
+  linearised copy reads the same 53 921 letters as its original with no warning, and the image-only page
+  yields no text on either engine and raises nothing, so "this page has no text" stays distinct from "this
+  page could not be read". `docs/competitive-scoreboard.md` carries the new lock hash
+  (`fca6dd17…5dab5b`), the refreshed medians and the release-cite table re-measured with
+  `DOTNET_gcServer=1` in isolated per-engine processes.
+
 ### Fixed
 
 - **A PAGE XML export is schema-valid.** The first run of the schema check the parity matrix asks for

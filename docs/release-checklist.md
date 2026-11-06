@@ -515,3 +515,40 @@ editions stay as those releases shipped them.
 
 
 
+
+
+## Preparing `1.5.0` (2026-11-06, nothing tagged or pushed)
+
+The parity work of 2026-11-06 closed every open row of `docs/parity.md` — no `Partial`, no `Planned` — and the
+capability it added is the first surface growth since `1.4.0`. This section states what is ready for the next
+version and what that version still needs, so the state is readable without re-deriving it.
+
+What is ready in the tree:
+
+| Gate | State, uncommitted to a version | Evidence |
+| --- | --- | --- |
+| G1 — the surface | **Five additions, all declared in `PublicAPI.Unshipped.txt`** | `PdfPageCanvas.SetFillColor`/`SetStrokeColor`/`FillPath`/`StrokePath` and `PdfLayoutReader.OpenAsync`; nothing shipped was removed or retyped, so the shipped surface is a subset. RS0016 holds because each entry is declared; the move into `Shipped.txt` happens in the release commit, as it did at `1.4.0` |
+| G3 — notes | **Drafted** | `CHANGELOG.md` `## [Unreleased]` holds `Added` (the colour-space selection set), `Changed` (the larger external corpus) and `Fixed` (the PAGE XML schema defect); `PackageReleaseNotes` in `src/Directory.Build.props` still carries the `1.4.0` summary and is written in the bump commit |
+| G9 — quality gate | **Green on the working tree** | 2082 tests on `net10.0`, both legs build in `Release`, `validate-pdf.py` clean on the fixtures, mutation recorded per touched file (`PdfObjectInspector` 77.8 %, `PageXmlExporter` 72.8 %) |
+| parity | **No open row** | `docs/parity.md` reports 7 `Evidenced`, 9 `Met`, 5 out of scope, 0 `Partial`/`Planned` |
+
+What the release still needs, in the order the earlier releases used, none of which an unattended run can do:
+
+1. **The version bump.** `<Version>`, `AssemblyVersion`, `FileVersion` and `PackageReleaseNotes` in
+   `src/Directory.Build.props`, plus renaming `## [Unreleased]` to `## [1.5.0] - <date>` and moving the five
+   unshipped entries into their `PublicAPI.Shipped.txt` files.
+2. **The manual edition.** `tools/SharpCorePDF.Manual` rebuilds the PDF that ships beside the packages; the
+   `1.4.0` edition is 26 chapters, 119 pages, 222 bookmarks, and this version adds the drawing section, so the
+   edition number, page count and bookmark count change with it. It is built from the tagged sources, so it
+   cannot precede the tag.
+3. **The `quickstart.md` run (T104).** Follow the quickstart on the version to be shipped, in a clean
+   directory, and record what it prints.
+4. **The dry run (G6) and the install check (G8).** `publish.yml` with `publish: false` on the commit to be
+   tagged, then a clean `net10.0` console app against the published packages once the feed serves them.
+5. **`qpdf` on the machine.** Still not installed here, which is why the `1.4.0` G8 cell says the `1.2.0`
+   `qpdf check` was not repeated; `docs/tools/validate-pdf.py` drives it and would restore that step.
+
+Two of the caveats the earlier sections carry still hold and are worth repeating rather than discovering again:
+`G4` is still partly answered (no `.snupkg`, nothing code-signed), and the external corpus remains skewed to US
+federal forms plus arXiv — the two documents added on 2026-11-06 widen the *shapes* it covers (linearised, and
+image-only with no text layer) but not the *population*.
