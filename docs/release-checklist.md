@@ -529,7 +529,7 @@ What is ready in the tree:
 | --- | --- | --- |
 | G1 — the surface | **Five additions, all declared in `PublicAPI.Unshipped.txt`** | `PdfPageCanvas.SetFillColor`/`SetStrokeColor`/`FillPath`/`StrokePath` and `PdfLayoutReader.OpenAsync`; nothing shipped was removed or retyped, so the shipped surface is a subset. RS0016 holds because each entry is declared; the move into `Shipped.txt` happens in the release commit, as it did at `1.4.0` |
 | G3 — notes | **Drafted** | `CHANGELOG.md` `## [Unreleased]` holds `Added` (the colour-space selection set), `Changed` (the larger external corpus) and `Fixed` (the PAGE XML schema defect); `PackageReleaseNotes` in `src/Directory.Build.props` still carries the `1.4.0` summary and is written in the bump commit |
-| G9 — quality gate | **Green on the working tree** | 2082 tests on `net10.0`, both legs build in `Release`, `validate-pdf.py` clean on the fixtures, mutation recorded per touched file (`PdfObjectInspector` 77.8 %, `PageXmlExporter` 72.8 %) |
+| G9 — quality gate | **Green on the working tree** | 2152 tests on both legs (net10.0 and net11.0), the `Release` build clean, `validate-pdf.py` clean on the fixtures, mutation recorded per touched file (`PdfTextScanner` 59.12 %, `WordExtractor` 79.34 %, `SimdByteScan` 46.24 % with the survivors read) |
 | parity | **No open row** | `docs/parity.md` reports 7 `Evidenced`, 9 `Met`, 5 out of scope, 0 `Partial`/`Planned` |
 
 What the release still needs, in the order the earlier releases used, none of which an unattended run can do:
