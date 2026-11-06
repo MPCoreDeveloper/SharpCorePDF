@@ -159,10 +159,13 @@ internal static class Program
 
         await File.WriteAllBytesAsync(options.Output, finished, cancellationToken).ConfigureAwait(false);
 
-        // Verify what was written: it must reopen, keep its pages, and carry the footer.
+        // Verify what was written, with the library's own reader: the cover, the metadata, every
+        // heading against the page the contents states, the outline, and the footer on both ends.
         var check = await PageIndex
             .ReadAsync(new PdfByteArraySource(finished, "manual.pdf"), cancellationToken)
             .ConfigureAwait(false);
+
+        var problems = ManualVerifier.Verify(check, headings, pages, identity, stamped: !options.NoStamp);
 
         var footerOk = options.NoStamp
             || (check.Pages.Count > 1 && check.Pages[1].Contains("Page 2 of", StringComparison.Ordinal));
@@ -172,17 +175,23 @@ internal static class Program
         Console.WriteLine($"pages    : {check.Pages.Count} (measured {total})");
         Console.WriteLine($"outline  : {check.Info.OutlineItemCount} bookmark(s)");
         Console.WriteLine($"footer   : {(options.NoStamp ? "skipped" : footerOk ? "ok" : "MISSING")}");
+        Console.WriteLine($"check    : {(problems.Count == 0 ? "ok" : $"{problems.Count} problem(s)")}");
         Console.WriteLine(
             $"output   : {options.Output} ({new FileInfo(options.Output).Length / 1024} KB)");
 
-        return footerOk ? 0 : 1;
+        foreach (var problem in problems)
+        {
+            Console.Error.WriteLine("  " + problem);
+        }
+
+        return problems.Count == 0 ? 0 : 1;
     }
 
     private static Options? ParseArguments(string[] args)
     {
         string? root = null;
         string? output = null;
-        var version = "1.4.0";
+        string? version = null;
         var keepHtml = false;
         var noStamp = false;
 
@@ -246,6 +255,10 @@ internal static class Program
             return null;
         }
 
+        // The edition defaults to the version the product states, so the tool keeps one source of truth
+        // for it; --version stays for building an edition that is not the tree's own.
+        version ??= ReadProductVersion(root);
+
         var resolvedOutput = output is null
             ? Path.Combine(
                 root,
@@ -254,6 +267,32 @@ internal static class Program
             : Path.GetFullPath(output);
 
         return new Options(root, resolvedOutput, version, keepHtml, noStamp);
+    }
+
+    /// <summary>Reads the product version the manual's edition defaults to.</summary>
+    /// <param name="root">The repository root.</param>
+    /// <returns>The <c>&lt;Version&gt;</c> the product states, or <c>1.0.0</c> when it cannot be read.</returns>
+    private static string ReadProductVersion(string root)
+    {
+        var props = Path.Combine(root, "src", "Directory.Build.props");
+        if (!File.Exists(props))
+        {
+            return "1.0.0";
+        }
+
+        var text = File.ReadAllText(props);
+        const string Open = "<Version>";
+        const string Close = "</Version>";
+
+        var start = text.IndexOf(Open, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return "1.0.0";
+        }
+
+        start += Open.Length;
+        var end = text.IndexOf(Close, start, StringComparison.Ordinal);
+        return end > start ? text[start..end].Trim() : "1.0.0";
     }
 
     private static string? FindRepositoryRoot()
@@ -285,7 +324,7 @@ internal static class Program
         Console.WriteLine();
         Console.WriteLine("  --root <path>      the repository root (default: found from the tool's location)");
         Console.WriteLine("  --out <path>       the PDF to write (default: docs/SharpCorePDF-Manual-<version>.pdf)");
-        Console.WriteLine("  --version <x.y.z>  the version the cover and metadata state (default: 1.4.0)");
+        Console.WriteLine("  --version <x.y.z>  the version the cover and metadata state (default: <Version> in src/Directory.Build.props)");
         Console.WriteLine("  --keep-html        keep the intermediate HTML in docs/manual/build");
         Console.WriteLine("  --no-stamp         skip the footer, the outline and the metadata");
         Console.WriteLine("  --help             show this message");

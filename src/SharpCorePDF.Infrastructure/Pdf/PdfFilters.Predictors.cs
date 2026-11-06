@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Numerics;
 using SharpCorePDF.Domain.Exceptions;
 
 namespace SharpCorePDF.Infrastructure.Pdf;
@@ -145,7 +146,20 @@ internal static partial class PdfFilters
     /// <param name="previous">The row above it, already undone.</param>
     private static void UndoUp(Span<byte> current, ReadOnlySpan<byte> previous)
     {
-        for (var index = 0; index < current.Length; index++)
+        var index = 0;
+        var width = Vector<byte>.Count;
+
+        // Every byte is predicted from the byte above it and nothing else, so a row is a vector add:
+        // XObjects and cross-reference streams carry rows wide enough for this to matter.
+        for (; index <= current.Length - width; index += width)
+        {
+            var row = new Vector<byte>(current[index..]);
+            var above = new Vector<byte>(previous[index..]);
+
+            (row + above).CopyTo(current[index..]);
+        }
+
+        for (; index < current.Length; index++)
         {
             current[index] = (byte)(current[index] + previous[index]);
         }

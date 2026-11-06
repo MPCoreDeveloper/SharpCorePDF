@@ -139,6 +139,60 @@ internal static class ContentFixtures
         return objects.Build(catalog);
     }
 
+    /// <summary>Builds a one page document whose content carries one large inline image.</summary>
+    /// <param name="width">The image width in pixels.</param>
+    /// <param name="height">The image height in pixels, which is also its byte count at 8 bits a sample.</param>
+    /// <returns>The bytes of the document.</returns>
+    /// <remarks>
+    /// The data between <c>ID</c> and <c>EI</c> is the bulk run the vector byte scan exists for:
+    /// hundreds of kilobytes with no token inside them. The bytes cycle through 0-255, which never puts
+    /// an <c>I</c> after an <c>E</c> and so cannot contain the terminator, and a line of text follows the
+    /// image so a read still reports the same words on both engines.
+    /// </remarks>
+    public static byte[] InlineImage(int width, int height)
+    {
+        var data = new byte[width * height];
+
+        for (var index = 0; index < data.Length; index++)
+        {
+            data[index] = (byte)(index & 0xFF);
+        }
+
+        var header = Encoding.Latin1.GetBytes(
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"BT /F1 11 Tf 40 820 Td (Inline image page) Tj ET q 595 0 0 842 0 0 cm "
+                + $"BI /W {width} /H {height} /CS /G /BPC 8 ID "));
+
+        var footer = Encoding.Latin1.GetBytes("\nEI Q");
+
+        var content = new byte[header.Length + data.Length + footer.Length];
+
+        header.CopyTo(content, 0);
+        data.CopyTo(content, header.Length);
+        footer.CopyTo(content, header.Length + data.Length);
+
+        var objects = new Objects();
+
+        var catalog = objects.Reserve();
+        var pageTree = objects.Reserve();
+        var font = objects.Reserve();
+        var page = objects.Reserve();
+        var stream = objects.Reserve();
+
+        objects.Set(
+            page,
+            $"<< /Type /Page /Parent {pageTree} 0 R /MediaBox [0 0 595 842] "
+            + $"/Resources << /Font << /F1 {font} 0 R >> >> /Contents {stream} 0 R >>");
+
+        objects.Set(stream, Objects.StreamBody(string.Empty, content));
+        objects.Set(pageTree, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 595 842] >>");
+        objects.Set(catalog, $"<< /Type /Catalog /Pages {pageTree} 0 R >>");
+        objects.Set(font, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+
+        return objects.Build(catalog);
+    }
+
     /// <summary>Builds a one page document carrying one attachment of the requested size.</summary>
     /// <param name="payloadBytes">The size of the attachment's payload in bytes.</param>
     /// <returns>The bytes of the document.</returns>

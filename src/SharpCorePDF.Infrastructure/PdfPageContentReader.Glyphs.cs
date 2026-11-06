@@ -93,7 +93,9 @@ public sealed partial class PdfPageContentReader
 
         NoteClosedEncryption(reader, warnings);
 
-        foreach (var page in SelectPages(reader, range))
+        var selected = SelectPages(reader, range);
+
+        foreach (var page in selected)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -112,6 +114,19 @@ public sealed partial class PdfPageContentReader
             var collector = new PdfTextCollector(reader, pageNumber, warnings, fontsCache);
 
             collector.Collect(pageContent, PageResources(reader, page), glyphs);
+
+            if (pages.Count == 1 && selected.Count > 1)
+            {
+                // One growth for the rest of the range: the first page's glyph count times the pages
+                // selected is the estimate the list would otherwise discover by doubling, copy by copy.
+                // A page that drew nothing leaves the list alone rather than reserving for the whole run.
+                var estimate = (long)glyphs.Count * selected.Count * 9 / 8;
+
+                if (glyphs.Count > 0 && estimate <= 1_000_000)
+                {
+                    glyphs.EnsureCapacity((int)estimate);
+                }
+            }
         }
 
         return new PdfGlyphRead(ResultOwned(reader, glyphs, warnings), pages);

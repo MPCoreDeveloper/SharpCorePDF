@@ -26,6 +26,48 @@ public sealed class PdfPredictorTests
     public void Undoes_every_png_filter_type(string encoded, string expected) =>
         Assert.Equal(Convert.FromHexString(expected), Decode(encoded, Parameters(12, columns: 2)));
 
+    /// <summary>
+    /// The up filter is undone a vector at a time: a row wider than a vector, and a row whose length is
+    /// not a multiple of one, both decode to the bytes a byte loop would produce.
+    /// </summary>
+    /// <remarks>
+    /// 300 one-byte columns are nine 32-byte vectors and a twelve-byte tail on the machine the numbers
+    /// were taken on, and a different split on any other, so the assertion covers the vector loop and the
+    /// scalar tail on every machine this ships to.
+    /// </remarks>
+    [Fact]
+    public void Undoes_an_up_row_wider_than_a_vector()
+    {
+        const int Columns = 300;
+
+        var above = new byte[Columns];
+        var below = new byte[Columns];
+
+        for (var index = 0; index < Columns; index++)
+        {
+            above[index] = (byte)(index * 7);
+            below[index] = (byte)(255 - index);
+        }
+
+        var encoded = new byte[2 * (Columns + 1)];
+
+        encoded[0] = 2;
+        above.CopyTo(encoded, 1);
+        encoded[Columns + 1] = 2;
+        below.CopyTo(encoded, Columns + 2);
+
+        var expected = new byte[2 * Columns];
+
+        above.CopyTo(expected, 0);
+
+        for (var index = 0; index < Columns; index++)
+        {
+            expected[Columns + index] = (byte)(below[index] + above[index]);
+        }
+
+        Assert.Equal(expected, Decode(Convert.ToHexString(encoded), Parameters(12, columns: Columns)));
+    }
+
     /// <summary>A filter type that is not one of the five PNG filters is a damaged stream.</summary>
     [Fact]
     public void Reports_an_undefined_png_filter_type()

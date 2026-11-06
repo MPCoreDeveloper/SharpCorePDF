@@ -650,3 +650,32 @@ replaced. That use was reverted. The kernels remain in `PdfTextScanner.SkipInlin
 The record is kept because the next person to reach for a vector in this scanner will otherwise make the
 same measurement twice. A vector is for a run, not for a token.
 
+## The eighth record: the allocation pass, and a struct conversion that was measured out
+
+The allocation pass that followed the scan pass changed four production files. Each scope was read again
+with `--configuration Debug`, because the IDE's test server held the Release output and the score does not
+depend on the configuration.
+
+| Reading | Scope | Tested mutants | Score | The survivors, read |
+| --- | --- | --- | --- | --- |
+| eighth-a | `**/WordExtractor.cs`, after the word text became one `string.Create` at its final length | 124 | 80.16 % | one point above the seventh reading. The fixture gap recorded there stands — every glyph of the sample is drawn at one size and on one baseline — and the string build added no survivor: a mutation that corrupts the length or the copy is killed by the word-equality assertions |
+| eighth-b | `**/PdfObjectParser.Streams.cs` and `**/PdfFilters.Predictors.cs` | 302 | 80.58 % | the new `endstream` search and the vector `Up` row are covered by `Reads_a_stream_whose_length_is_wrong` and `Undoes_an_up_row_wider_than_a_vector`; the survivors are the error-tolerance branches of the stream scan (`index + 9 > data.Length`, the whitespace tests on the byte before and after the keyword), which a well-formed document never reaches |
+| eighth-c | `**/PdfPageContentReader.Glyphs.cs` and `**/DerEncoding.cs`, as first read | 87 | 41.41 % | 23.81 % and 46.15 %. The glyph file's capacity heuristic changes only how often a list grows, so its mutants answer the same bytes and no assertion can see them — unobservable by design rather than a missing test. The DER encoder's 30 survivors were tag and length paths no signature test walked, which was a gap and was closed rather than accepted |
+| eighth-d | `**/DerEncoding.cs`, after `DerEncodingTests` was added | 98 | 70.51 % | 18 survivors and 5 `NoCoverage` remain in the base-128 arc encoding and the error messages; the length forms at every boundary (0x7F/0x80, 0xFF/0x100, 0xFFFF/0x10000), the set ordering, the integer padding, the three algorithm shapes and the UTCTime/GeneralizedTime year boundary are now pinned byte for byte. The glyph file is unchanged at 23.81 %: its survivors are arithmetic no output can observe, and they are recorded as such rather than papered over with a test that asserts the list's capacity |
+
+### What the pass measured out
+
+The recommendation that followed the scan pass was to turn `PdfGlyph`, `PdfLetter` and `PdfRectangle` into
+structs. It was implemented, built and measured on the same harness: allocations rose from 33 183 KiB to
+44 852 KiB (34 985 KiB once the capacity estimate carried slack) and warm extraction moved between 38.6
+and 52.9 ms against 58.8 ms before — inside the run-to-run noise, not a win.
+
+The reason is structural rather than a detail of the conversion. `PdfWord` stores its own glyph and letter
+arrays, so a struct glyph is copied into two places where a class instance is referenced from both; the
+copy is the allocation the struct was meant to remove. It is also a major-version surface change that
+removes shipped members. The conversion was reverted, and the measurement is recorded in
+`docs/competitive-scoreboard.md` so the next proposal starts from it.
+
+What the pass kept: a word's text built once at its final length, a glyph list sized from the first page
+instead of doubling, the `endstream` search through the vector kernel, and a vector `Up` predictor. Those
+are the changes behind warm extraction 58.8 → 38.3 ms and allocations 33 183 → 29 557 KiB.

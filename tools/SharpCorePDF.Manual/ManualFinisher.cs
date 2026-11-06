@@ -34,8 +34,10 @@ internal static class ManualFinisher
     private static readonly PdfColor RuleColor = new(217, 209, 230);
     private static readonly PdfColor TextColor = new(107, 87, 140);
 
-    private const string Subject =
-        "Merging PDFs in .NET: plans, page selections, output policies, encryption, inspection, diagnostics";
+    internal const string Subject =
+        "The complete SharpCorePDF manual: creating, editing and reading PDFs in .NET - merge plans, "
+        + "page selections, output policies, encryption, inspection, authoring, extraction, the object "
+        + "graph, signatures and PDF/A";
 
     /// <summary>Adds the footer, the outline and the metadata to a printed document.</summary>
     /// <param name="pdf">The document Chromium printed.</param>

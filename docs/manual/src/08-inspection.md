@@ -332,7 +332,8 @@ a scaled, rotated or nested form. A `TJ` adjustment is a word break when it is w
 of an em and a kern when it is narrower.
 
 Characters come from the font, never from the raw code byte. A simple font is read through its `/Encoding`
-(`WinAnsiEncoding`, `MacRomanEncoding` or `StandardEncoding` by default) and its `/Differences`, which name
+— `WinAnsiEncoding`, which is also the reading when none is stated, `StandardEncoding` or
+`MacRomanEncoding` — and its `/Differences`, which name
 a glyph for individual codes — the standard glyph names, including the Latin-1 accented set such as
 `eacute`, are understood. A composite font is read through its `/ToUnicode` map. Widths come from
 `/Widths` with `/FirstChar`, or from `/W` and `/DW` for a composite font, with `/MissingWidth` as the

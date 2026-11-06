@@ -44,6 +44,7 @@ internal static class PerformanceRunner
         CancellationToken cancellationToken)
     {
         var text = ContentFixtures.Text(200);
+        var inlineImage = ContentFixtures.InlineImage(1024, 1024);
         var mergeSources = Enumerable.Range(0, 10).Select(_ => ContentFixtures.Text(10)).ToArray();
         var scenarios = new List<Scenario>
         {
@@ -59,6 +60,10 @@ internal static class PerformanceRunner
                 (await adapter.ExtractBlocksAsync(text, PageSelection.All, token)).WorkSummary()),
             new Scenario("merge-10x10", adapter => adapter.SupportsMerge, async (adapter, token) =>
                 (await adapter.MergeAsync(mergeSources, token)).WorkSummary()),
+            new Scenario("extract-1-inline-image-1mb", adapter => adapter.SupportsExtraction, async (adapter, token) =>
+                (await adapter.ExtractAsync(inlineImage, PageSelection.All, token)).WorkSummary()),
+            new Scenario("text-200-two-questions", adapter => adapter.SupportsExtraction, async (adapter, token) =>
+                (await adapter.ExtractTwiceAsync(text, PageSelection.All, token)).WorkSummary() + "; questions=2"),
         };
         // Alternate word strategies are opt-in rows per adapter: the same document and the same work
         // summary, grouped by a named algorithm instead of the default. They never replace the default
@@ -75,6 +80,25 @@ internal static class PerformanceRunner
                     async (candidate, token) =>
                         (await candidate.ExtractStrategyAsync(strategy, text, PageSelection.All, token)).WorkSummary()));
                 scenarios = [.. scenarios2];
+            }
+        }
+
+        // One pass over every scenario before anything is measured: the first call of a method pays
+        // tiered compilation, and a row that includes it says more about the JIT than about the engine.
+        // A failure here is discarded; the measured pass reports it with the engine and scenario named.
+        foreach (var scenario in scenarios)
+        {
+            foreach (var adapter in adapters.Where(scenario.Supports))
+            {
+                try
+                {
+                    _ = await scenario.Invoke(adapter, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    Console.Error.WriteLine(
+                        $"prewarm {adapter.Name}/{scenario.Name} failed: {exception.GetType().Name}");
+                }
             }
         }
 

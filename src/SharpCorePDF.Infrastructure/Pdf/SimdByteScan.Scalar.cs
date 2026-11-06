@@ -1,8 +1,8 @@
 namespace SharpCorePDF.Infrastructure.Pdf;
 
 /// <summary>
-/// The scalar loop <see cref="SimdByteScan"/> defers to when the span is shorter than a vector, which
-/// is the case for most of the stream: a content stream is read a token at a time.
+/// The scalar loop <see cref="SimdByteScan"/> defers to for the tail a vector leaves, and for any span
+/// shorter than a vector.
 /// </summary>
 internal static partial class SimdByteScan
 {

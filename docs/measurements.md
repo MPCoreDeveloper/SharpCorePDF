@@ -87,7 +87,7 @@ Reading it:
 | --- | --- | --- |
 | 150 x 1 MB in ≤ 10 s, ≥ 15 MB/s | 0.27 s / 0.39 s, 531 / 369 MB/s | **met**, 26–37x under the time budget |
 | a source costs ≤ 1 ms fixed, for sources up to 1 MB | 0.54 / 0.39 ms per extra source over 150; 0.41 / 0.34 ms over ten | **met** |
-| doubling the sources at constant total bytes adds < 20 % wall time | 1.20x and 0.88x (WS) / 1.32x and 1.41x (server) | **not met reliably** — see below |
+| doubling the sources at constant total bytes adds < 20 % wall time | 1.26x at 75 MB and 1.45x at 150 MB (2026-11-06); see "The restatement is adopted" below | **not met as written** — the gate was restated and adopted on 2026-11-06 |
 | output is written as it is produced | not measured | open; §7.1 itself flags this line as possibly unreachable, and the writer needs the object graph before it can write |
 
 ### The scaling budget is the one that does not hold
@@ -123,6 +123,27 @@ Two honest options, and one of them should be chosen deliberately:
    gate cannot resolve a regression smaller than the budget itself. Reporting the median of the
    per-iteration medians, more iterations and a quiet, pinned machine is the minimum for this to be a gate
    rather than a coin toss.
+
+### The restatement is adopted (2026-11-06)
+
+Option 1 is the decision: **the gate is per-source overhead ≤ 1 ms and allocations ≤ 2.5× the input
+bytes**, and the 1.20x ratio is reported beside them as an observation rather than as a pass or a fail.
+The reasons are the ones above — allocations are flat in the source count (2.05× against 2.10× for twice
+the sources), while the ratio is dominated by a per-source floor that is itself inside its own budget, and
+a ±20 % spread against a 20 % budget cannot resolve anything smaller than the budget.
+
+A fresh run of `tools/SharpCorePDF.Measure` on 2026-11-06 (server GC, 12 logical cores) reads:
+
+| Row | Measured | Restated gate | Verdict |
+| --- | --- | --- | --- |
+| 150 x 1 MB | 0.67 s, 213.5 MB/s | ≤ 10 s, ≥ 15 MB/s | **met**, 15× under the time budget |
+| fixed cost per source | 0.39 ms over 150, 0.26 ms over ten | ≤ 1 ms | **met** |
+| allocations | 2.05× (75 MB) to 2.19× (150 MB) of input | ≤ 2.5× | **met** |
+| doubling at constant bytes | 1.26× at 75 MB, 1.45× at 150 MB | observation only | reported, not gated |
+
+The last row is kept because it is the number the old gate named: a reader comparing this page with an
+older copy should see it move without having to reconstruct why. Halving the per-source floor is what the
+1.20x form would need, and that is separate work, not a gate.
 
 ## 3. NFR §7.2 — memory and the peak budget
 
@@ -395,7 +416,7 @@ the same scenario in T058, and the full SC-003 scenario is re-timed there.
 | §8 authoring wall time, RGB / RGBA / 200 pages | 0.80 / 1.56 / 7.17 ms recorded | no regression > 10% | **met**: 0.68 / 1.45 / 6.67 ms (faster, within run-to-run noise) |
 | §1 merge, 150 × 1.0 MB | 0.27 s / 531 MB/s recorded | 10 s / 15 MB/s | **met**: 0.265 s / 540 MB/s on re-read |
 | §1 fixed cost per source | 0.54 ms recorded | ≤ 1 ms | **met**: 0.46 ms over 150 sources, 0.30 ms over ten |
-| §1 scaling at constant bytes | 1.20x–1.52x recorded | < 1.20x | **not met**: 0.85x at 75 MB and 1.44x at 150 MB; the open item in §2 |
+| §1 scaling at constant bytes | 1.20x–1.52x recorded | < 1.20x | **not met**: 0.85x at 75 MB and 1.44x at 150 MB; superseded by the restated gate adopted in §2 (2026-11-06) |
 
 The merge, authoring and reader code was not changed by Phase 0; the re-read is here to prove the
 harness and the machine still produce the 1.0 shape. The allocation columns are the regression gate,
@@ -503,7 +524,9 @@ size change on a document whose budget is time, not size.
 | SC-003 editor | < 3 s | 3.92–4.53 ms | **met**, >600× headroom |
 
 No row regressed by more than 10%, so T101 blocks nothing. The one budget not met is the scaling ratio §2
-already records as a coin flip on this machine; it is neither new nor hidden by this run.
+already records as a coin flip on this machine; it is neither new nor hidden by this run. That ratio was
+restated and adopted as a gate on 2026-11-06 — "The restatement is adopted" in §2 — while this section stays
+the `1.1.0` record as it was taken.
 
 ## 11. Text layout: what the metrics and the placement were checked against
 

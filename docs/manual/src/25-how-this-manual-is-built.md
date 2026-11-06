@@ -150,12 +150,35 @@ outline are two renderings of it. The metadata — title, author, subject, keywo
 — is set in the same plan. The creator names the stages ("markdown + Chromium + SharpCorePDF"); the
 producer names the library, because the bytes were last written by it.
 
+## Checking what was written
+
+The last thing the build does is read its own output. The finished file is opened again with this
+library's reader — not with a second PDF engine — and the properties the build promises are checked
+before the run is allowed to succeed:
+
+* **It opens, and it kept its pages.** The count the page tree states must equal the number of pages the
+  read returned, so a composition that lost or duplicated a page cannot pass as a finished book.
+* **The cover states the edition it was built for.** A build given the wrong `--version`, or one whose
+  cover fell off the front, is a failure rather than a file with a plausible name.
+* **The metadata names the book.** Title, subject, author and producer are read back and compared with
+  what the finishing plan set.
+* **Every heading is where the contents says.** Each heading's text is searched for on the page that was
+  measured for it, so a contents row cannot point at a page that does not carry its title.
+* **The outline and the footer span the document.** One bookmark per heading, "Page 2 of N" on the
+  second page — the cover carries none — and "Page N of N" on the last one.
+
+A problem is printed with the check it failed and the run exits non-zero, so an edition that is
+mislabelled, truncated or off by a page cannot be committed by accident. The checks read the bytes that
+were written, because the finishing pass is an edit of a file Chromium produced: checking the
+intermediate file would prove the browser's work and say nothing about the overlay, the outline or the
+metadata composed after it.
+
 ## What the build does not do
 
 - It does not convert the result to PDF/A. The manual is an ordinary PDF 1.7 file, and Chapter 24
   explains what converting it would add and what it would refuse.
-- It does not check the prose. A chapter that states a wrong page count builds happily and prints the
-  wrong number.
+- It does not check the prose. The self-check proves where a heading landed, not whether the sentence
+  under it is true; a chapter that states a wrong page count builds happily and prints the wrong number.
 - It does not run in CI. The tool is compiled with the rest of the solution, but the book is generated on
   a machine with a browser, before a release, and the release records the page count it produced.
 - It does not publish the HTML. GitHub renders the Markdown chapters directly and the PDF is the
@@ -173,15 +196,16 @@ dotnet run --project .\tools\SharpCorePDF.Manual -- --no-stamp     # stops after
 
 Chrome or Edge is the only prerequisite beyond the .NET SDK. `SHARPCOREPDF_CHROME` points the printer at
 a browser installed somewhere else, and the build fails with a message that says so rather than with a
-stack trace. The run prints what it did — chapters, headings, pages, bookmarks, and whether the footer
-was found on page 2 by reading the finished file back — and it exits with a non-zero code when the
-footer is missing, so a build that silently lost its finishing pass cannot be mistaken for a good one.
+stack trace. The run prints what it did — chapters, headings, pages, bookmarks, the footer, and a `check`
+line that is `ok` only when every property above held when the written file was read back — and it exits
+with a non-zero code otherwise, so a build that silently lost its finishing pass cannot be mistaken for a
+good one.
 
 | Argument | What it changes |
 | --- | --- |
 | `--root <path>` | the repository root; found from the tool's location when it is not given |
 | `--out <path>` | the file to write; `docs/SharpCorePDF-Manual-<version>.pdf` by default |
-| `--version <x.y.z>` | the edition the cover, the footer and the metadata state |
+| `--version <x.y.z>` | the edition the cover, the footer and the metadata state; defaults to the tree's `<Version>` in `src/Directory.Build.props` |
 | `--keep-html` | keep the generated HTML in `docs/manual/build` |
 | `--no-stamp` | skip the footer, the outline and the metadata |
 

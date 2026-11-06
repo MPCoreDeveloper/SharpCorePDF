@@ -6,7 +6,7 @@ pages from nothing, and changes the assembly of an existing document — which p
 order and with what rotation. It does all of that without calling a native library, a command line
 tool or a third-party PDF engine.
 
-This manual describes version **1.3.0** of the library. It is written for the developer who has to ship a
+This manual describes version **1.5.0** of the library. It is written for the developer who has to ship a
 feature, not only for the developer who wants to read source code: every chapter explains the behaviour you
 can rely on, the behaviour you should not rely on, and the code that exercises it.
 
@@ -30,11 +30,11 @@ Chapters 5 to 10 cover one part of the API each: page selection, output options,
 inspection, errors and warnings, and dependency injection. Chapters 11 to 14 are for readers who want
 to understand the design, write a page that did not exist, need a recipe they can adapt, or change the
 assembly of an existing document: the architecture, authoring, a cookbook, then editing. Chapters 15 to 19
-continue authoring: Chapter 15 is the shape surface — lines, rectangles, ellipses, paths, fill and stroke,
-clipping and transforms — Chapter 16 is text layout, which measures a line, wraps a paragraph into a
-column and draws the result, Chapter 17 is the image formats, what is read out of each file and what each
-one is refused for, Chapter 18 is annotations, which are drawn over a page rather than into it, and
-Chapter 19 is forms: the field model, filling by name, reset and flatten.
+continue authoring: Chapter 15 is the shape surface — lines, rectangles, ellipses, paths, fill and stroke
+in a device or a named colour space, clipping and transforms — Chapter 16 is text layout, which measures a
+line, wraps a paragraph into a column and draws the result, Chapter 17 is the image formats, what is read
+out of each file and what each one is refused for, Chapter 18 is annotations, which are drawn over a page
+rather than into it, and Chapter 19 is forms: the field model, filling by name, reset and flatten.
 
 Chapters 20 to 22 cover the reading surface that turns a page into data a program can use: extraction and
 its four export formats, the layout analysis that decides what a block is and which block is read first,
@@ -43,13 +43,13 @@ trust surface: digital signatures and archival (PDF/A) output. Chapter 25 turns 
 converter that reads these chapters, the browser that lays the pages out, and the finishing pass this
 library writes.
 
-**This edition is `1.2`, and every chapter describes what the package ships.** Chapters 16 to 19 were
-written for the `1.2` line while `1.1.0` was the package on the feed, and each of their heads used to say
-which part of its surface `1.1.0` already carried: the annotation writer and the form model shipped there,
-and the form writer, the text layouter and the JPEG, BMP and GIF readers are what `1.2` adds. They now
-describe the surface as it stands, and a paragraph that still needs the history says so in a word rather
-than a warning. The numbers are kept rather than reassigned so that a cross-reference in one edition keeps
-pointing at the same chapter in the next.
+**This edition describes `1.5.0`, and every chapter describes what the package ships.** Since `1.4.0` the
+changes a caller can see in the API are additive: a page can paint in a colour space the caller names (Chapter 15), the
+layout reader can read a page as horizontal row bands for a document known to be a table (Chapter 21), and a
+session keeps one parse open across several questions about the same document (Chapter 20). Chapters 16 to
+19 were written while `1.1.0` was the package on the feed, and each of their heads used to say which part of
+its surface `1.1.0` already carried; they now describe the surface as it stands. The numbers are kept rather
+than reassigned so that a cross-reference in one edition keeps pointing at the same chapter in the next.
 
 You do not have to read the chapters in order. Each one starts from a complete example and refers to
 earlier chapters only for background.
@@ -74,9 +74,9 @@ GitHub documentation and the PDF. If you find a discrepancy between this text an
 is the source of truth; please open an issue so the text can be corrected. Chapter 25 describes how those
 files become the PDF you are reading.
 
-> **Version note.** This manual is written against 1.3.0. The public API is covered by an approved snapshot
+> **Version note.** This manual is written against 1.5.0. The public API is covered by an approved snapshot
 > in each project, so a change to a public member is a deliberate, reviewed event rather than an accident of
-> a refactoring. Code that compiles against 1.2.0 keeps compiling across this minor release — every addition
+> a refactoring. Code that compiles against 1.4.0 keeps compiling across this minor release — every addition
 > is additive — and the changelog records every addition and every change of behaviour.
 
 ## What you need

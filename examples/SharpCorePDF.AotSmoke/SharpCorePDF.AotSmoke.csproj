@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Native AOT smoke test.
+
+    It is deliberately a separate app rather than a mode of the examples: an AOT publish is a property of
+    the consumer, and this app is the smallest consumer that touches every surface the publish has to keep
+    working — the authoring builder, the dependency-injection registration, the merge engine, the content
+    reader and the byte-array source. `PublishAot` is not set here, so `dotnet run` still works; the CI leg
+    and a local proof pass it on the command line:
+
+      dotnet publish .\examples\SharpCorePDF.AotSmoke -c Release -r win-x64 -p:PublishAot=true
+
+    and then run the published executable with the `expect-aot` switch. That switch makes the app fail when
+    the process it runs in supports dynamic code, so a publish that silently fell back to the JIT cannot
+    pass as proof. See docs/aot.md.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <RootNamespace>SharpCorePDF.AotSmoke</RootNamespace>
+    <AssemblyName>SharpCorePDF.AotSmoke</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+    <!-- A Native AOT app does not use ICU, and the library's own tables do not need it. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpCorePDF.Domain\SharpCorePDF.Domain.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.Application\SharpCorePDF.Application.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.Infrastructure\SharpCorePDF.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.DependencyInjection\SharpCorePDF.DependencyInjection.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+  </ItemGroup>
+
+</Project>

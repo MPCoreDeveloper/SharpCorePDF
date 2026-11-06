@@ -16,6 +16,13 @@ namespace SharpCorePDF.Infrastructure.Reading;
 /// </remarks>
 internal sealed class PdfLayoutSession : IPdfLayoutSession
 {
+    /// <summary>The number of page ranges whose glyphs a session keeps.</summary>
+    /// <remarks>Two covers "the letters, then the words" of one range while bounding what a session holds.</remarks>
+    private const int CachedRanges = 2;
+
+    private readonly Dictionary<PageRange, PdfGlyphRead> glyphsByRange = [];
+    private readonly Queue<PageRange> order = [];
+
     private PdfFileReader? reader;
     private bool disposed;
 
@@ -108,7 +115,28 @@ internal sealed class PdfLayoutSession : IPdfLayoutSession
     private PdfGlyphRead ReadGlyphPages(PageRange range, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return PdfPageContentReader.ReadGlyphPages(Document(), range, cancellationToken);
+
+        // A session exists because the caller asks more than once, and in practice it asks about the same
+        // pages: the letters of a chapter, then its words, then an export. The walk of those pages is the
+        // expensive half — the content stream has to be parsed and every glyph placed — while grouping the
+        // glyphs a second time is a pass over data already in memory. Two ranges are kept, which covers the
+        // usual shape and bounds what a long-lived session holds to two glyph lists.
+        if (glyphsByRange.TryGetValue(range, out var cached))
+        {
+            return cached;
+        }
+
+        var read = PdfPageContentReader.ReadGlyphPages(Document(), range, cancellationToken);
+
+        if (order.Count == CachedRanges)
+        {
+            glyphsByRange.Remove(order.Dequeue());
+        }
+
+        glyphsByRange[range] = read;
+        order.Enqueue(range);
+
+        return read;
     }
 
     private PdfFileReader Document()
@@ -126,5 +154,7 @@ internal sealed class PdfLayoutSession : IPdfLayoutSession
 
         disposed = true;
         reader = null;
+        glyphsByRange.Clear();
+        order.Clear();
     }
 }

@@ -527,20 +527,22 @@ What is ready in the tree:
 
 | Gate | State, uncommitted to a version | Evidence |
 | --- | --- | --- |
-| G1 — the surface | **Five additions, all declared in `PublicAPI.Unshipped.txt`** | `PdfPageCanvas.SetFillColor`/`SetStrokeColor`/`FillPath`/`StrokePath` and `PdfLayoutReader.OpenAsync`; nothing shipped was removed or retyped, so the shipped surface is a subset. RS0016 holds because each entry is declared; the move into `Shipped.txt` happens in the release commit, as it did at `1.4.0` |
+| G1 — the surface | **Sixteen entries, all declared in `PublicAPI.Unshipped.txt`** | four canvas calls (`PdfPageCanvas.SetFillColor`/`SetStrokeColor`/`FillPath`/`StrokePath`), nine in `Domain` (the `IPdfLayoutSession` type, its six members and `IPdfLayoutReader.OpenAsync`, beside `PdfReadingOrderStrategy.RowBands`), two in `Application` and one in `Infrastructure` (the `OpenAsync` each reader gained); nothing shipped was removed or retyped, so the shipped surface is a subset. RS0016 holds because each entry is declared; the move into `Shipped.txt` happens in the release commit, as it did at `1.4.0` |
 | G3 — notes | **Drafted** | `CHANGELOG.md` `## [Unreleased]` holds `Added` (the colour-space selection set), `Changed` (the larger external corpus) and `Fixed` (the PAGE XML schema defect); `PackageReleaseNotes` in `src/Directory.Build.props` still carries the `1.4.0` summary and is written in the bump commit |
-| G9 — quality gate | **Green on the working tree** | 2152 tests on both legs (net10.0 and net11.0), the `Release` build clean, `validate-pdf.py` clean on the fixtures, mutation recorded per touched file (`PdfTextScanner` 59.12 %, `WordExtractor` 79.34 %, `SimdByteScan` 46.24 % with the survivors read) |
+| G9 — quality gate | **Green on the working tree** | 2204 tests on both legs (net10.0 and net11.0), the `Release` build clean, `validate-pdf.py` clean on the fixtures, mutation recorded per touched file (`PdfTextScanner` 59.12 %, `WordExtractor` 80.16 % after the string pass, `PdfObjectParser.Streams` + `PdfFilters.Predictors` 80.58 %, `DerEncoding` 70.51 % after the tag/length tests, `PdfPageContentReader.Glyphs` 23.81 %, `SimdByteScan` 46.24 %, each with the survivors read) |
+| Native AOT and trimming | **Claimed and proven** | every package sets `IsTrimmable`/`IsAotCompatible` and builds clean under the trim, AOT and single-file analyzers; `examples/SharpCorePDF.AotSmoke` publishes with `PublishAot` and runs — win-x64 locally (3.3 MB binary, `aot=True`, exit 0) and linux-x64 in the `native-aot` job of `ci.yml`; the configuration-binding overload carries `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`, and `docs/aot.md` records the proof |
 | parity | **No open row** | `docs/parity.md` reports 7 `Evidenced`, 9 `Met`, 5 out of scope, 0 `Partial`/`Planned` |
 
 What the release still needs, in the order the earlier releases used, none of which an unattended run can do:
 
 1. **The version bump.** `<Version>`, `AssemblyVersion`, `FileVersion` and `PackageReleaseNotes` in
-   `src/Directory.Build.props`, plus renaming `## [Unreleased]` to `## [1.5.0] - <date>` and moving the five
+   `src/Directory.Build.props`, plus renaming `## [Unreleased]` to `## [1.5.0] - <date>` and moving the sixteen
    unshipped entries into their `PublicAPI.Shipped.txt` files.
-2. **The manual edition.** `tools/SharpCorePDF.Manual` rebuilds the PDF that ships beside the packages; the
-   `1.4.0` edition is 26 chapters, 119 pages, 222 bookmarks, and this version adds the drawing section, so the
-   edition number, page count and bookmark count change with it. It is built from the tagged sources, so it
-   cannot precede the tag.
+2. **The manual edition.** A candidate edition is written beside the older ones from the working tree:
+   `docs/SharpCorePDF-Manual-1.5.0.pdf`, 26 chapters, **120 pages and 226 bookmarks**, carrying the new
+   *One open, several questions* section (Chapter 20) and the row-band and named-colour-space text
+   (Chapters 21 and 15). The released edition is rebuilt from the tagged sources — the file is replaced,
+   not added to — so anything that moves between this tree and the tag is re-measured rather than assumed.
 3. **The `quickstart.md` run (T104).** Follow the quickstart on the version to be shipped, in a clean
    directory, and record what it prints.
 4. **The dry run (G6) and the install check (G8).** `publish.yml` with `publish: false` on the commit to be

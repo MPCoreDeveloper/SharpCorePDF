@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -24,6 +25,12 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
 {
     /// <summary>The configuration section read when no other name is given.</summary>
     public const string DefaultConfigurationSection = "SharpCorePDF";
+
+    /// <summary>The reason the configuration-binding overload is not trim- or AOT-safe.</summary>
+    private const string BindingRequirement =
+        "Configuration binding reads the option names by reflection and creates its converters at run "
+        + "time. Build PdfEngineOptions in code and pass it to AddSharpCorePDF(PdfEngineOptions) in a "
+        + "trimmed or Native AOT application.";
 
     /// <summary>Registers SharpCorePDF with the default engine options.</summary>
     /// <param name="services">The service collection to add to.</param>
@@ -56,7 +63,18 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
     /// <param name="configuration">The configuration to read from.</param>
     /// <param name="sectionName">The section to read; defaults to <see cref="DefaultConfigurationSection"/>.</param>
     /// <returns>The same collection, so calls can be chained.</returns>
+    /// <remarks>
+    /// <para>
+    /// The bind is the configuration binder's, which reads the option names by reflection and creates its
+    /// converters at run time. Trimming can remove what it looks for and an AOT publish cannot generate it,
+    /// so the requirement is stated on the member instead of being discovered by a consumer's publish: a
+    /// trimmed or AOT application builds <see cref="PdfEngineOptions"/> in code and passes it to
+    /// <see cref="AddSharpCorePDF(IServiceCollection, PdfEngineOptions)"/>.
+    /// </para>
+    /// </remarks>
     /// <exception cref="ArgumentNullException">An argument is <see langword="null"/>.</exception>
+    [RequiresUnreferencedCode(BindingRequirement)]
+    [RequiresDynamicCode(BindingRequirement)]
     public static IServiceCollection AddSharpCorePDF(
         this IServiceCollection services,
         IConfiguration configuration,

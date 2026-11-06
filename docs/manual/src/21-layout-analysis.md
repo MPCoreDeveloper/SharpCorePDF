@@ -133,8 +133,9 @@ The library groups glyphs; it does not interpret a document. What that means in 
 * **No rendering, so no confidence.** A read that finds no letters on a page says so and returns no blocks;
   it does not guess from pixels ([ADR-001](../adr/0001-pdf-platform-boundary.md)).
 
-The cost of a call is one open of the source, one walk of the pages you selected and one pass over their
-content streams; the grouping is a pass over glyphs already in memory. Every call pays the read again, so a
-tool that shows several readings of the same pages is cheaper reading a wide range once and grouping it
-several times than calling `ReadBlocksAsync` once per strategy over the same range. The recorded cost of a
-read is in [`docs/measurements.md`](../measurements.md).
+The cost of a call is one walk of the pages you selected and one pass over their content streams; the
+grouping is a pass over glyphs already in memory. A one-shot call also opens the source, so a tool that
+shows several readings of the same pages opens a session once and asks it several times — one open, a walk
+per question (Chapter 20, *One open, several questions*). The grouping itself is recomputed for each
+question, which is what makes two strategies comparable: only the rule changes, never the glyphs. The
+recorded cost of a read is in [`docs/measurements.md`](../measurements.md).

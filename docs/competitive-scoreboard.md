@@ -181,6 +181,52 @@ Server GC changes the picture enough that it is the mode a release note must nam
 within a few milliseconds of parity here, cold extraction and block segmentation lead, and PdfPig is block
 row allocates 3.6x what its word row does. Work counts remain equal on every row.
 
+### Re-measured after the allocation pass (2026-11-06, later run)
+
+The same recipe — one engine per process, `DOTNET_gcServer=1`, 2 warm-ups / 5 iterations — run again
+after the scan and allocation pass, with two harness changes that make a row steadier: every scenario is
+executed once per engine before any warm-up is taken (so a row excludes tiered compilation), and the
+per-letter observation the harness builds is a struct rather than a class. Two runs of each engine agreed
+within a few per cent on every row; the table quotes the second.
+
+| Scenario | SharpCorePDF | PdfPig | PDFsharp |
+| --- | ---: | ---: | ---: |
+| text-200-all (steady state) | **67.5 ms** / 29 MB | 120.9 ms / 53 MB | — |
+| text-200-all-warm (session) | **38.3 ms** / 29 MB | 67.9 ms / 53 MB | — |
+| text-200-pages-1-10 | **1.4 ms** / 2.1 MB | 4.0 ms / 3.9 MB | — |
+| text-200-all-blocks-docstrum | **78.0 ms** / 33 MB | 230.6 ms / 135 MB | — |
+| create-10x20-truetype | **5.3 ms** / 0.8 MB / 80 534 B | 14.5 ms / 9.7 MB / 11 805 B | 5.6 ms / 1.1 MB / 11 950 B |
+| merge-10x10 | **1.9 ms** / 1.4 MB / 75 820 B | 16.9 ms / 22 MB / 80 715 B | 7.0 ms / 2.7 MB / 79 594 B |
+| extract-1-inline-image-1mb (new) | **0.7 ms** | 8.2 ms | — |
+| text-200-two-questions (new) | **31.3 ms** / 41 MB | 89.3 ms / 109 MB | — |
+
+What the pass changed, measured: warm extraction 58.8 → 38.3 ms and allocations 33 183 → 29 557 KiB on
+the text row; the external corpus's median open+extract 36.1 → 21.9 ms, still 13/13 completed and
+1 852 569 letters on both engines. PdfPig's own warm row read 47.8 ms in the earlier session and 63–68 ms
+in this one with identical code, which is why the in-run ratio is the comparison and a cross-session
+number is not.
+
+Two findings are worth carrying forward:
+
+* **The inline-image row exists because none did before.** No earlier scenario contained a `BI`/`EI`
+  image, so the vector byte scan was not exercised by any published number. On the new row SharpCorePDF
+  reads the page in 0.7 ms against PdfPig's 8.2 ms.
+* **A session now keeps the glyphs of its two most recent ranges, and that row measures it.**
+  `text-200-two-questions` asks the letters and then the words of the same pages: SharpCorePDF answers the
+  second question from the walk the first one made, PdfPig opens and walks twice. Measured 31.3 ms and
+  41 MB against 89.3 ms and 109 MB. In the same row, the same build with the cache bypassed allocated
+  50 356 KiB against 42 433 — the 7.9 MB of one glyph list — while its wall time difference (33.3 against
+  31.3 ms) sat inside the noise, so the allocation column is the evidence and the timing is not.
+  A row's absolute number depends on where in the run it sits — the two-question row reads faster than the
+  single-question warm row because of the heap state the earlier scenarios leave — so a row is compared with
+  the same row in another engine or run, never with a neighbouring row.
+* **Turning `PdfGlyph`, `PdfLetter` and `PdfRectangle` into structs was measured and rejected.**
+  `PdfWord` stores its own glyph and letter arrays, so a struct glyph is stored twice: allocations rose
+  to 44 852 KiB (34 985 KiB with a capacity slack) against 33 183, and wall time moved inside the noise.
+  It is also a major-version surface change. It can only pay off if `PdfWord.Glyphs`/`Letters` become
+  slices over one array, which is a redesign rather than a conversion — the decision and the numbers are
+  [ADR-003](adr/0003-per-letter-read-model.md).
+
 ### Block segmentation (Docstrum, workflow GC, 1 warm-up / 3 iterations)
 
 | Engine | Blocks | Words in blocks | Median ms | Allocated |
@@ -236,6 +282,30 @@ What the sample says, and does not say:
   itself still downloads nothing. A scanned document, a linearised file or a broken XFA form is not in
   this sample and would be the next thing to add.
 
+### External corpus leg, second sample (2026-11-06, seventeen documents)
+
+Four shapes joined the sample: two public web sample PDFs from unrelated sites, a rasterised image-only
+copy of the IRS 1040 (a scan-shaped input, derived rather than captured) and a USCIS I-9 whose `/XFA`
+payload was replaced with bytes that are not XML. The last two are derived, which is why their names say
+so — the corpus stays operator-supplied, hash-locked and uncommitted. Lock SHA-256
+`e57a43385ba3bc9c948d2b1851ccbf724a4ef5658d26ac13d367799e1f3c476e`.
+
+| Measure | SharpCorePDF | PdfPig |
+| --- | ---: | ---: |
+| Completed | 17/17 | 17/17 |
+| Errors / timeouts | 0 / 0 | 0 / 0 |
+| Median open+extract per file | **19.2 ms** | 98.3 ms |
+| Letters read, summed | **1 867 235** | **1 867 235** |
+| Files whose letter count differs | 0 of 17 | — |
+| Readability warnings | 0 | not reported |
+| Notes (informational) | 2 — two documents opened with an empty user password, which is a note and not a warning | — |
+
+**The wider sample found a defect the first one could not.** `web-sample-pdfobject.pdf` was written on a
+Mac: its three fonts state `/MacRomanEncoding`, which the reader did not implement, so the page read as no
+text and said why — a warning per font, no guessed characters. Adding the table turned 0 letters into
+2 432, exactly what PdfPig reads, and the corpus now agrees on all seventeen files. That is the argument
+for widening a corpus rather than for trusting a sample that already agrees with itself.
+
 ### Local robustness sample (synthetic, from repository assets)
 
 The script benchmarks/SharpCorePDF.Competitive/scripts/sample-corpus.ps1 rebuilds a deterministic sample (13 PDFs: the labelled parity
@@ -251,8 +321,10 @@ before a release cite.
 
 ## What the numbers say about "beating" the competitors
 
-1. **PdfPig still leads full-document extraction wall time (cold and warm)** on the generated fixture.
-   SharpCorePDF leads allocation economy on the same rows. Both are real findings, not slogans.
+1. **Full-document extraction is now led on both rows under the steady-state method** (67.5 ms cold,
+   38.3 ms warm against PdfPig's 120.9 and 67.9 ms), with 45 % less allocated. PdfPig led the warm row in
+   the earlier session (47.8 ms against 68.8); its own code path is identical for both rows, so that
+   movement is machine state, and the in-run ratio is what this table supports.
 2. **SharpCorePDF leads the 10-page cold slice, create, and merge** on wall time and allocations here.
 3. **Correctness on the labelled corpus remains tied** with PdfPig on characters, words and order.
    The dual box score now shows why the box columns disagreed: PdfPig overlaps the labels by 40.83% under
@@ -264,17 +336,21 @@ before a release cite.
 
 ## Next measurements to add
 
-- A PdfPig Docstrum **block-level** row (its Docstrum is a page segmenter, not a word rule, so it needs
-  a blocks scenario rather than a word row).
+- ~~A PdfPig Docstrum **block-level** row~~ **landed (2026-11-06)**: `text-200-all-blocks-docstrum` compares
+  both engines as block producers on the same document — 200 blocks and 16 400 words on each side.
+- ~~AdvSimd executed~~ **landed by workflow**: the `arm64` job in `ci.yml` runs the suite on an arm64 runner,
+  which is the only place `SimdByteScan`'s NEON kernel can run; the numbers it prints are the same property
+  test the x64 legs run, so a divergence shows up as a failure rather than as a timing difference.
 - ~~Remaining per-code decode cuts~~ **closed as exhausted (2026-11-06)**: caching the text state per show
   and testing the space without a string compare left allocation medians byte-identical (35 028 KiB) and
   moved cold extraction inside its own noise band (71.5-95.8 ms across runs, before: 75.9). The remaining
   cost is the per-glyph record itself, which is the product contract, not waste. What the attempt did
   surface is a real test gap: character spacing, word spacing and horizontal scaling had no assertion, so
   `PdfTextCollector` scored 41.9% under mutation. A spacing fixture and test now pin them (46.6%).
-- **Extend the external leg** past eleven documents: a random web slice, a scanned document, a linearised
-  file and a broken XFA form. The first sample (11/11 both engines, one 16-glyph gap) is recorded above;
-  the mechanism, the lock and the procedure are proven, so this is now corpus collection, not engineering.
+- **Extend the external leg** past thirteen documents: a random web slice, a captured scan and a broken XFA
+  form — the linearised file and the image-only page landed on 2026-11-06, and the sample now reads 13/13 on
+  both engines with 1 852 569 letters each. The mechanism, the lock and the procedure are proven, so this is
+  now corpus collection, not engineering.
 - ~~A multi-cell table fixture~~ **landed (2026-11-06)**: three tests pin the row-band order on a real
   two-column, three-row page — the default segmentation merges tightly-led rows into one block per column
   (documented in the fixture), the raw segmentation keeps each string a block, and a touching row whose

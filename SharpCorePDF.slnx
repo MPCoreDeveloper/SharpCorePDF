@@ -17,6 +17,7 @@
   -->
 
   <Folder Name="/examples/">
+    <Project Path="examples/SharpCorePDF.AotSmoke/SharpCorePDF.AotSmoke.csproj" />
     <Project Path="examples/SharpCorePDF.Examples/SharpCorePDF.Examples.csproj" />
   </Folder>
   <Folder Name="/src/">

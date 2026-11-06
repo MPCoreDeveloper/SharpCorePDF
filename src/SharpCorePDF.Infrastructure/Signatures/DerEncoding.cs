@@ -83,7 +83,7 @@ internal static class DerEncoding
     /// <param name="tag">The identifier byte of the tag.</param>
     /// <param name="items">The encoded values to place inside the tag.</param>
     /// <returns>The encoded value.</returns>
-    public static byte[] Tagged(byte tag, params byte[][] items)
+    public static byte[] Tagged(byte tag, params ReadOnlySpan<byte[]> items)
     {
         var contents = Concat(items);
 
@@ -93,7 +93,7 @@ internal static class DerEncoding
     /// <summary>Encodes a sequence around encoded values.</summary>
     /// <param name="items">The encoded values to place inside the sequence.</param>
     /// <returns>The encoded sequence.</returns>
-    public static byte[] Sequence(params byte[][] items) => Tagged(SequenceTag, items);
+    public static byte[] Sequence(params ReadOnlySpan<byte[]> items) => Tagged(SequenceTag, items);
 
     /// <summary>
     /// Encodes a set of values, ordered the way DER orders the members of a <c>SET OF</c>.
@@ -105,9 +105,9 @@ internal static class DerEncoding
     /// accepts any order still reads what is written, and the canonical order is what makes two runs of
     /// the same signature byte-for-byte comparable.
     /// </remarks>
-    public static byte[] SetOf(params byte[][] items)
+    public static byte[] SetOf(params ReadOnlySpan<byte[]> items)
     {
-        var ordered = (byte[][])items.Clone();
+        var ordered = items.ToArray();
         Array.Sort(ordered, Compare);
 
         return Tagged(SetTag, ordered);
@@ -257,7 +257,7 @@ internal static class DerEncoding
     /// <summary>Concatenates encoded values into one buffer.</summary>
     /// <param name="items">The encoded values.</param>
     /// <returns>The bytes of all of them, in order.</returns>
-    private static byte[] Concat(byte[][] items)
+    private static byte[] Concat(ReadOnlySpan<byte[]> items)
     {
         var total = 0;
 

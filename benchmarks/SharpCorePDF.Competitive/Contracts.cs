@@ -48,8 +48,8 @@ internal static class WordStrategies
     public const string NearestNeighbour = "nearest-neighbour";
 }
 
-internal sealed record LetterObservation(int PageNumber, string Text, Box Bounds);
-internal sealed record WordObservation(
+internal readonly record struct LetterObservation(int PageNumber, string Text, Box Bounds);
+internal readonly record struct WordObservation(
     int PageNumber,
     string Text,
     Box Bounds,
@@ -131,6 +131,21 @@ internal abstract class EngineAdapter
         PageSelection selection,
         CancellationToken cancellationToken) =>
         ExtractAsync(content, selection, cancellationToken);
+
+    /// <summary>
+    /// Answers two questions about the same selection — the letters, then the words — which is what a
+    /// reusable session exists for. The default asks twice through <see cref="ExtractAsync"/>, so an
+    /// adapter without a session still participates and the row still compares equal work.
+    /// </summary>
+    public virtual async ValueTask<ExtractionObservation> ExtractTwiceAsync(
+        byte[] content,
+        PageSelection selection,
+        CancellationToken cancellationToken)
+    {
+        _ = await ExtractAsync(content, selection, cancellationToken).ConfigureAwait(false);
+
+        return await ExtractAsync(content, selection, cancellationToken).ConfigureAwait(false);
+    }
 
     /// <summary>
     /// The named alternate word-grouping strategies this adapter can offer as opt-in rows. The default

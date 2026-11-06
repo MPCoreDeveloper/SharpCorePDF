@@ -7,24 +7,24 @@ using System.Runtime.Intrinsics.X86;
 namespace SharpCorePDF.Infrastructure.Pdf;
 
 /// <summary>
-/// Answers the two questions a content scan asks before every token — where a run of whitespace ends,
-/// and where a name or a keyword ends — a vector at a time where the hardware allows it.
+/// Finds one byte a vector at a time where the hardware allows it, for the one scan whose run is bulk:
+/// the terminator of an inline image.
 /// </summary>
 /// <remarks>
 /// <para>
 /// The shape is the one this team uses elsewhere: a platform check at the entry point, one kernel per
 /// instruction set, and a scalar loop for the tail the vector does not cover. AVX2 consumes 32 bytes an
-/// iteration, SSE2 and AdvSimd 16, and anything shorter than a vector is answered byte at a time, which
-/// is what almost every call to this class actually gets: content streams are full of short runs.
+/// iteration, SSE2 and AdvSimd 16, and anything shorter than a vector is answered byte at a time.
 /// </para>
 /// <para>
-/// The two sets are the specification's own. Whitespace is <c>0x00 0x09 0x0A 0x0C 0x0D 0x20</c>; the
-/// delimiters are <c>( ) &lt; &gt; [ ] { } / %</c>. Nothing here decides what a byte means to a reader —
-/// only where a run of them stops — so every kernel is a membership test, not a parse.
+/// The use is deliberately narrow. A content stream is parsed a token at a time, and a vector applied to
+/// a one-to-three-byte run costs more than the branches it replaces: that use measured 97.6 ms against
+/// 75.2 ms and was reverted, which <c>docs/mutation-testing.md</c> records. An inline image puts hundreds
+/// of kilobytes between <c>ID</c> and <c>EI</c>, and that is the run this class exists for.
 /// </para>
 /// <para>
-/// A scalar answer is always available and is what the tests compare against: the vector kernels are an
-/// optimisation of the same membership rule, never a second definition of it.
+/// Every kernel answers the same question as the scalar loop and returns the same index; the tests
+/// compare the two at every length a vector boundary can disturb.
 /// </para>
 /// </remarks>
 internal static partial class SimdByteScan

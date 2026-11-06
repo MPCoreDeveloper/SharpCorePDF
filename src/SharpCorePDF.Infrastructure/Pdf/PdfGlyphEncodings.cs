@@ -6,12 +6,13 @@ namespace SharpCorePDF.Infrastructure.Pdf;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A simple font draws one byte per glyph and states which character set the byte means. Two of the
-/// three sets the specification names are reproduced here exactly — <c>WinAnsiEncoding</c>, which is what
-/// every Latin producer uses, and <c>StandardEncoding</c>, the specification's default — and a font that
-/// states any other set is reported as unreadable rather than mapped through a table that would be
-/// close but wrong. Text that is guessed is worse than text that is missing: nothing downstream can tell
-/// the two apart.
+/// A simple font draws one byte per glyph and states which character set the byte means. Three of the four
+/// sets the specification names are reproduced here exactly — <c>WinAnsiEncoding</c>, which is what every
+/// Latin producer uses, <c>StandardEncoding</c>, the specification's default, and <c>MacRomanEncoding</c>,
+/// which a document written on a Mac states — and a font that states <c>MacExpertEncoding</c>, or a set no
+/// table here knows, is reported as unreadable rather than mapped through a table that would be close but
+/// wrong. Text that is guessed is worse than text that is missing: nothing downstream can tell the two
+/// apart.
 /// </para>
 /// <para>
 /// <c>/Differences</c> names glyphs one by one, which is how a subset font states that its code 3 is
@@ -326,6 +327,10 @@ internal static class PdfGlyphEncodings
                 table = Standard;
                 return true;
 
+            case "MacRomanEncoding":
+                table = MacRoman;
+                return true;
+
             default:
                 table = [];
                 return false;
@@ -346,6 +351,9 @@ internal static class PdfGlyphEncodings
 
     /// <summary>The <c>StandardEncoding</c> table, built once, for the same reason.</summary>
     private static readonly string?[] Standard = BuildStandard();
+
+    /// <summary>The <c>MacRomanEncoding</c> table, built once, for the same reason.</summary>
+    private static readonly string?[] MacRoman = BuildMacRoman();
 
     /// <summary>Resolves a glyph name to the character it names.</summary>
     /// <param name="name">The glyph name, without the leading slash.</param>
@@ -435,6 +443,54 @@ internal static class PdfGlyphEncodings
 
         table[0x27] = "\u2019";
         table[0x60] = "\u2018";
+
+        return table;
+    }
+
+    /// <summary>Builds the <c>MacRomanEncoding</c> table, the code page Mac OS wrote text in.</summary>
+    /// <returns>The table of 256 entries.</returns>
+    /// <remarks>
+    /// The printable ASCII range is shared with every other encoding; the upper half is Mac OS Roman,
+    /// including the typographic quotes and dashes a document written on a Mac uses. Code 0xF0 is the Apple
+    /// logo, which has no Unicode character, so it is left unset and reported rather than mapped to a
+    /// private-use code point — the same rule the other tables follow for a character they cannot state.
+    /// </remarks>
+    private static string?[] BuildMacRoman()
+    {
+        var table = new string?[TableLength];
+
+        for (var code = 32; code < 127; code++)
+        {
+            table[code] = ((char)code).ToString();
+        }
+
+        char[] high =
+        [
+        '\u00C4', '\u00C5', '\u00C7', '\u00C9', '\u00D1', '\u00D6', '\u00DC', '\u00E1',
+        '\u00E0', '\u00E2', '\u00E4', '\u00E3', '\u00E5', '\u00E7', '\u00E9', '\u00E8',
+        '\u00EA', '\u00EB', '\u00ED', '\u00EC', '\u00EE', '\u00EF', '\u00F1', '\u00F3',
+        '\u00F2', '\u00F4', '\u00F6', '\u00F5', '\u00FA', '\u00F9', '\u00FB', '\u00FC',
+        '\u2020', '\u00B0', '\u00A2', '\u00A3', '\u00A7', '\u2022', '\u00B6', '\u00DF',
+        '\u00AE', '\u00A9', '\u2122', '\u00B4', '\u00A8', '\u2260', '\u00C6', '\u00D8',
+        '\u221E', '\u00B1', '\u2264', '\u2265', '\u00A5', '\u00B5', '\u2202', '\u2211',
+        '\u220F', '\u03C0', '\u222B', '\u00AA', '\u00BA', '\u03A9', '\u00E6', '\u00F8',
+        '\u00BF', '\u00A1', '\u00AC', '\u221A', '\u0192', '\u2248', '\u2206', '\u00AB',
+        '\u00BB', '\u2026', '\u00A0', '\u00C0', '\u00C3', '\u00D5', '\u0152', '\u0153',
+        '\u2013', '\u2014', '\u201C', '\u201D', '\u2018', '\u2019', '\u00F7', '\u25CA',
+        '\u00FF', '\u0178', '\u2044', '\u20AC', '\u2039', '\u203A', '\uFB01', '\uFB02',
+        '\u2021', '\u00B7', '\u201A', '\u201E', '\u2030', '\u00C2', '\u00CA', '\u00C1',
+        '\u00CB', '\u00C8', '\u00CD', '\u00CE', '\u00CF', '\u00CC', '\u00D3', '\u00D4',
+        '\0', '\u00D2', '\u00DA', '\u00DB', '\u00D9', '\u0131', '\u02C6', '\u02DC',
+        '\u00AF', '\u02D8', '\u02D9', '\u02DA', '\u00B8', '\u02DD', '\u02DB', '\u02C7',
+        ];
+
+        for (var index = 0; index < high.Length; index++)
+        {
+            if (high[index] != '\0')
+            {
+                table[0x80 + index] = high[index].ToString();
+            }
+        }
 
         return table;
     }

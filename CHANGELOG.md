@@ -18,9 +18,25 @@ feed ever served.
 contents of the layers, and the entry below is written against the published `preview.1` rather than
 against an empty feed.
 
-## [Unreleased]
+## [1.5.0] - 2026-11-06
 
 ### Performance
+
+- **The scan allocates less per letter, and two more bulk scans are vectorised.** A word's text is built
+  once at its final length with `string.Create` instead of a `StringBuilder` per word; the glyph list is
+  sized from the first page's count so it stops doubling; the search for `endstream` walks the stream a
+  vector at a time through the same `SimdByteScan` kernel the inline-image search uses; and the PNG `Up`
+  predictor is a vector add. Measured on the 200-page fixture under server GC in an isolated process:
+  warm extraction 58.8 → 38.3 ms and allocations 33 183 → 29 557 KiB; on the locked 13-document external
+  corpus the median open+extract fell from 36.1 to 21.9 ms with the same 1 852 569 letters on both
+  engines. A new `extract-1-inline-image-1mb` row — the first scenario that contains a `BI`/`EI` image —
+  reads a 1 MiB inline image in 0.7 ms against PdfPig's 8.2 ms.
+
+- **A session keeps the glyphs of its two most recent page ranges.** A caller that asks the letters and
+  then the words of the same pages now walks the content once and groups it twice; the second answer costs
+  a grouping pass instead of a page walk. On the new `text-200-two-questions` row a session reads in
+  31.3 ms and allocates 41 MB against PdfPig's 89.3 ms and 109 MB, and the same build with the cache
+  bypassed allocated 7.9 MB more — exactly one glyph list.
 
 - **The scan allocates less and runs faster on the work a reader does.** Seven changes, each measured
   on the same 200-page fixture with `DOTNET_gcServer=1` in an isolated process: a number is parsed in
@@ -60,6 +76,13 @@ against an empty feed.
 
 ### Fixed
 
+- **A font that states `MacRomanEncoding` is read.** The reader knew `WinAnsiEncoding` and
+  `StandardEncoding` and reported any other set as unreadable rather than guess; a Mac-written PDF found by
+  the wider external corpus therefore read as no text at all. The Mac OS Roman table is now built once
+  beside the other two — including the `ﬁ`/`ﬂ` ligatures, the typographic quotes and the dashes — and the
+  file that found the gap reads 2 432 letters, the same count PdfPig reports. `MacExpertEncoding` remains
+  outside the claim and is still reported rather than approximated.
+
 - **A PAGE XML export is schema-valid.** The first run of the schema check the parity matrix asks for
   (ALTO 4.2 and PAGE XML 2019-07-15 against the published `.xsd` files with `lxml`) rejected the PAGE
   document: its `<Metadata>` stated a creator and neither of the two times the schema requires. `Created`
@@ -68,6 +91,16 @@ against an empty feed.
   the run recorded and the new test named.
 
 ### Added
+
+- **The packages are trim- and Native AOT-compatible, and one overload says when it is not.** Every
+  assembly declares `IsTrimmable` and `IsAotCompatible`, and the build is clean under the trim, AOT and
+  single-file analyzers: the reader, the writer and the merge engine use no reflection, no dynamic code
+  and no serialization of their own types. `examples/SharpCorePDF.AotSmoke` proves it — it authors a page,
+  merges two documents through the container and reads the text back, and its `expect-aot` switch fails the
+  run when the published binary still supports dynamic code. The configuration-binding overload
+  (`AddSharpCorePDF(IConfiguration)`) uses the framework binder and is annotated
+  `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`, so a trimmed or AOT publish reports it at build
+  time; an AOT application passes `PdfEngineOptions` in code. `docs/aot.md` records the evidence.
 
 - **A page can paint in a colour space the caller names.** `PdfPageCanvas.SetFillColor` and `SetStrokeColor`
   write the selection set — `cs`/`CS` then `scn`/`SCN` — and `FillPath`/`StrokePath` paint with what they
@@ -155,6 +188,14 @@ against an empty feed.
   `artifacts/competitive/`.
 
 ### Changed
+
+- **The competitive harness measures steady state, and it now has a row for the vector scan.** Every
+  scenario is executed once per engine before any warm-up is taken, because the first call of a method
+  pays tiered compilation: PdfPig's cold and warm rows run the identical code path and read 181.6 and
+  47.8 ms in the previous report. The per-letter observation the harness builds is a struct rather than a
+  class, so the allocation column is closer to the engine's own number, and the report's method limits say
+  what it still includes. `extract-1-inline-image-1mb` is the first scenario with a `BI`/`EI` image, so the
+  vector byte scan is measured rather than assumed.
 
 - **Text advance is computed once per glyph, and character/word spacing and Tz are now asserted.** The
   text walk derives the em-scaled width once and shares it between the glyph box and the advance, and

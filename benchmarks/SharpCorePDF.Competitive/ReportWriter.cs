@@ -61,6 +61,8 @@ internal static partial class ReportWriter
         text.AppendLine("## Method limits");
         text.AppendLine();
         text.AppendLine("- Text timing uses a deterministic repository-generated 200-page document. It is a regression shape, not a claim about the whole PDF ecosystem.");
+        text.AppendLine("- Every scenario is executed once per engine before any warm-up is taken, so a row is steady state and excludes tiered compilation; the allocation column includes the harness's own per-word observation objects, which each engine pays alike.");
+        text.AppendLine("- Inline-image timing uses a one-page document with a 1 MiB `BI`/`EI` image: it is the row that exercises the byte scan whose run is bulk.");
         text.AppendLine("- Correctness uses the checked-in human labels. Competitor output is never used as ground truth.");
         text.AppendLine("- Box agreement follows each label file's baseline-box convention. PdfPig's ink glyph rectangles will disagree with that convention even when character recall is perfect; see docs/competitive-scoreboard.md.");
         text.AppendLine("- Approximate managed peak is a 1 ms sampler of the whole process heap, not an exact per-operation high-water mark.");

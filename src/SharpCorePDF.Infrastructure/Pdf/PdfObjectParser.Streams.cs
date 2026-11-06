@@ -163,26 +163,36 @@ internal sealed partial class PdfObjectParser
 
     private static int FindEndStream(byte[] data, int from)
     {
-        for (var index = Math.Max(from, 1); index + 9 <= data.Length; index++)
+        var span = data.AsSpan();
+        var index = Math.Max(from, 1);
+
+        while (index + 9 <= data.Length)
         {
-            if (data[index] != (byte)'e' || !data.AsSpan(index, 9).SequenceEqual("endstream"u8))
+            // A stream body is the bulk run a scan like this exists for: the search for the 'e' of
+            // "endstream" walks hundreds of kilobytes of image or font data at a vector a time, and only
+            // the few positions it lands on pay for the nine-byte comparison.
+            var found = SimdByteScan.IndexOf(span[index..], (byte)'e');
+
+            if (found < 0)
             {
-                continue;
+                return -1;
             }
 
-            if (!PdfLexer.IsWhitespace(data[index - 1]))
+            index += found;
+
+            if (index + 9 > data.Length)
             {
-                continue;
+                return -1;
             }
 
-            var after = index + 9;
-
-            if (after < data.Length && !PdfLexer.IsWhitespaceOrDelimiter(data[after]))
+            if (span.Slice(index, 9).SequenceEqual("endstream"u8)
+                && PdfLexer.IsWhitespace(data[index - 1])
+                && (index + 9 >= data.Length || PdfLexer.IsWhitespaceOrDelimiter(data[index + 9])))
             {
-                continue;
+                return index;
             }
 
-            return index;
+            index++;
         }
 
         return -1;

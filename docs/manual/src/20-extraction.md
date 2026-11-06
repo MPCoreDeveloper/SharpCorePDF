@@ -7,7 +7,7 @@ extract is a page you could have merged, and the two cannot disagree about what 
 Two ports offer it. `IPdfContentReader.ReadTextAsync` reads blocks of text — the summary read of
 Chapter 8. `IPdfLayoutReader` reads the same page at three levels — letters, words and blocks — and writes
 the result out in the four formats a repository ingests. Both take an `IPdfContentSource`, a `PageRange` and
-an optional password, and both return a `PdfReadResult<T>`.
+an optional password, and both return a `PdfReadResult<T>`. A caller that will ask more than one question about a document opens a session and keeps one parse open for all of them — *One open, several questions* below.
 
 ```csharp
 using SharpCorePDF.Domain.Ports;
@@ -175,6 +175,64 @@ An export writes to a stream you own, so the caller decides the file name, the e
 lifetime. `ExportAsync` validates the format and the destination before it opens the document: a format
 this release does not write throws `ArgumentOutOfRangeException`, and a destination that cannot be written
 throws `ArgumentException`, both at the call rather than after a full read.
+
+## One open, several questions
+
+Every member above is a one-shot read: it opens the source, answers, and forgets the parse. A caller that
+already knows it will ask more than once — the letters of one range, then the words of another, then an
+export — pays for the cross-reference table and the page tree on every call. `OpenAsync` returns a session
+that keeps one parse open for all of them:
+
+```csharp
+await using var session = await layoutReader.OpenAsync(
+    new PdfFileSource("report.pdf"),
+    cancellationToken: cancellationToken);
+
+var letters = await session.ReadLettersAsync(PageRange.Single(1), cancellationToken);
+var words = await session.ReadWordsAsync(PageRange.All, cancellationToken: cancellationToken);
+var blocks = await session.ReadBlocksAsync(
+    PageRange.All,
+    new PdfLayoutOptions { ReadingOrder = PdfReadingOrderStrategy.RowBands },
+    cancellationToken);
+
+await using var alto = File.Create("report.alto.xml");
+await session.ExportAsync(PageRange.All, PdfLayoutFormat.Alto, alto, cancellationToken: cancellationToken);
+```
+
+| Member | What it answers |
+| --- | --- |
+| `SourceName` | The display name of the source the session was opened from; the warnings name the same source |
+| `ReadLettersAsync(range)` | One entry per glyph, in content-stream order — the read of the *Letters* section above |
+| `ReadWordsAsync(range, options?)` | The words, grouped by the options the call states |
+| `ReadBlocksAsync(range, options?)` | The blocks, in the reading order the options select |
+| `ReadHyperlinksAsync(range)` | The links the pages carry |
+| `ExportAsync(range, format, destination, options?)` | The blocks, written as ALTO, PAGE XML, hOCR or SVG text |
+
+The options belong to the call rather than to the session, so one session can read the same range twice
+with two different reading orders — which is what the comparison in Chapter 21 does. A `null` options
+argument takes the same defaults a one-shot read would, and a range past the last page answers for the pages
+that exist rather than throwing.
+
+A session keeps the read of its **two most recent ranges**, so asking for the letters and then the words of
+the same pages walks the content once: the second answer groups glyphs that are already in memory. Two
+ranges are what it holds, so a third evicts the oldest and a long-lived session cannot grow without end.
+
+Three rules about lifetime, because they are the ones a caller gets wrong:
+
+* **The session owns the parse, not your source.** `OpenAsync` reads the source into the session; the stream
+  is released before the call returns, and disposing the session disposes neither the source nor the file it
+  named. The document itself stays in memory for the life of the session, which is the cost the saved opens
+  are paid against.
+* **A disposed session refuses every question** with `ObjectDisposedException`, so a caller that has finished
+  with a document cannot keep reading it by accident. Disposing twice is harmless.
+* **A session is not thread-safe.** One caller owns it from open to dispose; open a second session for a
+  second concurrent reader of the same source. The service class is still safe to share, because a one-shot
+  read holds no state between calls.
+
+A session is a cost trade rather than a switch: it is worth opening when the caller asks at least twice, and
+it is what the competitive harness measures as its warm extraction row
+([`docs/competitive-scoreboard.md`](../competitive-scoreboard.md)). The recorded cost of one open is in
+[`docs/measurements.md`](../measurements.md).
 
 ## What an extraction is not
 

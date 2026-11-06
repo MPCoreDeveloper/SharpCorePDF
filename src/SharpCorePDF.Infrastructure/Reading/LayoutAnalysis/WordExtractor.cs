@@ -1,4 +1,3 @@
-using System.Text;
 using SharpCorePDF.Domain.ReadModels;
 using SharpCorePDF.Domain.ValueObjects;
 
@@ -255,7 +254,7 @@ internal static class WordExtractor
 
         var letters = new PdfLetter[count];
         var glyphs = new PdfGlyph[count];
-        var text = new StringBuilder(count);
+        var length = 0;
         var left = double.PositiveInfinity;
         var bottom = double.PositiveInfinity;
         var right = double.NegativeInfinity;
@@ -267,7 +266,7 @@ internal static class WordExtractor
 
             letters[index - start] = LetterExtractor.ToLetter(glyph);
             glyphs[index - start] = glyph;
-            text.Append(glyph.Text);
+            length += glyph.Text.Length;
 
             var near = Math.Min(glyph.X, glyph.X + glyph.Width);
             var far = Math.Max(glyph.X, glyph.X + glyph.Width);
@@ -278,9 +277,26 @@ internal static class WordExtractor
             top = Math.Max(top, glyph.Y + (glyph.FontSize * 0.8d));
         }
 
+        // The word's text is built once, at its final length: a StringBuilder per word was the same
+        // characters with a buffer, a chunk list and a copy in front of them.
+        var text = string.Create(
+            length,
+            (items, start, end),
+            static (span, state) =>
+            {
+                var offset = 0;
+
+                for (var index = state.start; index < state.end; index++)
+                {
+                    var value = state.items[index].Text;
+                    value.AsSpan().CopyTo(span[offset..]);
+                    offset += value.Length;
+                }
+            });
+
         words.Add(new PdfWord
         {
-            Text = text.ToString(),
+            Text = text,
             PageNumber = items[start].PageNumber,
             BoundingBox = PdfRectangle.FromCorners(left, bottom, right, top),
             Glyphs = glyphs,

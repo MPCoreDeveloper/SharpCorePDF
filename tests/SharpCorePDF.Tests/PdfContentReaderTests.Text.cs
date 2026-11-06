@@ -12,6 +12,80 @@ namespace SharpCorePDF.Tests;
 public sealed partial class PdfContentReaderTests
 {
     /// <summary>
+    /// A stream whose dictionary states a length longer than its body is read by scanning for its
+    /// terminator, which is the path that walks the bytes a vector at a time.
+    /// </summary>
+    [Fact]
+    public async Task Reads_a_stream_whose_length_is_wrong()
+    {
+        var objects = new PdfBuilder();
+        var catalog = objects.Reserve();
+        var pages = objects.Reserve();
+        var font = objects.Reserve();
+        var page = objects.Reserve();
+        var content = objects.Reserve();
+
+        var body = System.Text.Encoding.Latin1.GetBytes("BT /F1 12 Tf 72 720 Td (scanned) Tj ET");
+        var stream = System.Text.Encoding.Latin1.GetBytes($"<< /Length {body.Length + 64} >>\nstream\n")
+            .Concat(body)
+            .Concat(System.Text.Encoding.Latin1.GetBytes("\nendstream"))
+            .ToArray();
+
+        objects.Set(content, stream);
+        objects.Set(
+            page,
+            $"<< /Type /Page /Parent {pages} 0 R /MediaBox [0 0 595 842] "
+            + $"/Resources << /Font << /F1 {font} 0 R >> >> /Contents {content} 0 R >>");
+        objects.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 595 842] >>");
+        objects.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+        objects.Set(font, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+
+        var source = Source(objects.Build(catalog), "wrong-length.pdf");
+        var result = await Reader().ReadTextAsync(source, PageRange.All, cancellationToken: Token);
+
+        Assert.Equal("scanned", Assert.Single(result.Items).Text);
+        Assert.Empty(result.Warnings);
+    }
+
+    /// <summary>
+    /// A simple font that states <c>/MacRomanEncoding</c> is read through that table, including a code
+    /// written as a raw byte and one written as an octal escape.
+    /// </summary>
+    [Fact]
+    public async Task Reads_a_font_encoded_as_mac_roman()
+    {
+        var objects = new PdfBuilder();
+        var catalog = objects.Reserve();
+        var pages = objects.Reserve();
+        var font = objects.Reserve();
+        var page = objects.Reserve();
+        var content = objects.Reserve();
+
+        // 0x8E is eacute and 0xDE is the fi ligature in Mac OS Roman; the content states the second as the
+        // octal escape a producer writing plain ASCII would use.
+        objects.Set(
+            content,
+            PdfBuilder.StreamBody(
+                string.Empty,
+                System.Text.Encoding.Latin1.GetBytes("BT /F1 12 Tf 72 720 Td (caf\u008E \\336le) Tj ET")));
+        objects.Set(
+            page,
+            $"<< /Type /Page /Parent {pages} 0 R /MediaBox [0 0 595 842] "
+            + $"/Resources << /Font << /F1 {font} 0 R >> >> /Contents {content} 0 R >>");
+        objects.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 595 842] >>");
+        objects.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+        objects.Set(
+            font,
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /MacRomanEncoding >>");
+
+        var source = Source(objects.Build(catalog), "macroman.pdf");
+        var result = await Reader().ReadTextAsync(source, PageRange.All, cancellationToken: Token);
+
+        Assert.Equal("caf\u00E9 \uFB01le", Assert.Single(result.Items).Text);
+        Assert.Empty(result.Warnings);
+    }
+
+    /// <summary>
     /// A simple font is read through its encoding, the widths it states and the width it leaves to the
     /// reader, and the words of one line and the line under it make one block.
     /// </summary>

@@ -24,16 +24,37 @@ internal sealed class SharpCorePdfAdapter : EngineAdapter
     public override bool SupportsMerge => true;
     public override bool SupportsBlocks => true;
 
-    public override async ValueTask<ExtractionObservation> ExtractAsync(
+    public override ValueTask<ExtractionObservation> ExtractTwiceAsync(
+        byte[] content,
+        PageSelection selection,
+        CancellationToken cancellationToken) =>
+        ExtractTwiceCoreAsync(content, selection, cancellationToken);
+
+    private async ValueTask<ExtractionObservation> ExtractTwiceCoreAsync(
         byte[] content,
         PageSelection selection,
         CancellationToken cancellationToken)
     {
-        var range = selection.PageCount is { } count
+        var range = Range(selection);
+        var source = new PdfByteArraySource(content, "competitive.pdf");
+
+        await using var session = await reader.OpenAsync(source, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        // The first question is the letters; the second is the words, which a session answers by grouping
+        // glyphs it has already walked. Two calls through the one-shot reader would walk the pages twice,
+        // which is the shape this row exists to measure.
+        _ = await session.ReadLettersAsync(range, cancellationToken).ConfigureAwait(false);
+
+        return Observe(await session.ReadWordsAsync(range, cancellationToken: cancellationToken).ConfigureAwait(false), selection);
+    }
+
+    private static PageRange Range(PageSelection selection) =>
+        selection.PageCount is { } count
             ? PageRange.FromTo(selection.FirstPage, selection.FirstPage + count - 1)
             : PageRange.All;
-        var source = new PdfByteArraySource(content, "competitive.pdf");
-        var result = await reader.ReadWordsAsync(source, range, cancellationToken: cancellationToken);
+
+    private static ExtractionObservation Observe(PdfReadResult<PdfWord> result, PageSelection selection)
+    {
         var words = result.Items.Select(word => new WordObservation(
             word.PageNumber,
             word.Text,
@@ -50,6 +71,19 @@ internal sealed class SharpCorePdfAdapter : EngineAdapter
             words,
             warnings,
             notes);
+    }
+
+    public override async ValueTask<ExtractionObservation> ExtractAsync(
+        byte[] content,
+        PageSelection selection,
+        CancellationToken cancellationToken)
+    {
+        var source = new PdfByteArraySource(content, "competitive.pdf");
+        var result = await reader
+            .ReadWordsAsync(source, Range(selection), cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        return Observe(result, selection);
     }
 
 
@@ -58,29 +92,14 @@ internal sealed class SharpCorePdfAdapter : EngineAdapter
         PageSelection selection,
         CancellationToken cancellationToken)
     {
-        var range = selection.PageCount is { } count
-            ? PageRange.FromTo(selection.FirstPage, selection.FirstPage + count - 1)
-            : PageRange.All;
+        var range = Range(selection);
         var source = new PdfByteArraySource(content, "competitive.pdf");
-        await using var session = await reader.OpenAsync(source, cancellationToken: cancellationToken);
-        var result = await session.ReadWordsAsync(range, cancellationToken: cancellationToken);
-        var words = result.Items.Select(word => new WordObservation(
-            word.PageNumber,
-            word.Text,
-            Convert(word.BoundingBox),
-            word.Letters.Select(letter => new LetterObservation(
-                letter.PageNumber,
-                letter.Value,
-                Convert(letter.BoundingBox))).ToArray())).ToArray();
+        await using var session = await reader.OpenAsync(source, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var result = await session.ReadWordsAsync(range, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        var (warnings, notes) = Split(result.Warnings);
-
-        return new ExtractionObservation(
-            words.Length == 0 ? 0 : words.Max(word => word.PageNumber) - selection.FirstPage + 1,
-            words,
-            warnings,
-            notes);
+        return Observe(result, selection);
     }
+
     public override async ValueTask<BlockObservation> ExtractBlocksAsync(
         byte[] content,
         PageSelection selection,

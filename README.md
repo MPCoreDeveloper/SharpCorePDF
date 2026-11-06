@@ -55,7 +55,7 @@ independent implementations (`qpdf` via `pikepdf`, and `pypdf`).
 The product boundary is recorded in [ADR-001](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/adr/0001-pdf-platform-boundary.md).
 The capability target is PDFsharp 6.5 for creation and processing and PdfPig 0.1.x for reading and layout
 analysis; rendering, conversion, OCR, conformance validation, services and CLIs stay outside the product.
-`1.4.0` ships that target for creation, editing and reading — authoring, page editing, reading with layout
+`1.5.0` ships that target for creation, editing and reading — authoring, page editing, reading with layout
 analysis, signatures and PDF/A — with the exceptions [`docs/parity.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/parity.md)
 still records; that file names the release of every row and the test and external command behind it.
 Current capability is described below, not the target.
@@ -296,8 +296,8 @@ guide to the API: twenty-five chapters, from the first merge to encryption, insp
 the architecture, authoring a page, a cookbook of complete recipes, editing an existing document,
 extraction, layout analysis, the object graph, digital signatures, archival output and how the manual itself
 is built. Read it as
-[a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.4.0.pdf)
-(the 1.4.0 edition) or chapter by chapter as Markdown, starting with
+[a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.5.0.pdf)
+(the 1.5.0 edition) or chapter by chapter as Markdown, starting with
 [Installation and First Merge](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/manual/src/03-installation.md).
 The [documentation index](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md)
 links every chapter and the supporting measurement, release and governance documents.
@@ -336,6 +336,19 @@ engine be swapped in.
   other stream is copied byte for byte. The result uses a classic cross-reference table, which every
   reader in existence supports.
 
+### Native AOT and trimming
+
+The packages declare `IsTrimmable` and `IsAotCompatible`, and the build is clean under the trim, AOT and
+single-file analyzers: the reader, the writer and the merge engine use no reflection, no dynamic code and
+no serialization of their own types. `examples/SharpCorePDF.AotSmoke` proves it — it authors a page, merges
+two documents through the container and reads the text back, and it is published with `PublishAot` for
+win-x64 and in `ci.yml` for linux-x64; its `expect-aot` switch fails the run when the published binary
+still supports dynamic code. One overload is deliberately outside the claim:
+`AddSharpCorePDF(IConfiguration)` binds options through the configuration binder, so it carries
+`[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`; an AOT application passes `PdfEngineOptions`
+in code. [`docs/aot.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/aot.md) records
+the evidence and what AOT does and does not change.
+
 ## Known limits (deliberate, for version 1)
 
 * **Encryption covers the standard security handler, revisions 2 to 6.** A document that uses a public
@@ -370,7 +383,7 @@ engine be swapped in.
 # Everything at once, through the solution: the five packages, the tests,
 # the examples and the measurement harness.
 dotnet build .\SharpCorePDF.slnx -c Release
-dotnet test  .\SharpCorePDF.slnx                      # 1010 tests on each of net10.0 and net11.0
+dotnet test  .\SharpCorePDF.slnx                      # 1076 tests on each of net10.0 and net11.0
 dotnet run --project .\examples\SharpCorePDF.Examples -c Release
 
 # Or one project at a time:

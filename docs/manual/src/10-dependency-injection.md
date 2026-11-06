@@ -110,6 +110,13 @@ services.AddSharpCorePDF(configuration, "My:Pdf:Section");       // a section of
 - **A configuration** binds the named section and registers the bound value. The default section name
   is the `DefaultConfigurationSection` constant, `"SharpCorePDF"`.
 
+One note matters only when the application is published trimmed or with Native AOT. The configuration
+overload uses the framework's binder, which reads the property names by reflection and creates its
+converters at run time, so it is annotated `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]` and a
+trimmed or AOT publish reports it as a warning. Such an application passes an options instance in code —
+the second shape above — and [`docs/aot.md`](../aot.md) records the proof that the rest of the library is
+trim- and AOT-clean.
+
 The configuration overload does not fail when the section is missing: binding an absent section
 produces the default values. That is convenient in development and dangerous in production, where a
 typo in the section name silently disables a limit you thought you had set. Validate explicitly:
@@ -217,7 +224,7 @@ the exception-handling shape, and Chapter 8 explains the warning kinds.
 ## The producer string
 
 When `MergeOutputOptions.Producer` is not set, the writer stamps the document with the product name and
-the assembly version of the SharpCorePDF domain assembly, for example `SharpCorePDF 1.3.0`. Override it
+the assembly version of the SharpCorePDF domain assembly, for example `SharpCorePDF 1.5.0`. Override it
 with your own product name if the PDF is produced by your application rather than offered as a library
 feature:
 
