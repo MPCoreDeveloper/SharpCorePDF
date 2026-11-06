@@ -162,6 +162,65 @@ foreach (var page in info.Pages.Take(3))
 an optional password parameter — `InspectAsync(source, password, cancellationToken)` — which Chapter 8
 covers together with the rest of the read models.
 
+## Native AOT and trimming
+
+The packages are trim- and Native AOT-compatible: every assembly declares `IsTrimmable` and
+`IsAotCompatible`, and the reader, the writer and the merge engine use no reflection, no dynamic code and
+no serialization of their own types, so a publish has nothing to warn about.
+
+Publishing is a property of your application, not of the library. Set it in the project file and publish
+for one runtime identifier:
+
+```xml
+<PropertyGroup>
+  <PublishAot>true</PublishAot>
+</PropertyGroup>
+```
+
+```powershell
+dotnet publish -c Release -r win-x64
+```
+
+or pass it on the command line, which keeps the project file untouched:
+
+```powershell
+dotnet publish -c Release -r win-x64 -p:PublishAot=true
+```
+
+`PublishTrimmed=true` alone works too, and the rule below applies to it as well.
+
+**Register in code, not from configuration.** One member is outside the claim: the overload that binds a
+configuration section, `AddSharpCorePDF(IConfiguration)`, uses the framework's binder, which reads the
+option names by reflection and creates its converters at run time. It carries
+`[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`, so a trimmed or AOT publish reports the call at
+build time instead of failing at run time. An AOT application passes the options object — the second
+shape from *Register the services*:
+
+```csharp
+var services = new ServiceCollection()
+    .AddSharpCorePDF(PdfEngineOptions.Default with
+    {
+        MaxSourceBytes = 64L * 1024 * 1024,
+    })
+    .BuildServiceProvider();
+```
+
+Everything else — `AddSharpCorePDF()`, the merger, the reader, the authoring builder, the signer and the
+archival writer — is AOT-clean. The repository's own smoke application publishes this way, prints
+`aot=True`, merges two authored pages and reads them back on win-x64, linux-x64 and linux-arm64; the
+workflow publishes and runs it for both Linux identifiers, and [`docs/aot.md`](../aot.md) records the
+evidence.
+
+Two things AOT changes, and one it does not. It removes the JIT, so startup and memory improve. It produces
+a self-contained native binary instead of an IL package. It does **not** change steady-state throughput by
+itself: a long-running JIT process re-optimizes its hot path with profile data the AOT compiler does not
+have, which is why the competitive numbers in
+[`docs/competitive-scoreboard.md`](../competitive-scoreboard.md) are JIT numbers.
+
+`InvariantGlobalization` is safe to turn on and is not required either way: a read depends on the
+library's own encoding, CMap and glyph tables rather than on ICU, and its standard fonts are measured from
+a table in the assembly rather than from the machine's font folder.
+
 ## A complete `Program.cs`
 
 The pieces above, assembled and made a little more careful: it validates the plan before doing any

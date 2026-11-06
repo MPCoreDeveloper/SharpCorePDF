@@ -114,8 +114,8 @@ One note matters only when the application is published trimmed or with Native A
 overload uses the framework's binder, which reads the property names by reflection and creates its
 converters at run time, so it is annotated `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]` and a
 trimmed or AOT publish reports it as a warning. Such an application passes an options instance in code —
-the second shape above — and [`docs/aot.md`](../aot.md) records the proof that the rest of the library is
-trim- and AOT-clean.
+the second shape above — and Chapter 3 shows the publish command and the registration an AOT application
+uses; [`docs/aot.md`](../aot.md) records the proof that the rest of the library is trim- and AOT-clean.
 
 The configuration overload does not fail when the section is missing: binding an absent section
 produces the default values. That is convenient in development and dangerous in production, where a

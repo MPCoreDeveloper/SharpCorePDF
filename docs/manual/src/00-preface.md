@@ -23,7 +23,8 @@ The first four chapters are the shortest path to a working merge:
 
 - **Chapter 1** describes what the library does and the guarantees it makes.
 - **Chapter 2** states, just as plainly, what it does not do.
-- **Chapter 3** installs the package and merges three documents.
+- **Chapter 3** installs the package, merges three documents and shows how to publish the result with
+  Native AOT.
 - **Chapter 4** explains the merge plan, the object at the centre of the API.
 
 Chapters 5 to 10 cover one part of the API each: page selection, output options, encryption,
@@ -84,5 +85,7 @@ files become the PDF you are reading.
 - The .NET SDK that can target **.NET 10** or **.NET 11**. The packages ship assemblies for both.
 - A PDF to merge. Any reader can produce one; the tests use documents written by a different producer
   precisely so that the library is not tested only against its own output.
+- For a Native AOT publish: the C toolchain the platform needs — clang on Linux, the Visual C++ build
+  tools on Windows — as Chapter 3 describes.
 - For building this manual: the .NET SDK and Chrome or Edge, and nothing else. Chapter 25 describes the
   build. That is a maintainer concern, not a requirement of the library.

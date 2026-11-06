@@ -6,7 +6,7 @@ long-form reference for the API.
 
 ## The manual
 
-- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.5.0.pdf)** — 120 pages, A4, with a
+- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.5.0.pdf)** — 121 pages, A4, with a
   linked contents page and PDF bookmarks.
 - **Read the chapters as Markdown** in [`manual/src`](manual/src). Each file is one chapter, and the
   file-name order is the chapter order. This edition describes `1.5.0`. Chapters 16 to 19 were written
