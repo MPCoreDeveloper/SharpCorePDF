@@ -58,12 +58,14 @@ internal sealed record WordObservation(
 internal sealed record ExtractionObservation(
     int PagesInspected,
     IReadOnlyList<WordObservation> Words,
-    int WarningCount)
+    int WarningCount,
+    int NoteCount = 0)
 {
     public int LetterCount => Words.Sum(word => word.Letters.Count);
 
     public string WorkSummary() =>
-        $"pages={PagesInspected}; words={Words.Count}; letters={LetterCount}; warnings={WarningCount}";
+        $"pages={PagesInspected}; words={Words.Count}; letters={LetterCount}; warnings={WarningCount}"
+        + (NoteCount == 0 ? string.Empty : $"; notes={NoteCount}");
 }
 
 internal sealed record WriteObservation(long OutputBytes, int? PageCount)
@@ -73,10 +75,11 @@ internal sealed record WriteObservation(long OutputBytes, int? PageCount)
 }
 
 /// <summary>What a block read produced: how many blocks, and how many words inside them.</summary>
-internal sealed record BlockObservation(int PagesInspected, int Blocks, int Words)
+internal sealed record BlockObservation(int PagesInspected, int Blocks, int Words, int NoteCount = 0)
 {
     public string WorkSummary() =>
-        $"pages={PagesInspected}; blocks={Blocks}; words={Words}";
+        $"pages={PagesInspected}; blocks={Blocks}; words={Words}"
+        + (NoteCount == 0 ? string.Empty : $"; notes={NoteCount}");
 }
 
 internal abstract class EngineAdapter

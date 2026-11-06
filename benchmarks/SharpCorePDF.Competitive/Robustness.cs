@@ -21,6 +21,7 @@ internal sealed record RobustnessResult(
     int Words,
     int Letters,
     int Warnings,
+    int Notes,
     string? Error);
 
 internal static class RobustnessRunner
@@ -69,7 +70,7 @@ internal static class RobustnessRunner
             {
                 results.AddRange(adapters.Where(adapter => adapter.SupportsExtraction).Select(adapter =>
                     new RobustnessResult(
-                        adapter.Name, relative, string.Empty, info.Length, "Skipped", 0, 0, 0, 0, 0,
+                        adapter.Name, relative, string.Empty, info.Length, "Skipped", 0, 0, 0, 0, 0, 0,
                         $"Exceeds the {options.MaximumFileBytes}-byte per-file limit.")));
                 continue;
             }
@@ -82,7 +83,7 @@ internal static class RobustnessRunner
             {
                 results.AddRange(adapters.Where(adapter => adapter.SupportsExtraction).Select(adapter =>
                     new RobustnessResult(
-                        adapter.Name, relative, hash, content.LongLength, "LockMismatch", 0, 0, 0, 0, 0,
+                        adapter.Name, relative, hash, content.LongLength, "LockMismatch", 0, 0, 0, 0, 0, 0,
                         "The file does not match the SHA-256 manifest; no engine opened it.")));
                 continue;
             }
@@ -111,6 +112,7 @@ internal static class RobustnessRunner
                         observed.Words.Count,
                         observed.LetterCount,
                         observed.WarningCount,
+                        observed.NoteCount,
                         null));
                 }
                 catch (TimeoutException)
@@ -118,7 +120,7 @@ internal static class RobustnessRunner
                     timeout.Cancel();
                     results.Add(new RobustnessResult(
                         adapter.Name, relative, hash, content.LongLength, "Timeout",
-                        Stopwatch.GetElapsedTime(started).TotalMilliseconds, 0, 0, 0, 0,
+                        Stopwatch.GetElapsedTime(started).TotalMilliseconds, 0, 0, 0, 0, 0,
                         $"Exceeded {options.Timeout.TotalSeconds:0.###} seconds; the runner stops here so no abandoned work continues into the next document."));
                     return results;
                 }
@@ -126,7 +128,7 @@ internal static class RobustnessRunner
                 {
                     results.Add(new RobustnessResult(
                         adapter.Name, relative, hash, content.LongLength, "Error",
-                        Stopwatch.GetElapsedTime(started).TotalMilliseconds, 0, 0, 0, 0,
+                        Stopwatch.GetElapsedTime(started).TotalMilliseconds, 0, 0, 0, 0, 0,
                         exception.GetType().Name + ": " + exception.Message));
                 }
             }

@@ -172,7 +172,8 @@ reproduced every row with no `LockMismatch`.
 | Median open+extract per file | 36.5 ms (41.2 on re-run) | 157.2 ms (120.9 on re-run) |
 | Letters read, summed over the corpus | 1 798 648 | 1 798 648 |
 | Files whose letter count differs | 0 of 11 | — |
-| Warnings raised | 1 (a USCIS form) | not reported by the adapter |
+| Readability warnings | **0** | not reported by the adapter |
+| Notes (informational) | 1 — a USCIS form opened with an empty user password and read decrypted | — |
 
 What the sample says, and does not say:
 
@@ -182,8 +183,10 @@ What the sample says, and does not say:
   no `/ToUnicode`, so what their codes mean is stated only in the clear-text header of the embedded Type1
   program. The reader now reads that header when the document states no encoding, and the glyph table now
   knows the mathematical and Greek names those programs use — after the fix both engines read 1 798 648
-  letters on the same bytes, and one warning remains, on a USCIS form. PdfPig's adapter reports no
-  warnings by construction, so the warning column is not a cross-engine metric.
+  letters on the same bytes. No readability warning remains on the corpus: the last one the harness counted
+  was the encryption note for a form opened with an empty user password, which the harness now reports in a
+  Notes column instead of the warning count. PdfPig's adapter reports neither by construction, so those
+  columns are not cross-engine metrics.
 - **Word counts are not comparable across engines**, exactly as on the labelled corpus: IRS field text is
   drawn character by character and SharpCorePDF groups it as one word per glyph (7 927/7 927) while
   PdfPig merges it (2 232), and on arXiv paper one SharpCorePDF under-splits (5 106 vs 7 162). Neither is

@@ -16,8 +16,8 @@ internal static partial class ReportWriter
             return;
         }
 
-        text.AppendLine("| Engine | Completed | Error | Timeout | Skipped | Median ms (completed) |");
-        text.AppendLine("| --- | ---: | ---: | ---: | ---: | ---: |");
+        text.AppendLine("| Engine | Completed | Error | Timeout | Skipped | Notes (e.g. encrypted, opened) | Median ms (completed) |");
+        text.AppendLine("| --- | ---: | ---: | ---: | ---: | ---: | ---: |");
         foreach (var group in results.GroupBy(result => result.Engine).OrderBy(group => group.Key))
         {
             var completed = group.Where(result => result.Status == "Completed").ToArray();
@@ -27,7 +27,7 @@ internal static partial class ReportWriter
                     .ToString("F2", CultureInfo.InvariantCulture);
             text.AppendLine(string.Create(
                 CultureInfo.InvariantCulture,
-                $"| {group.Key} | {completed.Length} | {group.Count(result => result.Status == "Error")} | {group.Count(result => result.Status == "Timeout")} | {group.Count(result => result.Status == "Skipped")} | {median} |"));
+                $"| {group.Key} | {completed.Length} | {group.Count(result => result.Status == "Error")} | {group.Count(result => result.Status == "Timeout")} | {group.Count(result => result.Status == "Skipped")} | {group.Sum(result => result.Notes)} | {median} |"));
         }
 
         var failures = results

@@ -22,6 +22,14 @@ against an empty feed.
 
 ### Added
 
+- **The harness reports informational notes apart from warnings, so a decrypted document no longer looks
+  damaged.** A file that is encrypted with an empty user password is read in full; the remark saying so was
+  being counted as a warning, which put the external corpus's last remaining "warning" in the wrong column.
+  `ExtractionObservation` and `RobustnessResult` now carry a note count (the encryption remark), perf rows
+  print `notes=` when there are any, and the robustness table has its own Notes column. The eleven-document
+  external leg therefore reads **0 warnings** for SharpCorePDF with one note, and 1 798 648 letters on both
+  engines.
+
 - **A Type1 font's own encoding is read when the document states none, so LaTeX formulas are no longer
   lost.** A pdfTeX subset of a Computer Modern math or symbol font states neither `/Encoding` nor
   `/ToUnicode`: what its codes mean exists only in the clear-text header of the embedded Type1 program, as

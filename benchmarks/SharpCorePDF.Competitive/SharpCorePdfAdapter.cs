@@ -1,6 +1,7 @@
 using SharpCorePDF.Application.Extensions;
 using SharpCorePDF.Application.Services;
 using SharpCorePDF.Domain.Aggregates;
+using SharpCorePDF.Domain.ReadModels;
 using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure;
 using SharpCorePDF.Infrastructure.Extensions;
@@ -42,10 +43,13 @@ internal sealed class SharpCorePdfAdapter : EngineAdapter
                 letter.Value,
                 Convert(letter.BoundingBox))).ToArray())).ToArray();
 
+        var (warnings, notes) = Split(result.Warnings);
+
         return new ExtractionObservation(
             words.Length == 0 ? 0 : words.Max(word => word.PageNumber) - selection.FirstPage + 1,
             words,
-            result.Warnings.Count);
+            warnings,
+            notes);
     }
 
 
@@ -69,10 +73,13 @@ internal sealed class SharpCorePdfAdapter : EngineAdapter
                 letter.Value,
                 Convert(letter.BoundingBox))).ToArray())).ToArray();
 
+        var (warnings, notes) = Split(result.Warnings);
+
         return new ExtractionObservation(
             words.Length == 0 ? 0 : words.Max(word => word.PageNumber) - selection.FirstPage + 1,
             words,
-            result.Warnings.Count);
+            warnings,
+            notes);
     }
     public override async ValueTask<BlockObservation> ExtractBlocksAsync(
         byte[] content,
@@ -89,10 +96,13 @@ internal sealed class SharpCorePdfAdapter : EngineAdapter
             new PdfLayoutOptions { Segmentation = PdfPageSegmentationStrategy.Docstrum },
             cancellationToken: cancellationToken);
 
+        var (warnings, notes) = Split(result.Warnings);
+
         return new BlockObservation(
             result.Items.Count == 0 ? 0 : result.Items.Max(block => block.PageNumber) - selection.FirstPage + 1,
             result.Items.Count,
-            result.Items.Sum(block => block.Words.Count));
+            result.Items.Sum(block => block.Words.Count),
+            notes);
     }
 
     public override async ValueTask<WriteObservation> CreateAsync(
@@ -147,6 +157,18 @@ internal sealed class SharpCorePdfAdapter : EngineAdapter
         using Stream destination = capturePath is null ? new CountingStream() : File.Create(capturePath);
         var result = await merger.MergeAsync(plan, destination, cancellationToken);
         return new WriteObservation(destination.Length, result.PageCount);
+    }
+
+    /// <summary>
+    /// Splits the remarks a read made into the ones that are problems and the ones that are notes. The
+    /// encryption remark ("opened and read decrypted") is a note: it says the document was read, not that
+    /// anything was lost, and counting it as a warning would make a password-free protected file look broken.
+    /// </summary>
+    private static (int Warnings, int Notes) Split(IReadOnlyList<PdfWarning> remarks)
+    {
+        var notes = remarks.Count(remark => remark.Kind == PdfWarningKind.EncryptionOpened);
+
+        return (remarks.Count - notes, notes);
     }
 
     internal static string CreationText(int page, int line) =>
