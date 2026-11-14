@@ -20,6 +20,10 @@ against an empty feed.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.7.0] - 2026-11-14
+
 ### Added
 
 - **Stationery: a background template per page range, with a default.** `PdfStationery` maps a template
