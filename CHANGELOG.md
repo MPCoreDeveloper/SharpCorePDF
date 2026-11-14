@@ -20,7 +20,18 @@ against an empty feed.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Stationery: a background template per page range, with a default.** `PdfStationery` maps a template
+  to a `PageRange` and can name a default for the pages no assignment covers (`Assign`,
+  `AssignDefault`, `AssignNone`), and `PdfEditPlan.ApplyStationery(...)` records the whole plan as one
+  operation. The template is recorded as the underlay layer the editor already writes — a form
+  XObject — so the page's own content streams keep their bytes, vector graphics and selectable text
+  survive, and nothing is rasterized. Assignments are tried last first, a one-page template repeats
+  across its range, a multi-page template maps one page for one page, and a range that reaches past it
+  is refused. `PDF/A-1b` refuses a translucent or blended stationery. The manual's chapter 14 has the
+  section and `PdfDocumentEditorTests.Stationery*` has the tests, including one per acceptance
+  criterion of #6.
 
 ## [1.6.0] - 2026-11-14
 
