@@ -96,6 +96,42 @@ public sealed class PdfFontInspectorTests
         Assert.Equal(expected, result.Items.Select(font => font.BaseFont));
     }
 
+    /// <summary>
+    /// Writes the in-memory font fixture to disk, so the external <c>pikepdf</c>/<c>pypdf</c> run recorded
+    /// in <c>docs/parity.md</c> row 22 reads the same bytes, and pins the font tuples that run lists.
+    /// </summary>
+    [Fact]
+    public async Task Writes_the_font_fixture_the_external_validator_reads()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "scpdf-fonts-fixture.pdf");
+
+        await File.WriteAllBytesAsync(path, PdfContentFixtures.Fonts(), Token);
+
+        var result = await FontsAsync(await File.ReadAllBytesAsync(path, Token));
+
+        string[] expected =
+        [
+            "ABCDEF+Arial",
+            "Helvetica",
+            "Courier",
+            "ZapfDingbats",
+            "XYZABC+SomeFont",
+            "ZapfType3",
+            "MinionMM",
+            "Loose",
+            "ABCDEFHelvetica",
+            "abcDEF+Weird",
+            "EmptyType3",
+            "ABCDEF+X",
+            "FontFileOne",
+            "CffOne",
+            "BaseEncoded",
+        ];
+
+        Assert.Equal(expected, result.Items.Select(font => font.BaseFont));
+        Assert.True(new FileInfo(path).Length > 0);
+    }
+
     /// <summary>A subset that carries its program is reported with the program, the encoding and its pages.</summary>
     [Fact]
     public async Task Reports_an_embedded_subset_with_its_program_and_pages()
