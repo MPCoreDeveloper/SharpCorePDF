@@ -114,7 +114,9 @@ jobs:
           mkdir -p "$(dirname "$archive")"
 
           if [ ! -f "$archive" ]; then
-            curl --fail --silent --show-error --location --output "$archive" \
+            curl --fail --silent --show-error --location \
+              --proto '=https' --proto-redir '=https' --tlsv1.2 \
+              --output "$archive" \
               "https://software.verapdf.org/releases/${band}/verapdf-greenfield-${VERAPDF_VERSION}-installer.zip"
           fi
 
@@ -175,7 +177,9 @@ jobs:
           mkdir -p "$(dirname "$jar")"
 
           if [ ! -f "$jar" ]; then
-            curl --fail --silent --show-error --location --output "$jar" \
+            curl --fail --silent --show-error --location \
+              --proto '=https' --proto-redir '=https' --tlsv1.2 \
+              --output "$jar" \
               "https://repo1.maven.org/maven2/org/apache/pdfbox/preflight-app/${PDFBOX_PREFLIGHT_VERSION}/preflight-app-${PDFBOX_PREFLIGHT_VERSION}.jar"
           fi
 
