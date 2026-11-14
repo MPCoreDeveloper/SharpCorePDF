@@ -1,1 +1,53 @@
 #nullable enable
+override sealed SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfEditOperation? other) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfStationery.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfStationery.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfStationery.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation!
+override SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.Kind.get -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+override SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.ToString() -> string!
+SharpCorePDF.Domain.Aggregates.PdfEditPlan.ApplyStationery(SharpCorePDF.Domain.ValueObjects.PdfStationery! stationery) -> SharpCorePDF.Domain.Aggregates.PdfEditPlan!
+SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind.ApplyStationery = 25 -> SharpCorePDF.Domain.ValueObjects.PdfEditOperationKind
+SharpCorePDF.Domain.ValueObjects.PdfStationery
+SharpCorePDF.Domain.ValueObjects.PdfStationery.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfStationery!
+SharpCorePDF.Domain.ValueObjects.PdfStationery.Assign(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ValueObjects.PageRange pages, SharpCorePDF.Domain.ValueObjects.PdfOverlayOptions? options = null, string? password = null) -> SharpCorePDF.Domain.ValueObjects.PdfStationery!
+SharpCorePDF.Domain.ValueObjects.PdfStationery.AssignDefault(SharpCorePDF.Domain.Ports.IPdfContentSource! source, SharpCorePDF.Domain.ValueObjects.PdfOverlayOptions? options = null, string? password = null) -> SharpCorePDF.Domain.ValueObjects.PdfStationery!
+SharpCorePDF.Domain.ValueObjects.PdfStationery.Assignments.get -> System.Collections.Immutable.ImmutableArray<SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment!>
+SharpCorePDF.Domain.ValueObjects.PdfStationery.Assignments.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfStationery.AssignNone(SharpCorePDF.Domain.ValueObjects.PageRange pages) -> SharpCorePDF.Domain.ValueObjects.PdfStationery!
+SharpCorePDF.Domain.ValueObjects.PdfStationery.Default.get -> SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment?
+SharpCorePDF.Domain.ValueObjects.PdfStationery.Default.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfStationery.Equals(SharpCorePDF.Domain.ValueObjects.PdfStationery? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfStationery.PdfStationery() -> void
+SharpCorePDF.Domain.ValueObjects.PdfStationery.ResolveForPage(int pageNumber) -> SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment?
+SharpCorePDF.Domain.ValueObjects.PdfStationery.Validate() -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment
+SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment!
+SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.Equals(SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.Options.get -> SharpCorePDF.Domain.ValueObjects.PdfOverlayOptions!
+SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.Options.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.Pages.get -> SharpCorePDF.Domain.ValueObjects.PageRange
+SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.Pages.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.Password.get -> string?
+SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.Password.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.PdfStationeryAssignment() -> void
+SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.Source.get -> SharpCorePDF.Domain.Ports.IPdfContentSource?
+SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.Source.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation
+SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.Deconstruct(out SharpCorePDF.Domain.ValueObjects.PdfStationery! Stationery) -> void
+SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.Equals(SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.PdfStationeryOperation(SharpCorePDF.Domain.ValueObjects.PdfStationery! Stationery) -> void
+SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.Stationery.get -> SharpCorePDF.Domain.ValueObjects.PdfStationery!
+SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.Stationery.init -> void
+static SharpCorePDF.Domain.ValueObjects.PdfStationery.Create() -> SharpCorePDF.Domain.ValueObjects.PdfStationery!
+static SharpCorePDF.Domain.ValueObjects.PdfStationery.operator !=(SharpCorePDF.Domain.ValueObjects.PdfStationery? left, SharpCorePDF.Domain.ValueObjects.PdfStationery? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfStationery.operator ==(SharpCorePDF.Domain.ValueObjects.PdfStationery? left, SharpCorePDF.Domain.ValueObjects.PdfStationery? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.operator !=(SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment? left, SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment.operator ==(SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment? left, SharpCorePDF.Domain.ValueObjects.PdfStationeryAssignment? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.operator !=(SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation? left, SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation.operator ==(SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation? left, SharpCorePDF.Domain.ValueObjects.PdfStationeryOperation? right) -> bool

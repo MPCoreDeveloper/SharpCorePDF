@@ -172,6 +172,10 @@ public sealed partial class PdfEditEngine
                     break;
                 }
 
+                case PdfStationeryOperation stationery:
+                    ApplyStationery(sources, layout, stationery.Stationery, index, document.SourceName);
+                    break;
+
                 case PdfAddAnnotationOperation add:
                     ApplyAnnotation(
                         layout,
@@ -894,6 +898,78 @@ public sealed partial class PdfEditEngine
         var number = writer.AllocateObject();
         writer.WriteObject(number, copier.Clone(stream));
         destination.Add(new PdfReference(number, 0));
+    }
+
+    /// <summary>Records the stationery template of every page the plan covers.</summary>
+    /// <param name="sources">The documents of the edit.</param>
+    /// <param name="layout">The pages of the edit, in output order.</param>
+    /// <param name="stationery">The templates and the pages they cover.</param>
+    /// <param name="index">The position of the operation, used in error messages.</param>
+    /// <param name="documentName">The display name of the document being edited, used in error messages.</param>
+    /// <exception cref="PdfEditPlanValidationException">
+    /// A stationery document has fewer pages than the range it covers needs.
+    /// </exception>
+    private static void ApplyStationery(
+        EditSources sources,
+        List<EditedPage> layout,
+        PdfStationery stationery,
+        int index,
+        string documentName)
+    {
+        for (var pageNumber = 1; pageNumber <= layout.Count; pageNumber++)
+        {
+            if (stationery.ResolveForPage(pageNumber) is not { Source: { } source } assignment)
+            {
+                // An assignment with no source, or no default at all, leaves the page as it is.
+                continue;
+            }
+
+            var reader = sources.SourceOf(source);
+
+            layout[pageNumber - 1].Overlays.Add(
+                new OverlayLayer(
+                    reader,
+                    ResolveStationeryPage(reader, assignment, pageNumber, index, documentName),
+                    assignment.Options,
+                    PdfOverlayLayer.Under));
+        }
+    }
+
+    /// <summary>Picks the stationery page recorded under one page of the edited document.</summary>
+    /// <param name="reader">The stationery document.</param>
+    /// <param name="assignment">The assignment that covers the page.</param>
+    /// <param name="pageNumber">The one-based page of the edited document.</param>
+    /// <param name="index">The position of the operation, used in error messages.</param>
+    /// <param name="documentName">The display name of the document being edited, used in error messages.</param>
+    /// <returns>The stationery page.</returns>
+    /// <exception cref="PdfEditPlanValidationException">
+    /// The stationery document has fewer pages than the range it covers needs.
+    /// </exception>
+    private static SourcePage ResolveStationeryPage(
+        PdfFileReader reader,
+        PdfStationeryAssignment assignment,
+        int pageNumber,
+        int index,
+        string documentName)
+    {
+        // A one-page template repeats across the pages it covers; a multi-page one maps page for page,
+        // starting at the first page of its assignment.
+        if (reader.Pages.Count == 1)
+        {
+            return reader.Pages[0];
+        }
+
+        var offset = pageNumber - assignment.Pages.From;
+
+        if (offset < 0 || offset >= reader.Pages.Count)
+        {
+            throw new PdfEditPlanValidationException(
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"operation {index}: the stationery document '{reader.SourceName}' has {reader.Pages.Count} page(s), which cannot cover page {pageNumber} of '{documentName}'."));
+        }
+
+        return reader.Pages[offset];
     }
 
     /// <summary>One page of the edited document while its layout is being resolved.</summary>

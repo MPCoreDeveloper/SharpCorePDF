@@ -79,6 +79,9 @@ public enum PdfEditOperationKind
 
     /// <summary>The form is drawn into the pages and removed, so the document keeps no form.</summary>
     FlattenForm,
+
+    /// <summary>Stationery templates are recorded under the pages of the document.</summary>
+    ApplyStationery,
 }
 
 /// <summary>Determines whether a page of another document is recorded under or over a page of this one.</summary>
@@ -329,6 +332,36 @@ public sealed record PdfOverlayOperation(
         System.Globalization.CultureInfo.InvariantCulture,
         $"record '{Overlay?.DisplayName}' {(Layer == PdfOverlayLayer.Under ? "under" : "over")} page {PageNumber} at opacity {Options?.Opacity ?? 1.0:0.##}");
 }
+
+/// <summary>
+/// Records stationery templates under the pages of the document, each covering the pages it names and
+/// a default covering the rest.
+/// </summary>
+/// <param name="Stationery">The templates and the pages they cover.</param>
+/// <remarks>
+/// <para>
+/// The templates are recorded as underlay layers, exactly like <see cref="PdfOverlayOperation"/> with a
+/// layer of <see cref="PdfOverlayLayer.Under"/>, so the content streams of every page keep their bytes
+/// and the resources of a template never collide with the resources of the page.
+/// </para>
+/// <para>
+/// The operation resolves its pages against the document state the preceding operations leave behind,
+/// which means it applies to the pages that exist at its position in the plan. A caller who wants a
+/// background under the whole result adds it last.
+/// </para>
+/// </remarks>
+public sealed record PdfStationeryOperation(PdfStationery Stationery) : PdfEditOperation
+{
+    /// <inheritdoc />
+    public override PdfEditOperationKind Kind => PdfEditOperationKind.ApplyStationery;
+
+    /// <summary>Formats the operation for diagnostics.</summary>
+    /// <returns>The number of assignments and whether a default exists.</returns>
+    public override string ToString() => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"apply stationery: {Stationery?.ToString() ?? "(null)"}");
+}
+
 
 /// <summary>Replaces the XMP metadata packet of the document.</summary>
 /// <param name="Xmp">The packet, as UTF-8 XML; it must be well formed.</param>

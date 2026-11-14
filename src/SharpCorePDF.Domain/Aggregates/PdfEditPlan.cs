@@ -262,6 +262,24 @@ public sealed record PdfEditPlan
         string? password = null) =>
         AddOverlay(underlay, pageNumber, options, PdfOverlayLayer.Under, password);
 
+    /// <summary>
+    /// Records stationery templates under the pages of this document: one template per assigned page
+    /// range, plus a default for the pages no assignment covers.
+    /// </summary>
+    /// <param name="stationery">The templates and the pages they cover.</param>
+    /// <returns>The new plan.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="stationery"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The pages are resolved against the document state the preceding operations leave behind, so a
+    /// caller who wants a background under the whole result adds this operation last. A one-page
+    /// template repeats across the pages it covers; a multi-page template maps one page for one page.
+    /// </remarks>
+    public PdfEditPlan ApplyStationery(PdfStationery stationery)
+    {
+        ArgumentNullException.ThrowIfNull(stationery);
+        return Add(new PdfStationeryOperation(stationery));
+    }
+
     /// <summary>Replaces the XMP metadata packet of the document.</summary>
     /// <param name="xmp">The packet as UTF-8 XML; it must be well formed.</param>
     /// <returns>The new plan.</returns>
@@ -438,6 +456,13 @@ public sealed record PdfEditPlan
                 {
                     errors.Add(
                         $"operation {index}: a layer with an opacity below 1 or a blend mode other than Normal cannot be written for PDF/A-1b, which has no transparency.");
+                }
+
+                if (operations[index] is PdfStationeryOperation { Stationery: { } stationery }
+                    && UsesTransparency(stationery))
+                {
+                    errors.Add(
+                        $"operation {index}: a stationery layer with an opacity below 1 or a blend mode other than Normal cannot be written for PDF/A-1b, which has no transparency.");
                 }
 
                 if (operations[index] is PdfAddAnnotationOperation { Annotation.Opacity: < 1d }
@@ -748,6 +773,18 @@ public sealed record PdfEditPlan
 
                 break;
 
+            case PdfStationeryOperation stationery when stationery.Stationery is null:
+                yield return $"operation {index}: the stationery to apply is null.";
+                break;
+
+            case PdfStationeryOperation stationery:
+                foreach (var problem in stationery.Stationery.Validate())
+                {
+                    yield return $"operation {index}: {problem}";
+                }
+
+                break;
+
             case PdfSetXmpOperation xmp:
                 if (xmp.Xmp.IsEmpty)
                 {
@@ -911,4 +948,26 @@ public sealed record PdfEditPlan
             yield return $"operation {index}: page range '{pages}' ends before it starts.";
         }
     }
+
+    /// <summary>Determines whether a stationery layer states a transparency the PDF/A-1b profile forbids.</summary>
+    /// <param name="stationery">The stationery to check.</param>
+    /// <returns><see langword="true"/> when a template is translucent or blended.</returns>
+    private static bool UsesTransparency(PdfStationery stationery)
+    {
+        foreach (var assignment in stationery.Assignments)
+        {
+            if (assignment.Options is null || StatesTransparency(assignment.Options))
+            {
+                return true;
+            }
+        }
+
+        return stationery.Default?.Options is null || StatesTransparency(stationery.Default.Options);
+    }
+
+    /// <summary>Determines whether one set of overlay options states a transparency.</summary>
+    /// <param name="options">The options to check.</param>
+    /// <returns><see langword="true"/> when the opacity is below 1 or the blend mode is not normal.</returns>
+    private static bool StatesTransparency(PdfOverlayOptions options) =>
+        options.Opacity < 1d || options.BlendMode != PdfOverlayBlendMode.Normal;
 }

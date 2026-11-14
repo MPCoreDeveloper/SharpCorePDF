@@ -189,6 +189,68 @@ internal static class PdfEditExamples
         }
     }
 
+    /// <summary>
+    /// Puts a letterhead behind the first page and a footer behind the rest: stationery is a layer per
+    /// page range, with a default for the pages no assignment covers.
+    /// </summary>
+    /// <param name="context">The document to dress and the ports to edit it with.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    public static async Task StationeryAsync(ExampleContext context, CancellationToken cancellationToken)
+    {
+        var heading = PdfTypeface.Standard(StandardFont.HelveticaBold);
+        var output = context.OutputPath("stationery.pdf");
+
+        // A letterhead and a footer are documents of their own, like the watermark above: the library
+        // draws each once and records it under every page the stationery plan assigns to it.
+        var letterhead = PdfDocumentBuilder.Create()
+            .AddPage(PdfPageSize.A4, page => page
+                .DrawText("Northwind Traders", 72, 780, heading, 22)
+                .DrawLine(
+                    new PdfPoint(72, 772),
+                    new PdfPoint(523, 772),
+                    new PdfStroke(PdfPaint.Black, width: 0.75)))
+            .Build("letterhead.pdf");
+
+        var footer = PdfDocumentBuilder.Create()
+            .AddPage(PdfPageSize.A4, page => page
+                .DrawLine(
+                    new PdfPoint(72, 60),
+                    new PdfPoint(523, 60),
+                    new PdfStroke(PdfPaint.Black, width: 0.5))
+                .DrawText("Confidential", 72, 44, heading, 9))
+            .Build("footer.pdf");
+
+        // One assignment per page range, plus a default for the pages neither names. Assignments are
+        // tried last first, so a narrower range overrides a broader one.
+        var stationery = PdfStationery.Create()
+            .Assign(letterhead, PageRange.Single(1))
+            .AssignDefault(footer);
+
+        var plan = PdfEditPlan.Create()
+            .ApplyStationery(stationery)
+            .WithOutput(options => options with
+            {
+                ModificationDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                Producer = "SharpCorePDF examples",
+            });
+
+        PdfEditResult result;
+
+        await using (var destination = File.Create(output))
+        {
+            result = await context.Editor.ApplyAsync(
+                new PdfFileSource(context.Appendix),
+                plan,
+                destination,
+                cancellationToken: cancellationToken);
+        }
+
+        Report.Item("wrote", output);
+        Report.Item("operations applied", string.Join(", ", result.Operations));
+        Report.Item("bytes", result.BytesWritten);
+    }
+
+
     /// <summary>Comments on the document without touching a byte of its content.</summary>
     /// <param name="context">The document to comment on and the ports to comment with.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
