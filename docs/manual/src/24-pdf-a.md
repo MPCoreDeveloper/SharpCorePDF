@@ -43,7 +43,8 @@ if (!result.IsWritten)
 `new PdfAWriterService(new PdfAWriter())` (Chapter 10). The source is opened, read to its end and disposed;
 the destination belongs to the caller and is flushed, not closed.
 
-`PdfAProfile` names five profiles — three at level B and two at level U:
+`PdfAProfile` names six profiles — three at level B, two at level U, and PDF/A-4, whose base level has no
+letter:
 
 | Profile | Part of ISO 19005 | Level | PDF version written | Transparency | JPEG 2000 | Embedded files |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -52,13 +53,16 @@ the destination belongs to the caller and is flushed, not closed.
 | `PdfA2U` | 19005-2 | U | 1.7 | allowed | allowed | refused |
 | `PdfA3B` | 19005-3 | B | 1.7 | allowed | allowed | allowed |
 | `PdfA3U` | 19005-3 | U | 1.7 | allowed | allowed | allowed |
+| `PdfA4` | 19005-4 | (none) | 2.0 | allowed | allowed | refused |
 
 Level B keeps the visual appearance. Level U adds one requirement: every glyph the document draws has a
 Unicode equivalent, which is what a text extractor or a search index reads. The writer already states a
 `ToUnicode` map for every font it subsets, so a document that converts to `PdfA2B` converts to `PdfA2U`
 as well; the level is written as `pdfaid:conformance` in the packet, and nothing else about the file
-changes. A profile at level A — tagged structure, accessibility — is not offered, and PDF/UA is a
-different standard.
+changes. PDF/A-4 is based on PDF 2.0 and is the base level of ISO 19005-4: it writes `pdfaid:part` 4 and
+no `pdfaid:conformance` element, and it allows transparency while refusing embedded files. PDF/A-4f, -4u
+and a profile at level A — tagged structure, accessibility — are not offered, and PDF/UA is a different
+standard.
 
 The profile decides the version of the file, whatever `PdfVersion` a caller might otherwise have asked
 for; a PDF/A-1b document that claims 1.7 is not one.
@@ -69,9 +73,9 @@ byte-identical, which is what a test that compares files needs.
 
 ## What the writer writes
 
-- **The header version** the profile names, 1.4 or 1.7.
-- **An XMP packet** in the catalog, uncompressed and UTF-8, carrying `pdfaid:part` and
-  `pdfaid:conformance`, plus the document information mirrored into `dc:title`, `dc:creator`,
+- **The header version** the profile names, 1.4, 1.7 or 2.0.
+- **An XMP packet** in the catalog, uncompressed and UTF-8, carrying `pdfaid:part` and — for the level-B
+  and level-U profiles — `pdfaid:conformance`, plus the document information mirrored into `dc:title`, `dc:creator`,
   `dc:description`, `pdf:Keywords`, `pdf:Producer`, `xmp:CreatorTool` and the two dates. A profile
   requires the dictionary and the packet to agree, so the same values are written to both.
 - **An output intent** in the catalog: `/S /GTS_PDFA1` and a destination profile. By default the profile is
@@ -117,7 +121,7 @@ changing what a page looks like, or that are data.
 | A CID font subset without `/CIDSet`, for 1b | ISO 19005-1 requires the set, and the writer cannot know which CIDs a program it did not subset describes. |
 | Transparency for 1b — a soft mask, a blend mode, a transparency group | PDF 1.4 has no transparency, and making it opaque changes the page. |
 | `JPXDecode` or `LZWDecode` for 1b | The first part of ISO 19005 forbids both filters. |
-| Embedded files for 1b and 2b | Only PDF/A-3 allows attachments. |
+| Embedded files for 1b, 2b and 4 | Only PDF/A-3 allows attachments; PDF/A-4f would, and is not offered. |
 | Optional content for 1b | PDF 1.4 has no layers. |
 | An annotation without an appearance stream (except `Link` and `Popup`) | A viewer would have to invent the content. |
 | A JavaScript, `Launch`, `Sound`, `Movie`, `Rendition`, `ImportData` or `SubmitForm` action | The profile forbids the action itself, not just its startup use. |

@@ -16,16 +16,21 @@ internal static class PdfAProfileRules
         PdfAProfile.PdfA1B => 1,
         PdfAProfile.PdfA2B or PdfAProfile.PdfA2U => 2,
         PdfAProfile.PdfA3B or PdfAProfile.PdfA3U => 3,
+        PdfAProfile.PdfA4 => 4,
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "The profile is not one the engine writes."),
     };
 
     /// <summary>Gets the conformance level the profile names.</summary>
     /// <param name="profile">The profile.</param>
-    /// <returns>The level, written as <c>pdfaid:conformance</c>: <c>B</c> or <c>U</c>.</returns>
-    public static string Conformance(PdfAProfile profile) => profile switch
+    /// <returns>
+    /// The level, written as <c>pdfaid:conformance</c>: <c>B</c> or <c>U</c>, or <see langword="null"/> for
+    /// PDF/A-4, whose base level states the part alone.
+    /// </returns>
+    public static string? Conformance(PdfAProfile profile) => profile switch
     {
         PdfAProfile.PdfA1B or PdfAProfile.PdfA2B or PdfAProfile.PdfA3B => "B",
         PdfAProfile.PdfA2U or PdfAProfile.PdfA3U => "U",
+        PdfAProfile.PdfA4 => null,
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "The profile is not one the engine writes."),
     };
 
@@ -39,16 +44,18 @@ internal static class PdfAProfileRules
         PdfAProfile.PdfA3B => "PDF/A-3b",
         PdfAProfile.PdfA2U => "PDF/A-2u",
         PdfAProfile.PdfA3U => "PDF/A-3u",
+        PdfAProfile.PdfA4 => "PDF/A-4",
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "The profile is not one the engine writes."),
     };
 
     /// <summary>Gets the PDF version a document written for the profile has.</summary>
     /// <param name="profile">The profile.</param>
-    /// <returns>PDF 1.4 for PDF/A-1b, PDF 1.7 for the other four.</returns>
+    /// <returns>PDF 1.4 for PDF/A-1b, PDF 2.0 for PDF/A-4, PDF 1.7 for the other four.</returns>
     public static PdfVersion Version(PdfAProfile profile) => profile switch
     {
         PdfAProfile.PdfA1B => PdfVersion.V1_4,
         PdfAProfile.PdfA2B or PdfAProfile.PdfA3B or PdfAProfile.PdfA2U or PdfAProfile.PdfA3U => PdfVersion.V1_7,
+        PdfAProfile.PdfA4 => PdfVersion.V2_0,
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "The profile is not one the engine writes."),
     };
 

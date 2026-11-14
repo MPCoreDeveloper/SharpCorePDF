@@ -115,18 +115,19 @@ public sealed class PdfATests
     /// <param name="profile">The profile to write for.</param>
     /// <param name="version">The version the file header states.</param>
     /// <param name="part">The part of ISO 19005 the packet names.</param>
-    /// <param name="conformance">The conformance level the packet names.</param>
+    /// <param name="conformance">The conformance level the packet names, or <see langword="null"/> for PDF/A-4.</param>
     [Theory]
     [InlineData(PdfAProfile.PdfA1B, "1.4", "1", "B")]
     [InlineData(PdfAProfile.PdfA2B, "1.7", "2", "B")]
     [InlineData(PdfAProfile.PdfA2U, "1.7", "2", "U")]
     [InlineData(PdfAProfile.PdfA3B, "1.7", "3", "B")]
     [InlineData(PdfAProfile.PdfA3U, "1.7", "3", "U")]
+    [InlineData(PdfAProfile.PdfA4, "2.0", "4", null)]
     public async Task Writes_the_structures_the_profile_requires(
         PdfAProfile profile,
         string version,
         string part,
-        string conformance)
+        string? conformance)
     {
         var (result, output) = await ConvertAsync(Authored(), profile);
 
@@ -143,7 +144,16 @@ public sealed class PdfATests
         var xmp = TestAssets.ReadMetadata(output);
 
         Assert.Contains($"<pdfaid:part>{part}</pdfaid:part>", xmp);
-        Assert.Contains($"<pdfaid:conformance>{conformance}</pdfaid:conformance>", xmp);
+
+        if (conformance is null)
+        {
+            // PDF/A-4 states the part alone; the base level has no conformance element.
+            Assert.DoesNotContain("<pdfaid:conformance>", xmp);
+        }
+        else
+        {
+            Assert.Contains($"<pdfaid:conformance>{conformance}</pdfaid:conformance>", xmp);
+        }
         Assert.Contains("Décompte 12345", xmp);
         Assert.Contains("<pdf:Producer>", xmp);
 

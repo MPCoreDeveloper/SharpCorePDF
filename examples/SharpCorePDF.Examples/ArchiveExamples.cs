@@ -59,7 +59,8 @@ internal static class ArchiveExamples
             PdfAProfile.PdfA2B,
             PdfAProfile.PdfA2U,
             PdfAProfile.PdfA3B,
-            PdfAProfile.PdfA3U])
+            PdfAProfile.PdfA3U,
+            PdfAProfile.PdfA4])
         {
             destination.SetLength(0);
 
@@ -162,7 +163,8 @@ internal static class ArchiveExamples
             PdfAProfile.PdfA2B,
             PdfAProfile.PdfA2U,
             PdfAProfile.PdfA3B,
-            PdfAProfile.PdfA3U])
+            PdfAProfile.PdfA3U,
+            PdfAProfile.PdfA4])
         {
             using var destination = new MemoryStream();
 
@@ -205,6 +207,7 @@ internal static class ArchiveExamples
         PdfAProfile.PdfA2U => "archive-source-2u.pdf",
         PdfAProfile.PdfA3B => "archive-source-3b.pdf",
         PdfAProfile.PdfA3U => "archive-source-3u.pdf",
+        PdfAProfile.PdfA4 => "archive-source-4.pdf",
         _ => "archive-source.pdf",
     };
 
@@ -347,6 +350,7 @@ internal static class ArchiveExamples
         PdfAProfile.PdfA2U => "PDF/A-2u",
         PdfAProfile.PdfA3B => "PDF/A-3b",
         PdfAProfile.PdfA3U => "PDF/A-3u",
+        PdfAProfile.PdfA4 => "PDF/A-4",
         _ => profile.ToString(),
     };
 
@@ -360,6 +364,7 @@ internal static class ArchiveExamples
         PdfAProfile.PdfA2U => "archive-2u.pdf",
         PdfAProfile.PdfA3B => "archive-3b.pdf",
         PdfAProfile.PdfA3U => "archive-3u.pdf",
+        PdfAProfile.PdfA4 => "archive-4.pdf",
         _ => "archive.pdf",
     };
 

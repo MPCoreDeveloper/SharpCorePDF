@@ -60,9 +60,12 @@ internal static class XmpPacket
         xml.Append("   <pdfaid:part>")
             .Append(PdfAProfileRules.Part(profile).ToString(CultureInfo.InvariantCulture))
             .Append("</pdfaid:part>\n");
-        xml.Append("   <pdfaid:conformance>")
-            .Append(PdfAProfileRules.Conformance(profile))
-            .Append("</pdfaid:conformance>\n");
+        if (PdfAProfileRules.Conformance(profile) is { } conformance)
+        {
+            xml.Append("   <pdfaid:conformance>")
+                .Append(conformance)
+                .Append("</pdfaid:conformance>\n");
+        }
         xml.Append("  </rdf:Description>\n");
     }
 

@@ -49,4 +49,10 @@ public enum PdfAProfile
     /// PDF/A-3u, ISO 19005-3 level U: PDF/A-3b plus the rule that every glyph has a Unicode equivalent.
     /// </summary>
     PdfA3U = 5,
+
+    /// <summary>
+    /// PDF/A-4, ISO 19005-4: a PDF 2.0 document. The base level states part 4 and no conformance level;
+    /// transparency and the PDF 2.0 feature set are allowed, and embedded files are not.
+    /// </summary>
+    PdfA4 = 6,
 }

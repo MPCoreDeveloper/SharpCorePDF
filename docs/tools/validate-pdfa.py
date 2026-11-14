@@ -9,7 +9,7 @@ The library writes the structures a profile requires; it does not claim conforma
 claim: it runs veraPDF, the reference validator, over the file and reports PASS or FAIL together with the
 rules that failed. A file this library wrote is only an archival master once this says so.
 
---profile decides the flavour veraPDF checks against (1b, 2b, 2u, 3b or 3u). Without it veraPDF detects the
+--profile decides the flavour veraPDF checks against (1b, 2b, 2u, 3b, 3u or 4). Without it veraPDF detects the
 flavour the document declares, which is what a receiving archive usually does as well.
 
 --format decides how the verdict is reached. `text` keeps veraPDF's own report and reads its PASS line,
@@ -36,7 +36,7 @@ import sys
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
-FLAVOURS = ("1b", "2b", "2u", "3b", "3u")
+FLAVOURS = ("1b", "2b", "2u", "3b", "3u", "4")
 FORMATS = ("text", "xml")
 VERSION_PATTERN = re.compile(r"veraPDF\s+(\d+(?:\.\d+)+)")
 

@@ -28,6 +28,11 @@ against an empty feed.
   The report is read-only and never returns stream contents; a document that stays closed is reported
   with `IsReadable`/`RequiresPassword` instead of throwing. `tools/SharpCorePDF.Diagnostics` prints it as
   text or JSON, with `--profile` for the archival pre-flight and `--json` for the whole report.
+- **PDF/A-4 (ISO 19005-4) is written.** `PdfAProfile.PdfA4` writes a PDF 2.0 document with `pdfaid:part`
+  4 and no conformance level — the base level — with the same embedded fonts and sRGB output intent as the
+  other profiles, and transparency allowed. `compliance.yml` now validates `archive-4.pdf` and
+  `archive-source-4.pdf` with veraPDF, and the `archive-pdfa` example writes both. PDF/A-4f/-4u and level A
+  remain out of scope.
 
 ### Changed
 

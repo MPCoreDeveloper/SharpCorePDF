@@ -21,3 +21,4 @@ SharpCorePDF.Domain.ReadModels.PdfDiagnosticsReport.Warnings.get -> System.Colle
 SharpCorePDF.Domain.ReadModels.PdfDiagnosticsReport.Warnings.init -> void
 static SharpCorePDF.Domain.ReadModels.PdfDiagnosticsReport.operator !=(SharpCorePDF.Domain.ReadModels.PdfDiagnosticsReport? left, SharpCorePDF.Domain.ReadModels.PdfDiagnosticsReport? right) -> bool
 static SharpCorePDF.Domain.ReadModels.PdfDiagnosticsReport.operator ==(SharpCorePDF.Domain.ReadModels.PdfDiagnosticsReport? left, SharpCorePDF.Domain.ReadModels.PdfDiagnosticsReport? right) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfAProfile.PdfA4 = 6 -> SharpCorePDF.Domain.ValueObjects.PdfAProfile

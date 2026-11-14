@@ -204,7 +204,7 @@ jobs:
           set -euo pipefail
           output="$RUNNER_TEMP/SharpCorePDF.Examples/output"
 
-          for profile in 1b 2b 2u 3b 3u; do
+          for profile in 1b 2b 2u 3b 3u 4; do
             python3 docs/tools/validate-pdfa.py \
               --format xml --report-dir artifacts/pdfa --require-version "$VERAPDF_VERSION" \
               --profile "$profile" \
@@ -213,7 +213,8 @@ jobs:
           done
 
       # The same documents, read by two more implementations. --strict-tools makes a missing tool a failure
-      # rather than a note, because a green run here is supposed to mean that all three agreed.
+      # rather than a note, because a green run here is supposed to mean that all three agreed. PDFBox 3.0.8
+      # and Ghostscript have no PDF/A-4 mode, so veraPDF is the only reading of that profile.
       - name: Cross-validate with a second and a third implementation
         env:
           VERAPDF_HOME: ${{ env.VERAPDF_INSTALL }}
