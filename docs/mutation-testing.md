@@ -31,13 +31,13 @@ dotnet tool restore
 
 # One layer. The five projects under src/ are four layers and a meta package: SharpCorePDF itself has no
 # code to mutate.
-dotnet stryker --config-file stryker-config.json --project SharpCorePDF.Domain.csproj --output artifacts/mutation/Domain
+dotnet stryker --config-file stryker-config.json --solution SharpCorePDF.slnx --mutate "src/SharpCorePDF.Domain/**/*.cs" --output artifacts/mutation/Domain
 
 # One file, when the question is about one file
-dotnet stryker --config-file stryker-config.json --project SharpCorePDF.Domain.csproj --mutate "**/PageRange.cs"
+dotnet stryker --config-file stryker-config.json --solution SharpCorePDF.slnx --mutate "**/PageRange.cs"
 
 # Only the lines a branch changes against main
-dotnet stryker --config-file stryker-config.json --project SharpCorePDF.Domain.csproj --since:main
+dotnet stryker --config-file stryker-config.json --solution SharpCorePDF.slnx --mutate "src/SharpCorePDF.Domain/**/*.cs" --since:main
 
 # The reading, out of the report the run leaves behind
 python ./docs/tools/mutation-summary.py ./artifacts/mutation/Domain/reports/mutation-report.json --detail
@@ -128,7 +128,8 @@ baseline would come from.
 ```
 
 The path is the command that was run: that first sweep predates `.config/dotnet-tools.json`, and installed the
-tool with `--tool-path .tools`. The manifest and `.tools/` hold the same 5.0.0, so `dotnet stryker` after
+tool with `--tool-path .tools`. The manifest and `.tools/` held the same 5.0.0 at the time; the manifest now
+pins 5.1.0, and the solution-context re-run is recorded at the end of this file. `dotnet stryker` after
 `dotnet tool restore` is the same tool from one pin — which is what the commands above and `mutation.yml` use,
 and what a clone has without any install step.
 
@@ -780,4 +781,18 @@ What survived, read one by one:
   document with an inspection-only warning and an archival removal is the fixture that would close them,
   and it is the next thing to add if this service's suite is extended.
 
+
+
+## 5.1.0 — the solution-context reading (2026-11-14)
+
+`dotnet tool update dotnet-stryker --version 5.1.0` moves the harness to a version that runs in solution
+context: it finds `SharpCorePDF.slnx`, discovers the test project itself, and refuses a `test-projects`
+entry in `stryker-config.json`. The key is gone; the workflow and the commands above name the solution and
+scope the layer with `--mutate`. The configuration is otherwise unchanged.
+
+The scoped reading of `Services/PdfDiagnoserService.cs` with 5.1.0 is **38.46%** (5 killed, 8 survived,
+11 compile errors, 13 mutants), against 42.86% on 5.0.0. The survivor set is the same one the 1.7.0 record
+names — the redundant null guard, the exception message string, the four `ConfigureAwait` arguments and
+the two warning-merge statements — and the single kill that moved is a mutant 5.1.0's Safe Mode rejects
+at compile time rather than executes. No test changed, and no new survivor appeared.
 

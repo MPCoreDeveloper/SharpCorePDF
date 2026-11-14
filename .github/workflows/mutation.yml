@@ -127,8 +127,9 @@ jobs:
             10.0.x
 
       # The version is the repository's own, not this workflow's: .config/dotnet-tools.json pins
-      # dotnet-stryker to the version stryker-config.json is written for (5.0.0 is the first that speaks
-      # Microsoft.Testing.Platform, through `--test-runner mtp`), so a local run and this one cannot drift.
+      # dotnet-stryker to the version stryker-config.json is written for (5.1.0 still speaks
+      # Microsoft.Testing.Platform through `--test-runner mtp`), so a local run and this one cannot drift.
+      # 5.1.0 runs in solution context: the solution names the tests and --mutate scopes the layer.
       - name: Restore the tools
         run: dotnet tool restore
 
@@ -141,7 +142,8 @@ jobs:
           mkdir -p "artifacts/mutation/$LAYER"
           args=(
             --config-file stryker-config.json
-            --project "$LAYER.csproj"
+            --solution SharpCorePDF.slnx
+            --mutate "src/$LAYER/**/*.cs"
             --output "artifacts/mutation/$LAYER"
           )
           # A scheduled run passes neither input, and stryker-config.json then decides both.

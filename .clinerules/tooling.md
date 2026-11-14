@@ -11,9 +11,10 @@ What "installed" means, in this order:
 
 1. `.config/dotnet-tools.json`, committed, pinning `dotnet-stryker` — a local tool, so `dotnet tool restore`
    is the whole setup and no clone has to install anything globally.
-2. `stryker-config.json` at the root: `test-projects`, `test-runner`, `target-framework`, `configuration`,
+2. `stryker-config.json` at the root: `test-runner`, `target-framework`, `configuration`,
    `mutation-level`, `coverage-analysis`, `thresholds`, `reporters`, `break-on-initial-test-failure` and
-   `mutate`. The workflow and a local run read this one file.
+   `mutate`. The workflow and a local run read this one file. Stryker 5.1.0 runs in solution context: the
+   test project is discovered from the solution, so the config carries no `test-projects`.
 3. A workflow that restores the same manifest, so the pin is stated once.
 4. A README section (`Building and testing` → mutation testing) saying how to run it and how to read the
    report, and a longer record under `docs/` when there is something worth recording.
@@ -22,9 +23,9 @@ Setting it up on a repository that has none of this:
 
 ```powershell
 dotnet new tool-manifest                                  # writes .config/dotnet-tools.json
-dotnet tool install dotnet-stryker --version 5.0.0        # the version stryker-config.json is written for
+dotnet tool install dotnet-stryker --version 5.1.0        # the version stryker-config.json is written for
 dotnet tool restore
-dotnet stryker --config-file stryker-config.json --project <Layer>.csproj --mutate "**/<File>.cs"
+dotnet stryker --config-file stryker-config.json --solution SharpCorePDF.slnx --mutate "src/<Layer>/**/*.cs"
 ```
 
 `StrykerOutput/` (the default output directory) and `artifacts/` are ignored; reports are never committed.

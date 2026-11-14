@@ -278,12 +278,13 @@ delivered by this document.
   python docs/tools/validate-pdfa.py --verapdf <verapdf.bat> --profile 2b archive-2b.pdf
   python docs/tools/validate-pdfa.py --verapdf <verapdf.bat> archive-1b.pdf archive-3b.pdf
   ```
-  All ten files report `PASS` — five profiles of each of the two documents — and `compliance.yml` repeats the
+  All twelve files report `PASS` — six profiles of each of the two documents — and `compliance.yml` repeats the
   run on every push and once a week with the validator pinned and `--require-version` passed, so the claim
   cannot age into a sentence in a document.
   Two more implementations read the same files through `validate-pdfa-cross.py`: Apache PDFBox preflight,
-  which shares no code with veraPDF and votes on `1b` while parsing `2b`/`3b` without a verdict, and
-  Ghostscript, which rewrites the document as archival output from what it understood. The agreement has
+  which shares no code with veraPDF and votes on `1b` while parsing the other profiles without a verdict,
+  and Ghostscript, which rewrites the document as archival output from what it understood. Neither has a
+  PDF/A-4 mode, so veraPDF is the only reading of that profile. The agreement has
   teeth: a `2b` file judged as `1b` is rejected by veraPDF and by PDFBox independently.
   The earlier 1.30.3 run found one defect the unit tests had not: a CID font subset without
   a `/CIDSet` stream fails ISO 19005-1 clause 6.3.5-3, and the authoring writer did not emit one. It does

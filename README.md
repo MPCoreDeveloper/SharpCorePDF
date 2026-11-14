@@ -473,10 +473,10 @@ encrypted documents the merge engine writes were checked the same way with qpdf,
 dotnet tool restore                     # Stryker is a local tool: .config\dotnet-tools.json states the version
 
 # One layer of the four under src/ -- the SharpCorePDF project itself is a meta package with no code:
-dotnet stryker --config-file stryker-config.json --project SharpCorePDF.Domain.csproj --output artifacts/mutation/Domain
+dotnet stryker --config-file stryker-config.json --solution SharpCorePDF.slnx --mutate "src/SharpCorePDF.Domain/**/*.cs" --output artifacts/mutation/Domain
 
 # One file, when one change is the question:
-dotnet stryker --config-file stryker-config.json --project SharpCorePDF.Infrastructure.csproj --mutate "**/ImagePixels.cs"
+dotnet stryker --config-file stryker-config.json --solution SharpCorePDF.slnx --mutate "**/ImagePixels.cs"
 
 # The reading, out of the report it leaves behind:
 python .\docs\tools\mutation-summary.py .\artifacts\mutation\Domain\reports\mutation-report.json --detail
