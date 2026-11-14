@@ -157,8 +157,18 @@ public sealed class PdfATests
         Assert.Contains("Décompte 12345", xmp);
         Assert.Contains("<pdf:Producer>", xmp);
 
-        Assert.NotNull(document.Information);
-        Assert.Equal("Décompte 12345", document.Information!.GetText("Title"));
+        if (profile == PdfAProfile.PdfA4)
+        {
+            // PDF/A-4 forbids the document information dictionary; the packet is the only copy, and it
+            // states the revision year the part requires.
+            Assert.Null(document.Information);
+            Assert.Contains("<pdfaid:rev>2020</pdfaid:rev>", xmp);
+        }
+        else
+        {
+            Assert.NotNull(document.Information);
+            Assert.Equal("Décompte 12345", document.Information!.GetText("Title"));
+        }
 
         var intents = document.ResolveArray(document.Catalog!.Get("OutputIntents"));
         Assert.NotNull(intents);

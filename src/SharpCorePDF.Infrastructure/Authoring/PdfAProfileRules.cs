@@ -34,6 +34,15 @@ internal static class PdfAProfileRules
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "The profile is not one the engine writes."),
     };
 
+    /// <summary>Gets the revision year PDF/A-4 states, or <see langword="null"/> for the parts that do not use it.</summary>
+    /// <param name="profile">The profile.</param>
+    /// <returns><c>2020</c> for PDF/A-4, written as <c>pdfaid:rev</c>; <see langword="null"/> otherwise.</returns>
+    public static string? Revision(PdfAProfile profile) => profile switch
+    {
+        PdfAProfile.PdfA4 => "2020",
+        _ => null,
+    };
+
     /// <summary>Gets the name of the profile, as the manual and the results spell it.</summary>
     /// <param name="profile">The profile.</param>
     /// <returns>The name, for example <c>PDF/A-2b</c>.</returns>

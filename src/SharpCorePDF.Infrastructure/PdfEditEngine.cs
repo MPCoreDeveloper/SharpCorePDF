@@ -277,7 +277,9 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
         // their bodies are written.
         sources.Flush();
 
-        var infoNumber = WriteInformation(writer, metadata);
+        // PDF/A-4 forbids the document information dictionary (a trailer /Info is allowed only beside a
+        // catalog /PieceInfo, which this writer does not produce), so the packet is the only copy there.
+        var infoNumber = profile == PdfAProfile.PdfA4 ? (int?)null : WriteInformation(writer, metadata);
         WriteTrailer(writer, catalogNumber, infoNumber, identifier, security, revision?.PreviousXref);
 
         Verify(capture, layout, plan.Output.Encryption?.UserPassword, warnings);

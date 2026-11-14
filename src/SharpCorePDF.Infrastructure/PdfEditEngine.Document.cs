@@ -727,21 +727,25 @@ public sealed partial class PdfEditEngine
     /// <summary>Writes the cross-reference table, the trailer and the closing bytes of the document.</summary>
     /// <param name="writer">The writer of the result.</param>
     /// <param name="catalogNumber">The object number of the catalog.</param>
-    /// <param name="infoNumber">The object number of the document information dictionary.</param>
+    /// <param name="infoNumber">The object number of the document information dictionary, or <see langword="null"/> when the profile forbids it.</param>
     /// <param name="identifier">The identifier written as both elements of the <c>ID</c> entry.</param>
     /// <param name="security">The encryption of the result, or <see langword="null"/> when it is written in the clear.</param>
     /// <param name="previousXref">The cross-reference section this revision chains to, or <see langword="null"/> for a complete document.</param>
     private static void WriteTrailer(
         PdfWriter writer,
         int catalogNumber,
-        int infoNumber,
+        int? infoNumber,
         PdfString identifier,
         PdfSecurityWriter? security,
         long? previousXref)
     {
         var trailer = new PdfDictionary();
         trailer.Set("Root", new PdfReference(catalogNumber, 0));
-        trailer.Set("Info", new PdfReference(infoNumber, 0));
+        if (infoNumber is { } info)
+        {
+            trailer.Set("Info", new PdfReference(info, 0));
+        }
+
         trailer.Set("ID", new PdfArray(new PdfObject[] { identifier, identifier }));
 
         if (previousXref is { } previous)
