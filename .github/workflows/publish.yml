@@ -180,6 +180,13 @@ jobs:
           $packages = @(Get-ChildItem ./artifacts/*.nupkg)
           if ($packages.Count -eq 0) { throw 'nothing was packed' }
 
+          # G4: every package ships a symbol package beside it. The count is the cheap check; the symbol
+          # push below sends them to nuget.org's symbol server, where a debugger finds them by the PDB.
+          $symbols = @(Get-ChildItem ./artifacts/*.snupkg)
+          if ($symbols.Count -ne $packages.Count) {
+            $failures += "$($packages.Count) package(s) but $($symbols.Count) symbol package(s)"
+          }
+
           $version = (Select-String -Path ./src/Directory.Build.props -Pattern '<Version>(.*?)</Version>').Matches[0].Groups[1].Value
 
           $entryPoint = 'SharpCorePDF'
@@ -267,5 +274,15 @@ jobs:
         run: |
           dotnet nuget push ./artifacts/*.nupkg \
             --source https://api.nuget.org/v3/index.json \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+            --skip-duplicate
+
+      # The symbol packages go to nuget.org's symbol server, not the package endpoint: a `.snupkg` is
+      # served from /api/v2/symbolpackage, and that is what a debugger asks for when it has the PDB.
+      - name: Push symbols to nuget.org
+        if: ${{ github.event_name == 'push' || inputs.publish }}
+        run: |
+          dotnet nuget push ./artifacts/*.snupkg \
+            --source https://www.nuget.org/api/v2/symbolpackage \
             --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
             --skip-duplicate

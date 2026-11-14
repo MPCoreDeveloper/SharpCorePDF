@@ -107,6 +107,7 @@ page, running footer and bookmarks stay in step.
 | --- | --- |
 | [`tools/validate-pdf.py`](tools/validate-pdf.py) | Runs `qpdf --check`, decodes every stream, and prints the geometry, rotation and annotations of every page; `--password` does the same for an encrypted document. |
 | [`tools/make-fixtures.py`](tools/make-fixtures.py) | Regenerates the PDF fixtures the test suite uses; `--parity` regenerates the checked-in parity corpus through [`tools/make_parity_fixtures.py`](tools/make_parity_fixtures.py). |
+| [`tools/verify-reproducible.ps1`](tools/verify-reproducible.ps1) | Packs the solution twice with the CI build property and fails when any entry of any package differs, and checks that every package has a symbol package beside it; the `reproducible` CI job runs it and the release checklist's G4 cites it. |
 
 Both tools run through `uv`, as shown in the repository README:
 

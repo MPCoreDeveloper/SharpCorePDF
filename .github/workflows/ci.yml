@@ -95,6 +95,28 @@ jobs:
             echo "defined=false" >> "$GITHUB_OUTPUT"
           fi
 
+  reproducible:
+    name: Reproducible packages and symbols
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install the .NET SDKs
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: |
+            11.0.x
+            10.0.x
+
+      # Two packs of the same commit, compared entry by entry. The script also asserts that every
+      # package has a symbol package beside it, which is the other half of G4.
+      - name: Pack twice and compare every entry
+        shell: pwsh
+        run: ./docs/tools/verify-reproducible.ps1
+
   build-test-sonar:
     name: Build, test and analyse
     runs-on: ubuntu-latest

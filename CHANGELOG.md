@@ -29,6 +29,13 @@ against an empty feed.
   with `IsReadable`/`RequiresPassword` instead of throwing. `tools/SharpCorePDF.Diagnostics` prints it as
   text or JSON, with `--profile` for the archival pre-flight and `--json` for the whole report.
 
+### Changed
+
+- **The packages ship symbols, and the build is proven reproducible.** Every `dotnet pack` writes a
+  `.snupkg` beside the `.nupkg`, `publish.yml` pushes both, and a `reproducible` CI job packs the same
+  commit twice and compares every entry of every package. The assembly and file versions follow
+  `<Version>` again (the 1.7.0 bump had left them at 1.6.0.0).
+
 ## [1.7.0] - 2026-11-14
 
 ### Added
