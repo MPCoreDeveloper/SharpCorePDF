@@ -1,1 +1,4 @@
 #nullable enable
+SharpCorePDF.Application.Services.PdfDiagnoserService
+SharpCorePDF.Application.Services.PdfDiagnoserService.DiagnoseAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, string? password = null, SharpCorePDF.Domain.ValueObjects.PdfAProfile? archivalProfile = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfDiagnosticsReport!>!
+SharpCorePDF.Application.Services.PdfDiagnoserService.PdfDiagnoserService(SharpCorePDF.Domain.Ports.IPdfInspector! inspector, SharpCorePDF.Domain.Ports.IPdfFontInspector! fonts, SharpCorePDF.Domain.Ports.IPdfSignatureValidator! signatures, SharpCorePDF.Domain.Ports.IPdfAWriter! archival) -> void

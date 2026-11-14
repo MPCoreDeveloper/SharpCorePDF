@@ -751,4 +751,33 @@ What survived, read one by one:
   promise an engine that the stream is at its start. A comment beside the branch now says exactly that, so the
   survivor is explained in the code rather than only in this record.
 
+## 1.7.0 — the diagnostics service (2026-11-14)
+
+Scoped run over `Services/PdfDiagnoserService.cs` after the one-call report was added:
+
+| File | Score | Killed | Survived | No coverage | Compile errors | Mutants |
+| --- | --- | --- | --- | --- | --- | --- |
+| `Services/PdfDiagnoserService.cs` | 42.86% | 6 | 8 | 0 | 10 | 24 |
+
+The first run scored 21.43% and named two real gaps, both now closed: no test passed an undefined
+`PdfAProfile`, and no test asserted a warning the font read makes but inspection does not
+(`FontDescriptorMissing`). `Refuses_an_undefined_profile` and
+`Reports_a_font_warning_the_inspection_did_not_make` close them, and `Reads_a_closed_document_once`
+counts the source's opens so the early return for a document that stays closed is a behaviour rather
+than an optimisation.
+
+What survived, read one by one:
+
+- **The four `ConfigureAwait(false)` arguments** (mutated to `true`): equivalent, for the same reason the
+  merge and font records state.
+- **The `ArgumentOutOfRangeException` message string**: no test asserts a refusal's wording, which is not
+  a contract.
+- **`ArgumentNullException.ThrowIfNull(source)`**: redundant with the guard in each of the four use cases
+  the diagnoser calls; removing it changes which layer throws, not the exception the caller sees.
+- **The two warning-merge statements** (`Add(document.Warnings)` and the archival block): the damaged
+  fixture reports `CrossReferenceRebuilt` through the font read as well, and the authored archival page
+  produces no warning of its own, so the current fixtures cannot tell the merge from the omission. A
+  document with an inspection-only warning and an archival removal is the fixture that would close them,
+  and it is the next thing to add if this service's suite is extended.
+
 

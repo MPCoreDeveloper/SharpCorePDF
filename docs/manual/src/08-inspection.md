@@ -408,3 +408,45 @@ gives you a place to interject a message, a prompt or a policy decision. It does
 safer in the sense of catching every error: a file can change between inspection and merge, and the
 merger validates again. The gain is a better conversation with the user, not a substitute for handling
 `PdfException` (Chapter 9).
+
+## One-call diagnostics
+
+When the question is not one fact but the whole picture — what is this file, which fonts does it need,
+is it signed, would it archive — `IPdfDiagnoser` answers it in one call instead of four:
+
+```csharp
+var report = await diagnoser.DiagnoseAsync(
+    new PdfFileSource("statement.pdf"),
+    password: null,
+    archivalProfile: PdfAProfile.PdfA2B);
+
+Console.WriteLine(report.Document.PageCount);
+Console.WriteLine(report.Fonts.Count);
+Console.WriteLine(report.Signatures.Count);
+Console.WriteLine(report.Archival?.IsWritten);
+
+foreach (var warning in report.Warnings)
+{
+    logger.LogWarning("{Kind}: {Message}", warning.Kind, warning.Message);
+}
+```
+
+The report is assembled from the same use cases the rest of this chapter describes — inspection, the
+font inspector (Chapter 26), the signature validator (Chapter 23) and the archival writer's pre-flight
+(Chapter 24) — so it cannot disagree with them. It is read-only and redaction-explicit: it names sources
+and describes structure, and it never returns stream contents, which is what makes it safe to log or
+attach to a support ticket.
+
+`Archival` is `null` unless a profile is named; when it is present, `IsWritten` says whether the writer
+would write the document and `UnsatisfiedRequirements` names every reason it would not. A document that
+is encrypted and stays closed is reported, not thrown: `Document.IsReadable` and
+`Document.RequiresPassword` answer what stands in the way, and the other reads are skipped. `Warnings`
+is the merged list, de-duplicated by kind and message, and `HasFindings` is the one-line answer.
+
+The `tools/SharpCorePDF.Diagnostics` console prints the same report as text or JSON, which is what makes
+it useful in a support conversation:
+
+```powershell
+dotnet run --project .\tools\SharpCorePDF.Diagnostics -- statement.pdf --profile 2b
+dotnet run --project .\tools\SharpCorePDF.Diagnostics -- statement.pdf --json
+```

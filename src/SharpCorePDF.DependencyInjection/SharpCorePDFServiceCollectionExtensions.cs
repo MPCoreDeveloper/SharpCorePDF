@@ -123,6 +123,7 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
         services.TryAddSingleton<IPdfSigner, PdfSignerService>();
         services.TryAddSingleton<IPdfSignatureValidator, PdfSignatureValidatorService>();
         services.TryAddSingleton<IPdfAWriter, PdfAWriterService>();
+        services.TryAddSingleton<IPdfDiagnoser, PdfDiagnoserService>();
 
         return services;
     }

@@ -135,6 +135,12 @@ await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
   select it. A standard font that relies on the one the reader already has is reported as carrying no
   program rather than as a defect, and a resource that does not resolve is a `FontUnreadable` warning
   beside the fonts that were read. Chapter 26 has the whole answer.
+* **One call can describe the whole file.** `IPdfDiagnoser.DiagnoseAsync` returns a
+  `PdfDiagnosticsReport` — the document, its fonts, its signatures, an optional PDF/A pre-flight and the
+  merged, de-duplicated warnings — assembled from the same use cases the rest of the library uses, so it
+  cannot disagree with them. The report is read-only and never returns stream contents; a document that
+  stays closed is reported with `IsReadable`/`RequiresPassword` instead of throwing. The
+  `tools/SharpCorePDF.Diagnostics` console prints it as text or JSON.
 * **A cover page can be written from nothing and merged in front.** `PdfDocumentBuilder` adds pages of
   a chosen size, draws lines of text with one of the twelve standard fonts or a TrueType program you
   supply, and places PNG, JPEG, BMP and GIF images at fixed positions — a top-left origin, `y`
@@ -345,8 +351,8 @@ nuget.org.
 | Package | Contents |
 | --- | --- |
 | [`SharpCorePDF`](https://www.nuget.org/packages/SharpCorePDF) | The one to install. Carries no assembly of its own: its only content is a dependency on the four below, so `dotnet add package SharpCorePDF` is the whole install. |
-| [`SharpCorePDF.Domain`](https://www.nuget.org/packages/SharpCorePDF.Domain) | The `MergePlan` aggregate, the `PdfSource` entity, value objects (`PageSelection`, `PageRange`, `PdfMetadata`, `PdfVersion`, `PdfPageSize`, `PageRotation`, `PdfColor`, `StandardFont`, the policies), the read models (document and page info, `PdfReadResult<T>`, image, mask, annotation, destination, form field, widget, bookmark, embedded file, text block, word, glyph, page detail and XMP) and the ports (`IPdfMerger`, `IPdfInspector`, `IPdfContentReader`, `IPdfContentSource`). No I/O, no third-party code. |
-| [`SharpCorePDF.Application`](https://www.nuget.org/packages/SharpCorePDF.Application) | The use cases: `PdfMergerService` (validate, open, inspect, resolve selections, hand over to the engine, release every stream), `PdfInspectorService` and `PdfContentReaderService` (resolve the source, open it once, call the engine's page-content port), plus the extension methods callers use (`PdfMergerExtensions`, `PdfContentReaderExtensions`). |
+| [`SharpCorePDF.Domain`](https://www.nuget.org/packages/SharpCorePDF.Domain) | The `MergePlan` aggregate, the `PdfSource` entity, value objects (`PageSelection`, `PageRange`, `PdfMetadata`, `PdfVersion`, `PdfPageSize`, `PageRotation`, `PdfColor`, `StandardFont`, the policies), the read models (document and page info, `PdfReadResult<T>`, image, mask, annotation, destination, form field, widget, bookmark, embedded file, text block, word, glyph, page detail and XMP) and the ports (`IPdfMerger`, `IPdfInspector`, `IPdfContentReader`, `IPdfDiagnoser`, `IPdfContentSource`). No I/O, no third-party code. |
+| [`SharpCorePDF.Application`](https://www.nuget.org/packages/SharpCorePDF.Application) | The use cases: `PdfMergerService` (validate, open, inspect, resolve selections, hand over to the engine, release every stream), `PdfInspectorService`, `PdfContentReaderService` and `PdfDiagnoserService` (resolve the source, open it once, call the engine's page-content port), plus the extension methods callers use (`PdfMergerExtensions`, `PdfContentReaderExtensions`). |
 | [`SharpCorePDF.Infrastructure`](https://www.nuget.org/packages/SharpCorePDF.Infrastructure) | The engine: the object model, the lexer, the object parser, the filter decoders, cross-reference tables, cross-reference streams, object streams, the page tree walk, the object copier, `PdfMergeEngine`, `PdfDocumentReader`, `PdfPageContentReader` (one partial file per capability, with `PdfTextCollector` for the glyphs), the content scanner, the writer, the content sources, and the authoring path (`PdfDocumentBuilder`, `PdfPageCanvas`, `PdfTypeface`, with the TrueType subset writer and the PNG reader). |
 | [`SharpCorePDF.DependencyInjection`](https://www.nuget.org/packages/SharpCorePDF.DependencyInjection) | `AddSharpCorePDF()` registration. |
 

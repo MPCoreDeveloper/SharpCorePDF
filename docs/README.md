@@ -6,7 +6,7 @@ long-form reference for the API.
 
 ## The manual
 
-- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.7.0.pdf)** — 124 pages, A4, with a
+- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.7.0.pdf)** — 125 pages, A4, with a
   linked contents page and PDF bookmarks.
 - **Read the chapters as Markdown** in [`manual/src`](manual/src). Each file is one chapter, and the
   file-name order is the chapter order. This edition describes `1.7.0`. Chapters 16 to 19 were written
@@ -31,7 +31,7 @@ long-form reference for the API.
 | [5. Page Selection](manual/src/05-page-selection.md) | The one-based selection notation, building selections in code, and preflighting a range. |
 | [6. Output Options](manual/src/06-output-options.md) | Target version, primary source, metadata policies and overrides, outlines, page labels and reproducible output. |
 | [7. Encryption and Permissions](manual/src/07-encryption-permissions.md) | Algorithms, passwords, permission bits, encrypted sources, and what encryption does to reproducibility. |
-| [8. Inspection](manual/src/08-inspection.md) | The document model, what inspection reports, the content reader (images, text, annotations, form, bookmarks, attachments, XMP and the inline budget), encrypted and damaged documents, and preflight. |
+| [8. Inspection](manual/src/08-inspection.md) | The document model, what inspection reports, the content reader (images, text, annotations, form, bookmarks, attachments, XMP and the inline budget), encrypted and damaged documents, preflight and the one-call diagnostics report. |
 | [9. Errors, Exceptions and Warnings](manual/src/09-error-handling.md) | The exception family, what throws when, writing files safely, and warnings versus errors. |
 | [10. Dependency Injection](manual/src/10-dependency-injection.md) | `AddSharpCorePDF`, engine options, configuration binding, logging and testing with the container. |
 | [11. Architecture](manual/src/11-architecture.md) | The layers, the life of a merge, immutability, the memory model, extension points and concurrency. |

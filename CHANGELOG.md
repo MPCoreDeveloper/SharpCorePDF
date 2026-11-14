@@ -20,7 +20,14 @@ against an empty feed.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **One call reports the whole picture.** `IPdfDiagnoser.DiagnoseAsync` returns a `PdfDiagnosticsReport` —
+  the document, its fonts, its signatures, an optional PDF/A pre-flight and the merged, de-duplicated
+  warnings — assembled from the use cases the library already exposes, so it cannot disagree with them.
+  The report is read-only and never returns stream contents; a document that stays closed is reported
+  with `IsReadable`/`RequiresPassword` instead of throwing. `tools/SharpCorePDF.Diagnostics` prints it as
+  text or JSON, with `--profile` for the archival pre-flight and `--json` for the whole report.
 
 ## [1.7.0] - 2026-11-14
 

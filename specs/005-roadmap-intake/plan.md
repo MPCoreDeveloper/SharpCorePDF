@@ -15,8 +15,10 @@ mutation record. P3 measured the 100 MB read path (`--large` in `tools/SharpCore
 `docs/measurements.md` §10), wrote [`docs/adr/0004-buffer-model.md`](../../docs/adr/0004-buffer-model.md) —
 which **rejects `System.IO.Pipelines` and the `ReadOnlySequence<byte>` seam for 1.x** — and implemented the
 option it recommended: a merge and an edit now read each source once, measured at **2.04× → 1.04×** input on
-a 100 MB document with identical output. `P4` (one-call diagnostics) is still waiting for the remainder of the
-roadmap text, and `P5` (PDF/A beyond the current claim) for a decision.
+a 100 MB document with identical output. `P4` (one-call diagnostics) is implemented in `[Unreleased]`
+(2026-11-14): `IPdfDiagnoser`, `PdfDiagnoserService` and the `tools/SharpCorePDF.Diagnostics` console; the
+remainder of the roadmap text would only add fields to the report. `P5` (PDF/A beyond the current claim) is
+still waiting for a decision.
 
 **Baseline**: this was written against the **working tree**, not the last commit. That tree carries the
 pending `[Unreleased]` change (configuration binding without reflection, the AOT smoke app) and three new

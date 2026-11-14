@@ -31,6 +31,7 @@
     <Project Path="tests/SharpCorePDF.Tests/SharpCorePDF.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/SharpCorePDF.Diagnostics/SharpCorePDF.Diagnostics.csproj" />
     <Project Path="tools/SharpCorePDF.Manual/SharpCorePDF.Manual.csproj" />
     <Project Path="tools/SharpCorePDF.Measure/SharpCorePDF.Measure.csproj" />
   </Folder>
