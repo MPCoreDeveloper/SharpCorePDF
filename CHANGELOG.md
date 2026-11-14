@@ -22,7 +22,7 @@ against an empty feed.
 
 Nothing yet.
 
-## [1.6.0] - 2026-11-13
+## [1.6.0] - 2026-11-14
 
 ### Added
 

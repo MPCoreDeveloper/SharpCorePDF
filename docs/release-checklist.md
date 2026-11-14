@@ -565,7 +565,7 @@ What remains open, and is not a gate this record can close from here:
    samples, a rasterised scan and a broken XFA — but a random web slice and a captured scan remain
    collection work rather than engineering.
 
-## `1.6.0` (2026-11-13, prepared — not yet tagged)
+## `1.6.0` (2026-11-14, tagged and published)
 
 This version is about archival evidence rather than new pages: the PDF/A output is checked by a pinned
 validator on every push, read by two more implementations, and the writer gained the two level-U profiles, a
@@ -577,10 +577,13 @@ configuration binding.
 | --- | --- | --- |
 | G1 — the surface | **Moved into `PublicAPI.Shipped.txt`** | 123 entries: 110 in `Domain` (`PdfOutputIntent`, `PdfAssociatedFileRelationship`, `PdfAProfile.PdfA2U`/`PdfA3U` and the rest of the new surface), 7 in `Application` and 6 in `Infrastructure`. `RS0016` is a build error, and the `Release` build after the move is clean, so nothing undeclared or unsorted slipped through |
 | G2 — the shipped leg | **Unchanged: both legs ship** | `dotnet pack` produced five `1.6.0` packages, and `SharpCorePDF.Domain`, `.Application` and `.Infrastructure` each carry `lib/net10.0` and `lib/net11.0` with their XML documentation |
-| G3 — notes | **Written** | `CHANGELOG.md` holds `## [1.6.0] - 2026-11-13`, including a *Not in this version* section that names the follow-ups, and `PackageReleaseNotes` carries the summary |
-| G9 — quality gate on the tree | **Green locally** | `dotnet build -c Release`: 0 warnings, 0 errors. `dotnet test`: **2330 passed, 0 failed** — 1165 on `net10.0` and 1165 on `net11.0` |
+| G3 — notes | **Written** | `CHANGELOG.md` holds `## [1.6.0] - 2026-11-14`, including a *Not in this version* section that names the follow-ups, and `PackageReleaseNotes` carries the summary |
+| G9 — quality gate on the tree | **Green on `1a533aa`, the tagged commit** | `ci.yml` run `43582110425`: token check, build/test/analyse, **Tests on arm64** and **Native AOT smoke** all `success`, and the analysis passed the gate for the commit. Locally: `dotnet build -c Release` 0 warnings 0 errors and `dotnet test` **2330 passed, 0 failed** (1165 on each leg), with new-code coverage **86.4 %** against the 80 % the gate asks for |
 | G4 — symbols and reproducible binaries | **Still partly** | no `.snupkg` and no code signing, unchanged since `1.0.0` |
-| G5, G6, G7, G8 | **Open** | they need the pushed commit: a green `ci.yml`, a `publish: false` dispatch, an annotated `v1.6.0` tag on that commit, and an install from the feed |
+| G5 — trusted publishing | **Unchanged, outside the tree** | the policy and `NUGET_USERNAME` live on nuget.org and in the repository settings; `1.6.0` needed no new subject |
+| G6 — a dry run on the commit to be tagged | **Yes, 2026-11-14 — `publish: false`, run `43582499540`** | dispatched on `main` at `1a533aa` after `ci.yml` and `compliance.yml` finished on it; sonar-gate, build, tests, pack and the package check all `success`, with the push steps correctly skipped |
+| G7 — the tag equals `<Version>` | **Yes — `v1.6.0` on `1a533aa`, `<Version>` 1.6.0** | an annotated tag whose message is `SharpCorePDF 1.6.0`, on the commit whose analysis was the newest on `main` |
+| G8 — the packages reach the feed | **Yes, 2026-11-14 — `publish.yml` run `43582707855` pushed all five** | five `PUT …/api/v2/package` answered `201 Created` and "Your package was pushed", one per id: `SharpCorePDF`, `.Domain`, `.Application`, `.Infrastructure`, `.DependencyInjection` at `1.6.0`. The `v3-flatcontainer` index was still serving `1.5.0` when this was written — NuGet validates a package after accepting it — so the install check is the one that has to be repeated rather than assumed |
 
 The archival evidence this version adds, because that is what the release is about:
 
@@ -597,7 +600,17 @@ The archival evidence this version adds, because that is what the release is abo
   malformed or 33-level name tree; `PdfAProfileRules` **77.27 %** and the two option types **95.65 %**, the
   remainder being `_ => throw` messages in arms the public API cannot reach.
 
-What remains before the tag, in order: commit the release (the `<Version>` bump, the CHANGELOG entry and the
-frozen API snapshots), wait for `ci.yml` to be green on that commit, dispatch `publish.yml` with
-`publish: false` for it, then cut the annotated tag whose message is `SharpCorePDF 1.6.0` and push it.
-`publish.yml` refuses a tag that does not equal `<Version>`, which is what G7 is for.
+What the gates caught before the tag, in the order they caught it — worth recording, because it is the reason
+the workflows run on every push rather than only before a release:
+
+1. **`compliance.yml` failed on its first run** (run `43581649868`, 23 s): the install step removed the
+   IzPack lock file from `$TMPDIR`, and the runner does not export it while the script runs under
+   `set -u` — `TMPDIR: unbound variable`. Fixed in `fe48db4` by defaulting it (`${TMPDIR:-/tmp}`).
+2. **The quality gate failed on new code** (run `43581743263`): `new_security_rating` was 3 against a
+   threshold of 1, from two `githubactions:S6506` findings — both `curl` calls in `compliance.yml` fetched
+   over HTTPS without restricting the protocol. Fixed in `1a533aa` with
+   `--proto '=https' --proto-redir '=https' --tlsv1.2`. Coverage (`86.4 %`), duplication (`0.7 %`) and the
+   reliability rating were already inside the gate, so the release was never blocked by the code itself.
+
+Both fixes are in the tagged commit, and both runs are green on it (`ci.yml` `43582110425`,
+`compliance.yml` `43582110459`).
