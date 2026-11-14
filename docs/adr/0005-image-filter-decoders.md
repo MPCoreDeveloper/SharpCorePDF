@@ -95,8 +95,15 @@ Two facts the first attempt established, so the next one does not rediscover the
    `ccitt-expected.txt` only under the matching `BlackIs1` value.
 2. **A line may start with a zero-length white run.** The transition at position 0 is what a line that
    starts black states; a decoder that records only transitions after the first pixel shifts the parity of
-   every later `b1`, and the Group 4 fixture then fails on its twelfth line (a vertical mode resolves to a
-   position left of the current one). The fix is to record every transition, including one at 0.
+   every later `b1`. Record every transition, including one at 0.
+3. **`b1` is measured from the last changing element, not from the paint position.** After a vertical or
+   horizontal mode the last transition *is* the new position, so a search of `>= position` selects the
+   transition the decoder has just consumed. That is what the Group 4 fixture hits on its twelfth line:
+   reference line 11 (`FFEF`) has transitions `[0, 11, 12, 16]`, the decoder reaches position 12 with
+   white, and `b1 = 12` makes the stream's `0000010` (V-3) resolve to 9, left of the position. The fix is
+   to carry `a0` — starting at -1 and set to the transition after every mode (pass moves it to `b2`,
+   horizontal to `a2`, vertical to `a1`) — and to search for the first reference transition **strictly
+   greater than `a0`**. With that, line 12's `b1` is 16, V-3 resolves to 13, and the line completes.
 
 The RunLength slice is shipped; the CCITT decoder is the open work, and the Group 4 fixture now decodes its
 first twelve lines correctly against this data.
