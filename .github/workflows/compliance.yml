@@ -141,8 +141,9 @@ jobs:
             > "$RUNNER_TEMP/auto-install.xml"
 
           # A killed install leaves this behind and the next one refuses to start; the name is the
-          # application's, which is what the installer prints when it trips over it.
-          rm -f "/tmp/iz-veraPDF Software.tmp" "$TMPDIR/iz-veraPDF Software.tmp"
+          # application's, which is what the installer prints when it trips over it. TMPDIR is not always
+          # set, and the script runs under `set -u`, so it is defaulted rather than assumed.
+          rm -f "/tmp/iz-veraPDF Software.tmp" "${TMPDIR:-/tmp}/iz-veraPDF Software.tmp"
 
           bash "$RUNNER_TEMP/verapdf/verapdf-greenfield-${VERAPDF_VERSION}/verapdf-install" \
             "$RUNNER_TEMP/auto-install.xml"
