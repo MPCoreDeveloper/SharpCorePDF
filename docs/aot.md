@@ -1,6 +1,6 @@
 # Native AOT and trimming
 
-What the packages claim, how the claim is proven, and the one member that is deliberately outside it.
+What the packages claim, how the claim is proven, and what a publish does and does not change.
 
 ## The claim
 
@@ -14,37 +14,25 @@ its own records and no P/Invoke — the only matches for `System.Reflection` in 
 under `obj/`. The authoring writer, the lexer, the object-graph walker, the layout analysis and the
 signature writer are ordinary code over arrays, spans and structs.
 
-## The one exception
-
-`AddSharpCorePDF(IServiceCollection, IConfiguration, string)` binds a configuration section to
-`PdfEngineOptions`. That binding is the framework binder's, and it reads property names by reflection and
-creates its converters at run time, which trimming can remove and an AOT publish cannot generate. The
-overload is therefore annotated:
-
-```csharp
-[RequiresUnreferencedCode(BindingRequirement)]
-[RequiresDynamicCode(BindingRequirement)]
-public static IServiceCollection AddSharpCorePDF(
-    this IServiceCollection services,
-    IConfiguration configuration,
-    string sectionName = DefaultConfigurationSection)
-```
-
-The annotation is how a consumer's publish finds out at build time rather than at run time: calling it from
-a trimmed or AOT application is a warning, and the message names the way out. That way out is the overload
-that takes the options object — `AddSharpCorePDF(PdfEngineOptions)` — which is what the smoke app uses.
+Configuration registration is part of that claim. `AddSharpCorePDF(IConfiguration)` binds the named
+section with ordinary property reads against `PdfEngineOptions`, so it needs no
+`[RequiresUnreferencedCode]` or `[RequiresDynamicCode]` annotation and a trimmed or Native AOT publish
+keeps the overload.
 
 ## How it is proven
 
 [`examples/SharpCorePDF.AotSmoke`](../examples/SharpCorePDF.AotSmoke) is the smallest consumer that touches
-everything a publish has to keep: the authoring builder writes a page, `AddSharpCorePDF` registers the
-engines, `IPdfMerger` merges two documents, `IPdfContentReader` reads the text back, and the byte-array
-source carries the bytes between them. It runs under the JIT like any example, and it is published with
+everything a publish has to keep: the authoring builder writes a page, the three `AddSharpCorePDF`
+overloads register the engines (defaults, an explicit options instance, and a configuration section),
+`IPdfMerger` merges two documents, `IPdfContentReader` reads the text back, and the byte-array source
+carries the bytes between them. It runs under the JIT like any example, and it is published with
 `PublishAot` for one RID at a time.
 
 Its `expect-aot` switch is what makes the run a proof: a Native AOT process reports
 `RuntimeFeature.IsDynamicCodeSupported == false`, so the app fails when the published binary still supports
-dynamic code. A publish that silently fell back to the JIT cannot pass.
+dynamic code. A publish that silently fell back to the JIT cannot pass. The configuration section is also
+asserted after binding, so a publish that kept the registration call but dropped the bound values cannot
+pass either.
 
 ```powershell
 dotnet run     --project .\examples\SharpCorePDF.AotSmoke
@@ -52,11 +40,11 @@ dotnet publish .\examples\SharpCorePDF.AotSmoke -c Release -r win-x64 -p:Publish
 .\examples\SharpCorePDF.AotSmoke\bin\Release\net11.0\win-x64\publish\SharpCorePDF.AotSmoke.exe --expect-aot
 ```
 
-Recorded 2026-11-06, .NET 11 RC 3 SDK, `Release`:
+Recorded 2026-11-13, .NET 11 SDK `11.0.100` (GA), `Release`:
 
 | RID | Publish | Run | Binary |
 | --- | --- | --- | --- |
-| `win-x64` | 0 warnings, 0 errors | `aot=True pages=2 chars=26 bytes=1348`, `AOT smoke: ok`, exit 0 | 3.3 MB |
+| `win-x64` | 0 warnings, 0 errors | `aot=True pages=2 chars=26 bytes=1348`, `AOT smoke: ok`, exit 0 | ~3.4 MB |
 | `linux-x64` | the `native-aot` job in `ci.yml` | the same line, with `expect-aot` | built on the runner |
 | `linux-arm64` | the `arm64` job in `ci.yml` | the same line, with `expect-aot` | built on the runner |
 
@@ -70,10 +58,9 @@ The version is worth stating beside the claim. The net11 assemblies are compiled
 first-class deployment mode there — the win-x64 run above is the proof that the combination behaves for
 this library.
 
-**GA had not shipped on the date of the record.** The .NET release index lists `11.0.0-rc.3` (2026-10-25) as
-the newest .NET 11 release, and the proof above was made with the SDK pinned to it. The `native-aot` and
-`arm64` jobs install `11.0.x`, so the first run after GA uses it without a change here; the evidence should
-be re-read then, and no release note should claim GA before that run.
+**Made against the released SDK.** .NET 11 shipped on 2026-11-10, and the record above was taken with SDK
+`11.0.100`, the GA build rather than a preview, on the machine whose `dotnet --version` reports it. The
+`native-aot` and `arm64` jobs install `11.0.x`, so they take that same GA channel without a change here.
 
 ## What AOT changes, and what it does not
 
@@ -81,8 +68,8 @@ be re-read then, and no release note should claim GA before that run.
 * **Steady state.** A long-running JIT process can match or beat AOT, because tiered PGO re-optimises the
   hot path with profile data the AOT compiler does not have. The numbers in
   [`competitive-scoreboard.md`](competitive-scoreboard.md) are JIT numbers.
-* **Size.** A self-contained native binary (3.3 MB for the smoke app) instead of IL in a package.
+* **Size.** A self-contained native binary (about 3.4 MB for the smoke app) instead of IL in a package.
 * **Globalisation.** The smoke app is invariant (`InvariantGlobalization`), and a read uses the library's
   own encoding, CMap and glyph tables rather than ICU.
 * **The public surface.** Nothing changes: a consumer on the JIT and a consumer publishing AOT call the same
-  API, and only the configuration-binding overload needs the annotation above.
+  API, including the configuration-binding overload.

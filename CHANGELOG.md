@@ -18,6 +18,140 @@ feed ever served.
 contents of the layers, and the entry below is written against the published `preview.1` rather than
 against an empty feed.
 
+## [Unreleased]
+
+Nothing yet.
+
+## [1.6.0] - 2026-11-13
+
+### Added
+
+- **The archival output is validated by CI, against a pinned validator.** `compliance.yml` installs veraPDF
+  1.30.4, writes the `archive-pdfa` documents and validates each one against the profile it was written for —
+  the authored page and, through `SCPDF_ARCHIVE_SOURCE`, the six-page `SafeWebCore.pdf` fixture — then uploads
+  the machine-readable reports. A validator below the pin exits 2 through `--require-version` instead of
+  answering, so a stale rule set cannot report a pass this repository no longer stands behind. The run is
+  repeated weekly because a validator upgrade changes the answer without this library changing a byte.
+- **`validate-pdfa.py` reads the report instead of the word PASS.** `--format xml` takes the verdict from the
+  `isCompliant` attribute of veraPDF's machine-readable report, `--report-dir` keeps that report per document,
+  and `--require-version` refuses a validator older than the one the repository ships against. The text mode a
+  person runs by hand is unchanged.
+- **The `archive-pdfa` example can archive a document it did not write.** `SCPDF_ARCHIVE_SOURCE` names a file,
+  and the example converts it for all three profiles beside the authored page — the same environment-variable
+  pattern the signature example uses for its timestamp token, because no redistributable real-world PDF belongs
+  in the repository. On 2026-11-13 all six documents reported `PASS` under veraPDF 1.30.4.
+- **Two more implementations read the same documents.** `validate-pdfa-cross.py` puts every archival file
+  through Apache PDFBox preflight and Ghostscript beside veraPDF. PDFBox shares no code with veraPDF and
+  validates PDF/A-1 on its own, so `1b` gets a second verdict while `2b` and `3b` are reported as `parsed`,
+  never as judged — PDFBox 3.0 does not implement those profiles and the tool does not pretend it does.
+  Ghostscript rewrites the document as archival output from what it understood, the evidence that the file is
+  not readable only by the tool that wrote it. `compliance.yml` runs the cross-check with `--strict-tools`, so
+  a missing implementation fails the run rather than narrowing it silently, and a `2b` file judged as `1b` is
+  now rejected by two independent implementations.
+- **The archival output intent can be the caller's own ICC profile.** `PdfAConversionOptions.OutputIntent`
+  takes a `PdfOutputIntent` — the profile bytes, the number of components and the condition identifiers —
+  and the writer states it instead of the built-in sRGB one. The bytes are written verbatim, and they are
+  checked first as what they claim to be: the ICC header's declared length, the `acsp` signature at offset 36
+  and a data colour space that agrees with the declared component count, so a caller who passes a JPEG or a
+  CMYK profile labelled as RGB is refused before a byte of the result exists. The pages are not converted
+  into that colour space; the intent states what they are meant to be read in. A 6-page real-world document
+  written with the sRGB program from a Windows workstation, under its own condition identifier, reported
+  `PASS` under veraPDF 1.30.4, and the bytes in the result are exactly the bytes that went in.
+- **PDF/A-3b output associates its embedded files, as ISO 19005-3 requires.** The catalog gains an `/AF`
+  array, each entry of the `EmbeddedFiles` name tree and its association name the same file specification
+  object (the tree is flattened so both point at one object), and every specification states an
+  `/AFRelationship`. A file that already states a relationship keeps it, because the source's claim is
+  evidence this writer does not have; one that states none takes
+  `PdfAConversionOptions.AssociatedFileRelationship`, which defaults to `/Unspecified` rather than inventing
+  a meaning, and may be set to `/Data`, `/Source`, `/Alternative` or `/Supplement`. A relationship set beside
+  any other profile is refused, because those profiles forbid embedded files. A one-page document carrying a
+  `text/plain` attachment, written with `/Alternative`, reported `PASS` under veraPDF 1.30.4.
+- **PDF/A-2u and PDF/A-3u output.** A level-U document is a level-B one whose every glyph has a Unicode
+  equivalent, and the writer already states a `ToUnicode` map for every font it subsets — so the level is a
+  statement in the packet, not a different file. A measurement came before the code: a 2b and a 3b result
+  whose `pdfaid:conformance` said `U` both reported `PASS` under veraPDF 1.30.4, for an authored page and for
+  a six-page document written by "Microsoft: Print To PDF", which is the case that would have failed if the
+  copied fonts had no mapping. Both profiles are now written end to end, `ArchiveExamples` writes all five,
+  and `compliance.yml` validates and cross-validates every one of them. Level A, which needs tagged
+  structure, is still out of scope.
+
+- **A page can state an opacity and a blend mode for what it paints next.** `PdfPageCanvas.SetAlpha(alpha,
+  blendMode)` writes the pair as one `/ExtGState` (`/ca`, `/CA`, `/BM`) and selects it with `gs`, so a
+  stretch of text, an image or a whole group of shapes can fade or blend without giving each one an opacity
+  of its own. The state is written once per distinct pair and restored by `SaveState`/`RestoreState`; a paint
+  that states an alpha of its own still wins over the selection, which is the rule an explicit paint already
+  followed for colour. Ten tests in `PdfPageCanvasTransparencyTests` pin the operator, the deduplication,
+  the blend name, the restore, the guards and the interaction with the archival profiles: PDF/A-1b has no
+  transparency and the existing pre-flight refuses the page for that profile, while PDF/A-2b keeps it. The
+  manual's drawing chapter gained *Transparency and blend modes*, the `draw-shapes` example paints one panel
+  through a multiplied state (`qpdf check: no problems`, `/ExtGState` with one entry per distinct pair per
+  `docs/parity.md` row 2), and the new measurement rows live in `docs/measurements.md` §10.
+
+- **A document's fonts can be read without opening them.** `IPdfFontInspector.ReadFontsAsync` answers which
+  fonts a file uses and whether each program travels with it: one entry per font, keyed by the object its
+  resource names, carrying the kind (`Type1` … `CIDFontType2`), where the program lives (`/FontFile`,
+  `/FontFile2`, `/FontFile3` or a Type 3 font's own streams), the encoding the document states, whether a
+  `/ToUnicode` map is present, whether the name carries the six-letter subset tag, and the one-based pages
+  that select it. A font selected by two hundred pages is one entry with two hundred page numbers. A resource
+  that does not resolve is reported as `FontUnreadable` and a font that states no descriptor as
+  `FontDescriptorMissing` — the second is not a defect, because a standard font may legally rely on the one
+  the reader already has. The walk follows a form XObject's own resources at depth, honours
+  `PdfEngineOptions.MaxNestingDepth` and opens an encrypted document with its password instead of reporting
+  it closed. The descriptor, kind, encoding and subset rules moved into `PdfFontDescriptorLookup`, which the
+  PDF/A pre-flight now shares with the new inspector rather than keeping a second copy. Twenty tests in
+  `PdfFontInspectorTests` cover every shape, the form case, the real-world case and both encryption
+  outcomes; the manual gained chapter 26.
+
+### Changed
+
+- **A merge and an edit read each source once instead of twice.** The application layer inspected a source to
+  resolve the page selection and then handed the same stream to the engine, which read the whole document a
+  second time; on a 100 MB file that was 100 MB of extra garbage per operation, and it is what
+  `docs/measurements.md` §1 attributed to "the output copy" — an explanation that could not hold for a partial
+  selection, whose output here is 0.9 MB. `IPdfDocumentBytesReader` hands the inspected bytes on, the use cases
+  prefer it when their reader implements it, and the engine's existing owned-bytes fast path turns the second
+  read into an aliasing read. Measured on the same 100 MB document: a merge of ten of its pages allocated
+  **204.2 MB → 104.2 MB** (2.04× → 1.04× input) with the same 931 273 B of output, and the process peak
+  working set fell from 955.6 to 856.3 MB. `IPdfDocumentReader` is unchanged, so a third-party reader still
+  compiles and still pays the second read; `SourceReadOnceTests` pins both behaviours with a source whose
+  stream can be drained only once. The decision and the options that were rejected are recorded in
+  [`docs/adr/0004-buffer-model.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/adr/0004-buffer-model.md).
+- **Configuration registration is trim- and Native AOT-compatible.** `AddSharpCorePDF(IConfiguration)`
+  binds `PdfEngineOptions` with ordinary property reads instead of the framework binder's reflection and
+  runtime-generated converters, so the overload no longer carries `[RequiresUnreferencedCode]` or
+  `[RequiresDynamicCode]`. An absent section still keeps the defaults; an unparsable value keeps that
+  member's default. `examples/SharpCorePDF.AotSmoke` now exercises default, explicit and configuration
+  registration and publishes with zero IL2026/IL3050 warnings. `docs/aot.md` records the evidence.
+
+### Not in this version
+
+Named here so the next version starts from a list rather than from memory. Each one is a capability, not a
+defect: nothing below is claimed by the packages above.
+
+- **Level A, and PDF/UA.** PDF/A-1a, -2a and -3a need a tagged structure tree and the accessibility semantics
+  that go with it; PDF/UA is a different standard again. The writer states level B or U; a caller who needs a
+  tag tree has to add one, and no part of this release pretends otherwise.
+- **A PDF/A target on the merge path.** `MergeOutputOptions` has no profile, so an archive that merges first
+  and converts second reads every source twice — once to merge, once to convert. The conversion is the only
+  entry point that writes archival structures (`IPdfAWriter`), and a merge-time profile is a design of its
+  own: the merge engine and the conversion share the writer but not the analysis.
+- **A caller-supplied output intent on an ordinary edit.** The intent is a conversion option. A
+  `PdfEditOutputOptions.OutputIntent` with a PDF/A profile works, because that route goes through the same
+  writer, but a plain edit copies whatever the source carried and adds none.
+- **Colour conversion.** The writer states the intent a caller supplies and never converts a page into that
+  colour space. A CMYK profile on pages painted in device RGB is a finding a validator reports, not something
+  the library repairs — by design, because a silent conversion changes what the page looks like.
+- **Per-page and per-object associations.** PDF/A-3 allows an embedded file to be associated with a page or a
+  structure element, not only with the document. This release writes the catalog-level `/AF` array and only
+  that.
+- **A corpus of real files.** The gate runs two documents through three implementations on every push: an
+  authored page and one file a producer wrote. The next step is breadth — customer files, one per profile and
+  per producer — because a document that fails is worth more than a rule that passes.
+- **PDF/X.** Prepress exchange is a separate standard with its own colour and box rules. It stays out.
+- **Ghostscript locally.** `validate-pdfa-cross.py` reports it as `n/a` when it is not installed and only
+  fails under `--strict-tools`, which is what CI passes. A workstation without it gets two implementations
+  instead of three, and the run says so.
+
 ## [1.5.0] - 2026-11-06
 
 ### Performance

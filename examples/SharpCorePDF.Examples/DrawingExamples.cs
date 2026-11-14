@@ -101,6 +101,18 @@ internal static class DrawingExamples
                         new PdfStroke(PdfPaint.Black, width: 1))
                     .DrawText("Rotated by one transform", 16, 42, heading, 14)
                     .RestoreState();
+                // The opacity of a shape is its paint's; the *blend mode* is not something a paint can
+                // state, so it comes from the graphics state. Everything painted between the save and the
+                // restore is multiplied into what is already on the page, which is how a watermark is
+                // written and why the selection is bracketed rather than left in force.
+                page.SaveState()
+                    .SetAlpha(1.0, PdfBlendMode.Multiply)
+                    .DrawRectangle(
+                        new PdfRectangle(330, 700, 535, 760),
+                        new PdfPaint(PdfColor.FromRgb(0xEC, 0xEF, 0xF4)),
+                        stroke: null)
+                    .DrawText("Multiplied into the page", 344, 736, heading, 14)
+                    .RestoreState();
             })
             .Build("shapes.pdf");
 

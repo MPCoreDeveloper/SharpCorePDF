@@ -45,12 +45,24 @@ Optional but useful, when a change touches what a merge writes:
 # An independent reader, so "it opens in our library" is not the only evidence
 uv run --with pikepdf python .\docs\tools\validate-pdf.py <file.pdf>
 
+# An independent PDF/A validator, so "the structures are there" is not the only evidence.
+# 1.30.4 is the version compliance.yml pins; a lower one exits 2 rather than answering.
+python .\docs\tools\validate-pdfa.py --require-version 1.30.4 --profile 2b <file.pdf>
+
+# A second and a third implementation, when the claim matters: PDFBox judges 1b and parses 2b/3b,
+# Ghostscript rewrites the document. The jar comes from Maven Central; preflight-app-*.jar is ignored.
+python .\docs\tools\validate-pdfa-cross.py --pdfbox .\preflight-app-3.0.8.jar --profile 2b <file.pdf>
+
 # The fixture corpus itself is generated, not committed by hand
 uv run --with pikepdf python .\docs\tools\make-fixtures.py .\tests\SharpCorePDF.Tests\Assets
 ```
 
-Neither Python tool runs in CI. They are what a maintainer runs before believing a result, and quoting their
-output in a pull request is worth more than a description of it.
+`validate-pdf.py` and the fixture generator are what a maintainer runs before believing a result, and
+quoting their output in a pull request is worth more than a description of it. `validate-pdfa.py` and
+`validate-pdfa-cross.py` also run in CI: `compliance.yml` writes the `archive-pdfa` documents, validates
+each one against the profile it was written for with the validator pinned, and then puts the same files
+through PDFBox preflight and Ghostscript, keeping the reports as an artifact. Running them locally against
+the same pins is what makes a claim about archival output checkable rather than quoted.
 
 ## What a pull request has to clear
 

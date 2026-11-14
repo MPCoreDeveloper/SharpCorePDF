@@ -216,7 +216,7 @@ internal static class PdfARequirements
                     continue;
                 }
 
-                var name = FontName(reader, font, entry.Key);
+                var name = PdfFontDescriptorLookup.BaseFont(reader, font, entry.Key);
                 var embedded = IsEmbedded(reader, font);
 
                 fonts[name] = fonts.TryGetValue(name, out var alreadyEmbedded) ? alreadyEmbedded && embedded : embedded;
@@ -510,12 +510,9 @@ internal static class PdfARequirements
             return font.Get("CharProcs") is not null;
         }
 
-        var descriptor = FindDescriptor(reader, font);
+        var descriptor = PdfFontDescriptorLookup.Find(reader, font);
 
-        return descriptor is not null
-            && (descriptor.Get("FontFile") is not null
-                || descriptor.Get("FontFile2") is not null
-                || descriptor.Get("FontFile3") is not null);
+        return PdfFontDescriptorLookup.Program(descriptor) != PdfEmbeddedFontProgramKind.None;
     }
 
     /// <summary>Determines whether a font is a subset of a CID font that states no CID set.</summary>
@@ -538,52 +535,12 @@ internal static class PdfARequirements
         var baseFont = font.GetName("BaseFont") ?? string.Empty;
 
         // The subset tag is six capital letters and a plus sign, as the specification defines it.
-        if (baseFont.Length < 8 || baseFont[6] != '+' || !baseFont[..6].All(char.IsAsciiLetterUpper))
+        if (!PdfFontDescriptorLookup.IsSubset(baseFont))
         {
             return false;
         }
 
-        return FindDescriptor(reader, font)?.Get("CIDSet") is null;
-    }
-
-    /// <summary>Finds the font descriptor of a simple or composite font.</summary>
-    /// <param name="reader">The source document.</param>
-    /// <param name="font">The font dictionary.</param>
-    /// <returns>The descriptor, or <see langword="null"/> when the font states none.</returns>
-    private static PdfDictionary? FindDescriptor(PdfFileReader reader, PdfDictionary font)
-    {
-        var descriptor = reader.ResolveDictionary(font.Get("FontDescriptor"));
-
-        if (descriptor is null
-            && reader.ResolveArray(font.Get("DescendantFonts")) is { Items.Count: > 0 } descendants
-            && reader.ResolveDictionary(descendants.Items[0]) is { } descendant)
-        {
-            // A composite font states its descriptor on the descendant, not on the Type0 dictionary.
-            descriptor = reader.ResolveDictionary(descendant.Get("FontDescriptor"));
-        }
-
-        return descriptor;
-    }
-
-    /// <summary>Gets the name a font is reported under.</summary>
-    /// <param name="reader">The source document.</param>
-    /// <param name="font">The font dictionary.</param>
-    /// <param name="resourceName">The resource name the page selects the font with.</param>
-    /// <returns>The base font name, or the resource name when the font states none.</returns>
-    private static string FontName(PdfFileReader reader, PdfDictionary font, string resourceName)
-    {
-        if (font.GetName("BaseFont") is { Length: > 0 } name)
-        {
-            return name;
-        }
-
-        if (reader.ResolveArray(font.Get("DescendantFonts")) is { Items.Count: > 0 } descendants
-            && reader.ResolveDictionary(descendants.Items[0])?.GetName("BaseFont") is { Length: > 0 } descendantName)
-        {
-            return descendantName;
-        }
-
-        return resourceName;
+        return PdfFontDescriptorLookup.Find(reader, font)?.Get("CIDSet") is null;
     }
 
     /// <summary>Determines whether a graphics state fades or blends.</summary>

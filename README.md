@@ -13,6 +13,8 @@
                        pushed on 2026-10-17, and reads 1.4.0 now; the four layer ids resolve too, at
                        1.4.0 and 1.0.0-preview.1
     tests              the ci.yml runs: the build, both test legs and the SonarCloud analysis
+    PDF/A              the compliance.yml runs: veraPDF 1.30.4, PDFBox preflight and Ghostscript
+                       over the archival documents the archive-pdfa example writes
     quality gate       the SonarCloud project MPCoreDeveloper_SharpCorePDF, which is also where the
                        coverage number is read; it reads "unknown" until the first analysis lands, the way
                        the version badge did before the first push
@@ -28,6 +30,9 @@
   </a>
   <a href="https://github.com/MPCoreDeveloper/SharpCorePDF/actions/workflows/ci.yml">
     <img src="https://img.shields.io/github/actions/workflow/status/MPCoreDeveloper/SharpCorePDF/ci.yml?label=tests&amp;logo=githubactions&amp;logoColor=white" alt="tests" />
+  </a>
+  <a href="https://github.com/MPCoreDeveloper/SharpCorePDF/actions/workflows/compliance.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/MPCoreDeveloper/SharpCorePDF/compliance.yml?label=pdf%2Fa&amp;logo=githubactions&amp;logoColor=white" alt="PDF/A conformance" />
   </a>
   <a href="https://sonarcloud.io/dashboard?id=MPCoreDeveloper_SharpCorePDF">
     <img src="https://img.shields.io/sonar/quality_gate/MPCoreDeveloper_SharpCorePDF?server=https%3A%2F%2Fsonarcloud.io&amp;logo=sonarcloud&amp;logoColor=white" alt="SonarCloud quality gate" />
@@ -122,6 +127,13 @@ await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
   file, unselected pages that something still points at are folded onto a page that exists, and
   anything the merge had to change is reported in `MergeResult.Warnings` as a `PdfWarning` whose
   `Kind` names the condition — the part a caller may match on, while its message is only text.
+* **The fonts a document depends on can be read without opening them.** `IPdfFontInspector.ReadFontsAsync`
+  answers which fonts a file uses and whether each program travels with it — one entry per font with its
+  kind, where the program lives (`/FontFile`, `/FontFile2`, `/FontFile3`), the encoding the document
+  states, whether a `/ToUnicode` map is present, whether the name carries a subset tag, and the pages that
+  select it. A standard font that relies on the one the reader already has is reported as carrying no
+  program rather than as a defect, and a resource that does not resolve is a `FontUnreadable` warning
+  beside the fonts that were read. Chapter 26 has the whole answer.
 * **A cover page can be written from nothing and merged in front.** `PdfDocumentBuilder` adds pages of
   a chosen size, draws lines of text with one of the twelve standard fonts or a TrueType program you
   supply, and places PNG, JPEG, BMP and GIF images at fixed positions — a top-left origin, `y`
@@ -149,7 +161,8 @@ await merger.MergeToFileAsync(plan, @"C:\reports\combined.pdf");
   and GIF (with the refusals `docs/parity.md` names). A paragraph
   does wrap and align inside a fixed box — `PdfTextLayouter.Layout` measures with the face's own data and
   hands `DrawTextLayout` the lines to draw. Chapter 15 covers the shape surface — paths, fill and stroke,
-  dashes, clipping, transforms and the saved graphics state — and Chapter 16 covers measuring and wrapping. The
+  dashes, clipping, transforms, the saved graphics state and the opacity and blend mode a page selects with
+  `SetAlpha` — and Chapter 16 covers measuring and wrapping. The
   `author-page` and `draw-shapes` scenarios in `examples/` show both: one writes a cover and merges it in
   front of a document, the other draws a clipped, dashed, rotated page from nothing.
 * **An existing document can be edited into a new one.** `IPdfDocumentEditor` applies an immutable
@@ -341,13 +354,11 @@ engine be swapped in.
 The packages declare `IsTrimmable` and `IsAotCompatible`, and the build is clean under the trim, AOT and
 single-file analyzers: the reader, the writer and the merge engine use no reflection, no dynamic code and
 no serialization of their own types. `examples/SharpCorePDF.AotSmoke` proves it — it authors a page, merges
-two documents through the container and reads the text back, and it is published with `PublishAot` for
-win-x64 and in `ci.yml` for linux-x64; its `expect-aot` switch fails the run when the published binary
-still supports dynamic code. One overload is deliberately outside the claim:
-`AddSharpCorePDF(IConfiguration)` binds options through the configuration binder, so it carries
-`[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`; an AOT application passes `PdfEngineOptions`
-in code. [`docs/aot.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/aot.md) records
-the evidence and what AOT does and does not change.
+two documents through the container (including configuration-bound registration) and reads the text back,
+and it is published with `PublishAot` for win-x64 and in `ci.yml` for linux-x64; its `expect-aot` switch
+fails the run when the published binary still supports dynamic code.
+[`docs/aot.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/aot.md) records the evidence
+and what AOT does and does not change.
 
 ## Known limits (deliberate, for version 1)
 
@@ -383,7 +394,7 @@ the evidence and what AOT does and does not change.
 # Everything at once, through the solution: the five packages, the tests,
 # the examples and the measurement harness.
 dotnet build .\SharpCorePDF.slnx -c Release
-dotnet test  .\SharpCorePDF.slnx                      # 1076 tests on each of net10.0 and net11.0
+dotnet test  .\SharpCorePDF.slnx                      # 1142 tests on each of net10.0 and net11.0
 dotnet run --project .\examples\SharpCorePDF.Examples -c Release
 
 # Or one project at a time:
@@ -469,6 +480,7 @@ deliberately not the publishing workflow, so a pull request is checked without a
 | Build, both test legs, coverage, static analysis, the gate | `ci.yml` | a push to `main`, a pull request, a manual dispatch |
 | The gate read for the tagged commit, the pack, the package check, the push to nuget.org | `publish.yml` | a `v*` tag, a manual dispatch with `publish: true` |
 | Mutation testing: what the suite would notice changing, reported and not gated | `mutation.yml` | Mondays, a manual dispatch |
+| PDF/A conformance: veraPDF 1.30.4 plus PDFBox preflight and Ghostscript over the archival documents the example writes, versions pinned | `compliance.yml` | a push to `main`, a pull request, Mondays, a manual dispatch |
 
 The analysis runs in the runner rather than on SonarCloud's side, which is what lets it carry coverage:
 the scanner session opens before the build, the measured test leg runs inside it, and it closes after it,
@@ -628,4 +640,5 @@ Bugs, questions and feature requests go to the
 [issue tracker](https://github.com/MPCoreDeveloper/SharpCorePDF/issues). The most valuable report of
 all is a merge that produced a file something else cannot open: attach the sources if you can, and the
 warning list the merge returned, and it becomes a test.
+
 

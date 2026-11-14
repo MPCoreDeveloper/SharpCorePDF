@@ -23,7 +23,7 @@ namespace SharpCorePDF.Infrastructure;
 /// reported without that flag, because no password would help.
 /// </para>
 /// </remarks>
-public sealed class PdfDocumentReader : IPdfDocumentReader
+public sealed class PdfDocumentReader : IPdfDocumentReader, IPdfDocumentBytesReader
 {
     private readonly PdfEngineOptions options;
 
@@ -39,6 +39,19 @@ public sealed class PdfDocumentReader : IPdfDocumentReader
         string sourceName,
         Stream content,
         string? password = null,
+        CancellationToken cancellationToken = default) =>
+        (await ReadWithBytesAsync(sourceName, content, password, cancellationToken).ConfigureAwait(false)).Info;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The bytes are the array the document was read into, so a use case that writes the document out does
+    /// not read it again: it hands <see cref="PdfDocumentBytes.OpenRead"/> to the engine, whose own read
+    /// recognises the array and uses it instead of copying it.
+    /// </remarks>
+    public async Task<PdfDocumentBytes> ReadWithBytesAsync(
+        string sourceName,
+        Stream content,
+        string? password = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceName);
@@ -50,6 +63,10 @@ public sealed class PdfDocumentReader : IPdfDocumentReader
 
         var reader = new PdfFileReader(bytes, sourceName, options, password);
 
-        return PdfDocumentInspection.Describe(reader, bytes.LongLength);
+        return new PdfDocumentBytes
+        {
+            Info = PdfDocumentInspection.Describe(reader, bytes.LongLength),
+            Bytes = bytes,
+        };
     }
 }

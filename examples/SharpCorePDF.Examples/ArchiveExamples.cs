@@ -54,7 +54,12 @@ internal static class ArchiveExamples
 
         // The same page is written for each profile. The writer decides the version of the file, adds
         // the XMP packet and the output intent, and refuses rather than mislabels.
-        foreach (var profile in (PdfAProfile[])[PdfAProfile.PdfA1B, PdfAProfile.PdfA2B, PdfAProfile.PdfA3B])
+        foreach (var profile in (PdfAProfile[])[
+            PdfAProfile.PdfA1B,
+            PdfAProfile.PdfA2B,
+            PdfAProfile.PdfA2U,
+            PdfAProfile.PdfA3B,
+            PdfAProfile.PdfA3U])
         {
             destination.SetLength(0);
 
@@ -89,6 +94,10 @@ internal static class ArchiveExamples
             Report.Item("remarks", result.Warnings.Count);
         }
 
+        // A conformance run points this at a document the repository does not ship, which is what makes
+        // the evidence about a file this library did not write.
+        await ConvertSourceAsync(context, cancellationToken);
+
         Report.Line("next: python docs/tools/validate-pdfa.py <file> --profile 2b");
 
         // A document that sets text in a standard font cannot become PDF/A: the profile requires the
@@ -120,6 +129,84 @@ internal static class ArchiveExamples
             Report.Line(requirement);
         }
     }
+
+    /// <summary>
+    /// Archives a document the caller names, under every profile, when one is named.
+    /// </summary>
+    /// <param name="context">The ports to write with and the folder to write to.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <remarks>
+    /// The path comes from <c>SCPDF_ARCHIVE_SOURCE</c>, the same way the signature example takes its
+    /// timestamp token from the environment. A conformance run needs a document this library did not
+    /// write, and no redistributable real-world PDF belongs in the repository, so the variable is how one
+    /// is handed to the example; without it nothing extra runs and a reader sees only the authored page.
+    /// A refusal is reported like any other, because a source that cannot be made archival is a result
+    /// worth reading rather than an error to hide.
+    /// </remarks>
+    private static async Task ConvertSourceAsync(ExampleContext context, CancellationToken cancellationToken)
+    {
+        var path = Environment.GetEnvironmentVariable("SCPDF_ARCHIVE_SOURCE");
+
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return;
+        }
+
+        var options = new PdfAConversionOptions
+        {
+            ModificationDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+        };
+
+        foreach (var profile in (PdfAProfile[])[
+            PdfAProfile.PdfA1B,
+            PdfAProfile.PdfA2B,
+            PdfAProfile.PdfA2U,
+            PdfAProfile.PdfA3B,
+            PdfAProfile.PdfA3U])
+        {
+            using var destination = new MemoryStream();
+
+            var result = await context.ArchiveWriter.ConvertAsync(
+                new PdfFileSource(path),
+                destination,
+                profile,
+                options,
+                cancellationToken: cancellationToken);
+
+            Report.Heading($"{PdfAProfileName(profile)} of {Path.GetFileName(path)}");
+
+            if (!result.IsWritten)
+            {
+                Report.Item("written", false);
+
+                foreach (var requirement in result.UnsatisfiedRequirements)
+                {
+                    Report.Line(requirement);
+                }
+
+                continue;
+            }
+
+            var output = context.OutputPath(SourceFileName(profile));
+            await File.WriteAllBytesAsync(output, destination.ToArray(), cancellationToken);
+
+            Report.Item("pages", result.PageCount);
+            Report.Item("wrote", output);
+        }
+    }
+
+    /// <summary>Gets the file the example writes a caller-supplied document to.</summary>
+    /// <param name="profile">The profile.</param>
+    /// <returns>The file name.</returns>
+    private static string SourceFileName(PdfAProfile profile) => profile switch
+    {
+        PdfAProfile.PdfA1B => "archive-source-1b.pdf",
+        PdfAProfile.PdfA2B => "archive-source-2b.pdf",
+        PdfAProfile.PdfA2U => "archive-source-2u.pdf",
+        PdfAProfile.PdfA3B => "archive-source-3b.pdf",
+        PdfAProfile.PdfA3U => "archive-source-3u.pdf",
+        _ => "archive-source.pdf",
+    };
 
     /// <summary>Archives a page for PDF/A-3b and signs the archive, so the signature covers the archival bytes.</summary>
     /// <param name="context">The ports to write, archive, sign and validate with.</param>
@@ -257,7 +344,9 @@ internal static class ArchiveExamples
     {
         PdfAProfile.PdfA1B => "PDF/A-1b",
         PdfAProfile.PdfA2B => "PDF/A-2b",
+        PdfAProfile.PdfA2U => "PDF/A-2u",
         PdfAProfile.PdfA3B => "PDF/A-3b",
+        PdfAProfile.PdfA3U => "PDF/A-3u",
         _ => profile.ToString(),
     };
 
@@ -268,7 +357,9 @@ internal static class ArchiveExamples
     {
         PdfAProfile.PdfA1B => "archive-1b.pdf",
         PdfAProfile.PdfA2B => "archive-2b.pdf",
+        PdfAProfile.PdfA2U => "archive-2u.pdf",
         PdfAProfile.PdfA3B => "archive-3b.pdf",
+        PdfAProfile.PdfA3U => "archive-3u.pdf",
         _ => "archive.pdf",
     };
 

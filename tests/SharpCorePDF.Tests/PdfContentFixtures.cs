@@ -720,6 +720,89 @@ internal static class PdfContentFixtures
         return builder.Build(catalog);
     }
 
+    /// <summary>A one page document that carries two embedded files, one of which states no relationship.</summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] WithAssociatedFiles()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.Reserve();
+        var metadata = builder.Reserve();
+        var tree = builder.Reserve();
+        var stated = builder.Reserve();
+        var unstated = builder.Reserve();
+
+        builder.Set(content, Content(string.Empty));
+        builder.Set(metadata, PdfBuilder.StreamBody(string.Empty, Encoding.UTF8.GetBytes(XmpText)));
+
+        var first = builder.AddStream(
+            "<< /Type /EmbeddedFile /Subtype /text#2Fplain",
+            Encoding.Latin1.GetBytes("stated"));
+
+        var second = builder.AddStream(
+            "<< /Type /EmbeddedFile /Subtype /text#2Fplain",
+            Encoding.Latin1.GetBytes("unstated"));
+
+        builder.Set(
+            stated,
+            $"<< /Type /Filespec /F (stated.txt) /UF (stated.txt) /AFRelationship /Source /EF << /F {first} 0 R >> >>");
+
+        builder.Set(
+            unstated,
+            $"<< /Type /Filespec /F (unstated.txt) /UF (unstated.txt) /EF << /F {second} 0 R >> >>");
+
+        builder.Set(tree, $"<< /Names [(stated.txt) {stated} 0 R (unstated.txt) {unstated} 0 R] >>");
+
+        builder.Set(page, $"<< /Type /Page /Parent {pages} 0 R /MediaBox [0 0 200 200] /Contents {content} 0 R >>");
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
+        builder.Set(
+            catalog,
+            $"<< /Type /Catalog /Pages {pages} 0 R /Metadata {metadata} 0 R /Names << /EmbeddedFiles {tree} 0 R >> >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
+    /// A document whose embedded file hangs under a child node and is written as a direct dictionary, which
+    /// is the shape a producer that inlines its file specifications writes.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    public static byte[] WithNestedAssociatedFiles()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.Reserve();
+        var metadata = builder.Reserve();
+        var root = builder.Reserve();
+        var child = builder.Reserve();
+
+        builder.Set(content, Content(string.Empty));
+        builder.Set(metadata, PdfBuilder.StreamBody(string.Empty, Encoding.UTF8.GetBytes(XmpText)));
+
+        var file = builder.AddStream(
+            "<< /Type /EmbeddedFile /Subtype /text#2Fplain",
+            Encoding.Latin1.GetBytes("direct"));
+
+        builder.Set(root, $"<< /Kids [{child} 0 R] >>");
+        builder.Set(
+            child,
+            $"<< /Names [(direct.txt) << /Type /Filespec /F (direct.txt) /UF (direct.txt) /EF << /F {file} 0 R >> >>] >>");
+
+        builder.Set(page, $"<< /Type /Page /Parent {pages} 0 R /MediaBox [0 0 200 200] /Contents {content} 0 R >>");
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 /MediaBox [0 0 200 200] >>");
+        builder.Set(
+            catalog,
+            $"<< /Type /Catalog /Pages {pages} 0 R /Metadata {metadata} 0 R /Names << /EmbeddedFiles {root} 0 R >> >>");
+
+        return builder.Build(catalog);
+    }
+
     /// <summary>A one page document with neither an XMP packet nor an embedded file.</summary>
     /// <returns>The bytes of the document.</returns>
     public static byte[] WithoutMetadata()
@@ -1902,6 +1985,179 @@ internal static class PdfContentFixtures
         builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
 
         return builder.Build(catalog, $"/Encrypt {encrypt} 0 R");
+    }
+
+    /// <summary>
+    /// A four page document whose fonts state every shape the inspector reports: an embedded subset with a
+    /// <c>/ToUnicode</c> map, selected by two pages; a standard font that states no descriptor; a
+    /// <c>Type0</c> font that resolves to its <c>CIDFontType2</c> descendant; a form XObject's own font, and
+    /// a form nested inside that form; resources a page inherits from the page tree; a page that states no
+    /// resources at all; a Type 3 font; a Multiple Master font; a <c>Type0</c> font with no descendant; two
+    /// names that only look like a subset tag; and a resource that names an object the file does not
+    /// contain.
+    /// </summary>
+    /// <returns>The bytes of the document.</returns>
+    /// <remarks>
+    /// Each shape is here because a branch of the walk reads it: the inherited resources are what the
+    /// fallback from the page to its ancestors exists for, the nested form is what the depth limit is
+    /// measured against, and the two look-alike names are what the subset test has to reject.
+    /// </remarks>
+    public static byte[] Fonts()
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var root = builder.Reserve();
+        var firstBranch = builder.Reserve();
+        var secondBranch = builder.Reserve();
+        var thirdBranch = builder.Reserve();
+        var page1 = builder.Reserve();
+        var page2 = builder.Reserve();
+        var page3 = builder.Reserve();
+        var page4 = builder.Reserve();
+        var content = builder.Reserve();
+        var toUnicode = builder.Reserve();
+
+        var program = builder.AddStream(string.Empty, [0, 1, 0, 0]);
+        var subsetDescriptor = builder.Add(
+            $"<< /Type /FontDescriptor /FontName /ABCDEF+Arial /Flags 32 /FontFile2 {program} 0 R >>");
+        var subset = builder.Add(
+            $"<< /Type /Font /Subtype /TrueType /BaseFont /ABCDEF+Arial /Encoding /WinAnsiEncoding "
+            + $"/FontDescriptor {subsetDescriptor} 0 R /ToUnicode {toUnicode} 0 R >>");
+        var standard = builder.Add(
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");
+        var cidDescriptor = builder.Add(
+            $"<< /Type /FontDescriptor /FontName /XYZABC+SomeFont /Flags 4 /FontFile2 {program} 0 R >>");
+        var descendant = builder.Add(
+            $"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /XYZABC+SomeFont "
+            + $"/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> "
+            + $"/FontDescriptor {cidDescriptor} 0 R >>");
+        var composite = builder.Add(
+            $"<< /Type /Font /Subtype /Type0 /BaseFont /XYZABC+SomeFont /Encoding /Identity-H "
+            + $"/DescendantFonts [{descendant} 0 R] >>");
+
+        // Two forms, one inside the other: the outer one's font is reachable at depth 1, the inner one's at
+        // depth 2, which is what the depth limit is measured against.
+        var formFont = builder.Add("<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>");
+        var deepFont = builder.Add("<< /Type /Font /Subtype /Type1 /BaseFont /ZapfDingbats >>");
+        var deepForm = builder.AddStream(
+            $"/Type /XObject /Subtype /Form /BBox [0 0 10 10] /Resources << /Font << /F12 {deepFont} 0 R >> >>",
+            []);
+        var form = builder.AddStream(
+            $"/Type /XObject /Subtype /Form /BBox [0 0 10 10] "
+            + $"/Resources << /Font << /F5 {formFont} 0 R >> /XObject << /Fm2 {deepForm} 0 R >> >>",
+            []);
+
+        // The fonts page 3 reaches through the resources its page tree states.
+        var type3 = builder.Add(
+            "<< /Type /Font /Subtype /Type3 /BaseFont /ZapfType3 /CharProcs << /a 1 0 R >> "
+            + "/FontMatrix [0.001 0 0 0.001 0 0] /Encoding << /Differences [97 /a] >> >>");
+        var multipleMaster = builder.Add("<< /Type /Font /Subtype /MMType1 /BaseFont /MinionMM >>");
+        var loose = builder.Add("<< /Type /Font /Subtype /Type0 /BaseFont /Loose /Encoding /Identity-H >>");
+        var emptyType3 = builder.Add(
+            "<< /Type /Font /Subtype /Type3 /BaseFont /EmptyType3 /FontMatrix [0.001 0 0 0.001 0 0] >>");
+
+        // A composite font with a CIDFontType0 descendant, an encoding dictionary that names no base
+        // encoding, and a subset tag that is exactly the eight characters the tag has.
+        var cidType0Descriptor = builder.Add("<< /Type /FontDescriptor /FontName /ABCDEF+X >>");
+        var cidType0Descendant = builder.Add(
+            $"<< /Type /Font /Subtype /CIDFontType0 /BaseFont /ABCDEF+X "
+            + $"/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> "
+            + $"/FontDescriptor {cidType0Descriptor} 0 R >>");
+        var custom = builder.Add(
+            $"<< /Type /Font /Subtype /Type0 /BaseFont /ABCDEF+X "
+            + $"/Encoding << /Differences [0 /a] >> /DescendantFonts [{cidType0Descendant} 0 R] >>");
+
+        // One font per place a program can live, and one encoding dictionary that does name a base
+        // encoding, so every arm of the two lookups is exercised.
+        var type1Descriptor = builder.Add(
+            $"<< /Type /FontDescriptor /FontName /FontFileOne /Flags 4 /FontFile {program} 0 R >>");
+        var type1Program = builder.Add(
+            $"<< /Type /Font /Subtype /Type1 /BaseFont /FontFileOne /FontDescriptor {type1Descriptor} 0 R >>");
+        var cffDescriptor = builder.Add(
+            $"<< /Type /Font /Subtype /Type1 /FontName /CffOne /Flags 4 /FontFile3 {program} 0 R >>");
+        var cffProgram = builder.Add(
+            $"<< /Type /Font /Subtype /Type1 /BaseFont /CffOne /FontDescriptor {cffDescriptor} 0 R >>");
+        var baseEncoded = builder.Add(
+            "<< /Type /Font /Subtype /TrueType /BaseFont /BaseEncoded "
+            + "/Encoding << /BaseEncoding /MacRomanEncoding /Differences [65 /a] >> >>");
+        // Six capitals without the plus, and a plus without six capitals: neither is a subset tag.
+        var tagged = builder.Add("<< /Type /Font /Subtype /Type1 /BaseFont /ABCDEFHelvetica >>");
+        var lower = builder.Add("<< /Type /Font /Subtype /Type1 /BaseFont /abcDEF+Weird >>");
+
+        builder.Set(toUnicode, PdfBuilder.StreamBody(string.Empty, "begincmap endcmap"u8.ToArray()));
+        builder.Set(content, Content("BT /F1 12 Tf ET"));
+        builder.Set(
+            page1,
+            TextPage(firstBranch, $"/F1 {subset} 0 R /F2 {standard} 0 R /F4 99 0 R", content, $"/Fm1 {form} 0 R"));
+        builder.Set(page2, TextPage(firstBranch, $"/F1 {subset} 0 R /F3 {composite} 0 R", content));
+        builder.Set(page3, $"<< /Type /Page /Parent {secondBranch} 0 R /MediaBox [0 0 612 792] /Contents {content} 0 R >>");
+        builder.Set(page4, $"<< /Type /Page /Parent {thirdBranch} 0 R /MediaBox [0 0 612 792] >>");
+
+        // The resources sit on one branch of the tree, not on the page and not on the root: the page that
+        // inherits them is the one the fallback from a page to its ancestors exists for, and the last
+        // branch states no resources at all.
+        builder.Set(
+            secondBranch,
+            $"<< /Type /Pages /Parent {root} 0 R /Kids [{page3} 0 R] /Count 1 /MediaBox [0 0 612 792] "
+            + $"/Resources << /Font << /F6 {type3} 0 R /F7 {multipleMaster} 0 R /F8 {loose} 0 R "
+            + $"/F9 {tagged} 0 R /F10 {lower} 0 R /F11 {emptyType3} 0 R /F12 {custom} 0 R "
+            + $"/F13 {type1Program} 0 R /F14 {cffProgram} 0 R /F15 {baseEncoded} 0 R >> >> >>");
+        builder.Set(
+            firstBranch,
+            $"<< /Type /Pages /Parent {root} 0 R /Kids [{page1} 0 R {page2} 0 R] /Count 2 /MediaBox [0 0 612 792] >>");
+        builder.Set(
+            thirdBranch,
+            $"<< /Type /Pages /Parent {root} 0 R /Kids [{page4} 0 R] /Count 1 /MediaBox [0 0 612 792] >>");
+        builder.Set(
+            root,
+            $"<< /Type /Pages /Kids [{firstBranch} 0 R {secondBranch} 0 R {thirdBranch} 0 R] /Count 4 "
+            + "/MediaBox [0 0 612 792] >>");
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {root} 0 R >>");
+
+        return builder.Build(catalog);
+    }
+
+    /// <summary>
+    /// A one page document that paints a chain of nested forms, each with a font of its own, so a test can
+    /// see exactly which level of the chain a read reached.
+    /// </summary>
+    /// <param name="depth">The number of forms in the chain.</param>
+    /// <returns>The bytes of the document.</returns>
+    /// <remarks>
+    /// The fonts are named <c>Level1</c> to <c>Level{n}</c> from the outside in, and the page sits directly
+    /// under the root of the page tree so the fixture stays parseable at a small limit: the limit also
+    /// bounds how deeply a syntax structure may nest, and a page dictionary is three levels deep before any
+    /// form is reached.
+    /// </remarks>
+    public static byte[] FontsInForms(int depth = 5)
+    {
+        var builder = new PdfBuilder();
+
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Reserve();
+        var content = builder.Reserve();
+
+        var inner = 0;
+
+        for (var level = depth; level >= 1; level--)
+        {
+            var font = builder.Add($"<< /Type /Font /Subtype /Type1 /BaseFont /Level{level} >>");
+            var xobject = inner == 0 ? string.Empty : $" /XObject << /Next{level} {inner} 0 R >>";
+
+            inner = builder.AddStream(
+                $"/Type /XObject /Subtype /Form /BBox [0 0 10 10] "
+                + $"/Resources << /Font << /F{level} {font} 0 R >>{xobject} >>",
+                []);
+        }
+
+        builder.Set(content, Content("/Fm1 Do"));
+        builder.Set(page, TextPage(pages, string.Empty, content, $"/Fm1 {inner} 0 R"));
+        builder.Set(pages, PageTree(page));
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
+
+        return builder.Build(catalog);
     }
 
     /// <summary>Builds the body of a page that names the fonts given and draws the content given.</summary>

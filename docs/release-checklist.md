@@ -564,3 +564,40 @@ What remains open, and is not a gate this record can close from here:
 4. **The corpus population.** Seventeen documents now cover the shapes the scoreboard named — two web
    samples, a rasterised scan and a broken XFA — but a random web slice and a captured scan remain
    collection work rather than engineering.
+
+## `1.6.0` (2026-11-13, prepared — not yet tagged)
+
+This version is about archival evidence rather than new pages: the PDF/A output is checked by a pinned
+validator on every push, read by two more implementations, and the writer gained the two level-U profiles, a
+caller-supplied output intent and the `/AF` association PDF/A-3 requires. The rest of the tree carries work
+that was already in review — transparency states, a font inspector, one read per source and an AOT-safe
+configuration binding.
+
+| Gate | State at `1.6.0` (in the working tree) | Evidence |
+| --- | --- | --- |
+| G1 — the surface | **Moved into `PublicAPI.Shipped.txt`** | 123 entries: 110 in `Domain` (`PdfOutputIntent`, `PdfAssociatedFileRelationship`, `PdfAProfile.PdfA2U`/`PdfA3U` and the rest of the new surface), 7 in `Application` and 6 in `Infrastructure`. `RS0016` is a build error, and the `Release` build after the move is clean, so nothing undeclared or unsorted slipped through |
+| G2 — the shipped leg | **Unchanged: both legs ship** | `dotnet pack` produced five `1.6.0` packages, and `SharpCorePDF.Domain`, `.Application` and `.Infrastructure` each carry `lib/net10.0` and `lib/net11.0` with their XML documentation |
+| G3 — notes | **Written** | `CHANGELOG.md` holds `## [1.6.0] - 2026-11-13`, including a *Not in this version* section that names the follow-ups, and `PackageReleaseNotes` carries the summary |
+| G9 — quality gate on the tree | **Green locally** | `dotnet build -c Release`: 0 warnings, 0 errors. `dotnet test`: **2330 passed, 0 failed** — 1165 on `net10.0` and 1165 on `net11.0` |
+| G4 — symbols and reproducible binaries | **Still partly** | no `.snupkg` and no code signing, unchanged since `1.0.0` |
+| G5, G6, G7, G8 | **Open** | they need the pushed commit: a green `ci.yml`, a `publish: false` dispatch, an annotated `v1.6.0` tag on that commit, and an install from the feed |
+
+The archival evidence this version adds, because that is what the release is about:
+
+- `compliance.yml` installs veraPDF **1.30.4** unattended, writes the five profiles of an authored page and of
+  the six-page `SafeWebCore.pdf`, validates each document against its own profile, then cross-checks the same
+  files with Apache PDFBox preflight **3.0.8** and Ghostscript under `--strict-tools`, and uploads the
+  machine-readable reports. It runs on a push, on a pull request, on a manual dispatch and once a week,
+  because a validator upgrade changes the answer without this repository changing a byte.
+- On 2026-11-13, locally, all **ten** documents reported `PASS` under veraPDF 1.30.4. A `2b` file judged as
+  `1b` is rejected by veraPDF (`6.7.11-2`) and by PDFBox (`7.11.2`) independently, which is what makes the
+  second and third implementation worth running.
+- Mutation, per touched file: `PdfOutputIntent` **100.00 %**; the new regions of `PdfEditEngine.Document`
+  **20 killed, 0 with no coverage**, with three survivors that are equivalent or reachable only through a
+  malformed or 33-level name tree; `PdfAProfileRules` **77.27 %** and the two option types **95.65 %**, the
+  remainder being `_ => throw` messages in arms the public API cannot reach.
+
+What remains before the tag, in order: commit the release (the `<Version>` bump, the CHANGELOG entry and the
+frozen API snapshots), wait for `ci.yml` to be green on that commit, dispatch `publish.yml` with
+`publish: false` for it, then cut the annotated tag whose message is `SharpCorePDF 1.6.0` and push it.
+`publish.yml` refuses a tag that does not equal `<Version>`, which is what G7 is for.

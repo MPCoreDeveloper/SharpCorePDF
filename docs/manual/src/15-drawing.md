@@ -278,6 +278,37 @@ This is a drawing surface, not a vector graphics library with a document model:
 Everything is emitted in call order, so painting over what came before is how you stack: an opaque rectangle
 over a photograph hides it, and a translucent one tints it.
 
+## Transparency and blend modes
+
+A `PdfPaint` states an opacity of its own: `new PdfPaint(color, alpha: 0.4)` writes an `/ExtGState` and
+selects it, which is what makes a single shape translucent. `SetAlpha` states the opacity of the **graphics
+state** instead, so it reaches what a paint cannot — text, images, and the way a pixel is combined with what
+is already on the page:
+
+```csharp
+page
+    .SaveState()
+    .SetAlpha(0.35, PdfBlendMode.Multiply)   // gs: /ca 0.35 /CA 0.35 /BM /Multiply
+    .DrawImage(logoPng, 40, 600, 152, 87)    // an image states no opacity of its own
+    .RestoreState();
+```
+
+The pair is written once per distinct state and selected with `gs`, so two identical calls write one
+dictionary and one operator rather than one per call. A `RestoreState` puts back the opacity of the enclosing
+scope, which is why the call above is bracketed: `q`/`Q` is what carries the state, not the alpha alone.
+`SetAlpha` validates what it is handed — a value outside 0–1, a value that is not finite, or a blend mode the
+engine does not write is an `ArgumentOutOfRangeException` raised at the call rather than when the page is
+written. `PdfBlendMode` offers `Normal`, `Multiply`, `Screen`, `Overlay`, `Darken` and `Lighten`.
+
+A paint with an alpha of its own still wins over the selection, the rule an explicit paint already follows for
+colour: `SetAlpha(0.5)` followed by `DrawRectangle(box, new PdfPaint(PdfColor.Black), null)` paints an opaque
+box, because the paint states 1. Use `SetAlpha` for a stretch of text, an image or a blend mode, and a
+translucent `PdfPaint` for a single shape.
+
+PDF/A-1b has no transparency: a page written for that profile with an alpha below 1 or a blend mode other
+than `Normal` is refused by the archival pre-flight, which names the graphics state it found. PDF/A-2b and
+-3b keep it — Chapter 24 has the profiles.
+
 ## The surface at a glance
 
 | Member | What it does |
@@ -290,6 +321,7 @@ over a photograph hides it, and a translucent one tints it.
 | `SetFillColor(name, components)` / `SetStrokeColor(name, components)` | Selects a colour space by name (`cs`/`CS`) and sets its colour (`scn`/`SCN`). |
 | `FillPath(path)` / `StrokePath(path)` | Paints a path with the colour the selection stated, writing no colour of its own. |
 | `SetTransform(matrix)` | Concatenates a canvas-space transform; affects paths, text and images. |
+| `SetAlpha(alpha, blendMode?)` | Selects the opacity and blend mode of what follows (`gs`); a paint's own alpha still wins. |
 | `SaveState()` / `RestoreState()` | Brackets any change of paint, stroke, clip or transform. |
 | `PdfPaint(color, alpha?, fillRule?, colorSpace?)` | A device colour, its opacity, the fill rule and the space. |
 | `PdfStroke(paint, width?, cap?, join?, miterLimit?, dashArray?, dashPhase?, strokeAdjustment?)` | A paint plus the line style written with it. |

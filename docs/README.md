@@ -16,7 +16,10 @@ long-form reference for the API.
   it stands. The [`1.4.0`](SharpCorePDF-Manual-1.4.0.pdf), [`1.3.0`](SharpCorePDF-Manual-1.3.0.pdf),
   [`1.2.0`](SharpCorePDF-Manual-1.2.0.pdf) and [`1.1.0`](SharpCorePDF-Manual-1.1.0.pdf) editions stay
   beside this one as the record of what those releases shipped, and the chapter numbers are kept so that a
-  cross-reference survives both.
+  cross-reference survives both. **Chapter 26 is newer than the PDF beside it**: it documents the font
+  inspector added after the `1.5.0` edition was printed, so the Markdown is one chapter ahead of the
+  downloadable file until the next edition is built, which is a release step
+  (`dotnet run --project .\tools\SharpCorePDF.Manual`).
 
 | Chapter | What it covers |
 | --- | --- |
@@ -46,12 +49,13 @@ long-form reference for the API.
 | [23. Digital Signatures](manual/src/23-signatures.md) | Appending a revision, detached CMS, the integrity/trust split, multiple signatures, and what a signature does not promise. |
 | [24. Archival PDF (PDF/A)](manual/src/24-pdf-a.md) | The profiles, what is removed versus refused, archival edits, output intents, and the veraPDF evidence. |
 | [25. How This Manual Is Built](manual/src/25-how-this-manual-is-built.md) | The four build stages, the Markdown subset, the browser as a layout engine, the two passes that measure the contents, and the footer, bookmarks and metadata written with SharpCorePDF. |
+| [26. Fonts](manual/src/26-fonts.md) | Which fonts a document uses, whether each program travels with it, which pages select it, what a subset and a missing `/ToUnicode` mean, and what the read does not open. |
 
 The first four chapters are the shortest path to a working merge. Chapters 5 to 10 cover one part of the
 API each, chapters 11 to 14 are for design context, authoring, ready-to-adapt recipes and editing, chapters
 15 to 19 continue the authoring surface — drawing, text layout, images, annotations and forms — chapters 20
-to 22 cover the reading surface, chapters 23 and 24 cover signatures and archival output, and chapter 25
-describes how the manual itself is built.
+to 22 cover the reading surface, chapters 23 and 24 cover signatures and archival output, chapter 25
+describes how the manual itself is built, and chapter 26 reads the fonts a document depends on.
 `Chapter 3` is the place to start if you only want to see a document merged.
 
 ### Building the PDF
@@ -88,11 +92,12 @@ page, running footer and bookmarks stay in step.
 | [`competitive-scoreboard.md`](competitive-scoreboard.md) | How to measure against pinned PdfPig and PDFsharp builds without shipping them: harness boundary, scenarios, label conventions, and the current local baseline. |
 | [`parity/README.md`](parity/README.md) | The fixture corpus: manifest, provenance, licence, regeneration command and the integrity test. |
 | [`api/1.1-api-review.md`](api/1.1-api-review.md) | The Phase 0 API review: placement, immutability, naming, dependency and platform rules for the 1.1 surface. |
-| [`measurements.md`](measurements.md) | The recorded cost of a merge, of a content read and of writing a page — allocations, wall time, throughput, retained heap and output bytes — and the performance and memory budgets they are read against. |
+| [`measurements.md`](measurements.md) | The recorded cost of a merge, of a content read and of writing a page — allocations, wall time, throughput, retained heap and output bytes — and the performance and memory budgets they are read against, plus §10 on what a 100 MB document costs. |
+| [`roadmap-gap-analysis.md`](roadmap-gap-analysis.md) | The roadmap feedback read against this tree: which of its nine items had already shipped, which were the same capability under another name, what was genuinely missing, and the command output behind every claim (build, both test legs, the AOT publish and its measured start-up, the external validators, the mutation readings). |
 | [`mutation-testing.md`](mutation-testing.md) | What the suite would notice changing: the Stryker configuration, how to read a report, the statuses that count toward the score, and the six recorded runs — what each survivor says about the tests, what moved between two readings, and the one assertion that was withdrawn after `1.4.0` and what it cost. |
 | [`aot.md`](aot.md) | The Native AOT and trimming claim: what the packages declare, the one overload that is outside it, the smoke app that proves it on win-x64 and linux-x64, and what AOT changes. |
 | [`release-checklist.md`](release-checklist.md) | The gates a version has to clear before it reaches nuget.org: version, packages, tests, coverage, changelog, symbols and the dry run. |
-| [`adr/`](adr/) | Architecture decision records. ADR-001 records the creation, editing and reading product boundary and the PDFsharp/PdfPig parity target; ADR-002 records the new-code coverage figure `1.1.0` ships with and the `1.2` task that closes it; ADR-003 records why the per-letter read model stays a record graph until 2.0, with the measurement that decided it. |
+| [`adr/`](adr/) | Architecture decision records. ADR-001 records the creation, editing and reading product boundary and the PDFsharp/PdfPig parity target; ADR-002 records the new-code coverage figure `1.1.0` ships with and the `1.2` task that closes it; ADR-003 records why the per-letter read model stays a record graph until 2.0, with the measurement that decided it; ADR-004 records the buffer-model decision — one `byte[]`, no pipelines, and the second read in a merge that is left open for approval. |
 | [`foundation-readiness.md`](foundation-readiness.md) | Every .NET Foundation eligibility criterion mapped to a repository artifact, with the remaining gaps named. |
 | [`foundation-application.md`](foundation-application.md) | The eight conditions that decide when the Foundation application is filed, and the answers it will contain. |
 

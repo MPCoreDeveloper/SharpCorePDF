@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Text;
+using SharpCorePDF.Application.Extensions;
 using SharpCorePDF.Application.Services;
 using SharpCorePDF.Domain.Aggregates;
 using SharpCorePDF.Domain.Ports;
@@ -64,6 +65,16 @@ if (args.Contains("--creator"))
 if (args.Contains("--editor"))
 {
     await EditorParity();
+    return;
+}
+
+// The 100 MB rows answer the question a roadmap asks about large documents — what a read costs *beyond*
+// the bytes it was handed — and are the baseline `docs/adr/0004-buffer-model.md` is decided on:
+//
+//   dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --large
+if (args.Contains("--large"))
+{
+    await LargeDocuments();
     return;
 }
 
@@ -390,6 +401,132 @@ static async Task ContentReading()
             $"{"",46}   source {document.Length:N0} B, payload {file.ByteLength:N0} B, "
             + $"buffered {file.IsBuffered}");
     }
+}
+
+/// <summary>Measures what reading a 100 MB document costs beyond the bytes it was handed.</summary>
+/// <returns>A task that completes when the rows are printed.</returns>
+/// <remarks>
+/// The document is a padded copy of a real fixture, so the row measures the engine rather than a corpus of
+/// its own. The "bytes read from disk" row is the floor every other row is read against: a reader that
+/// materialises the document pays that once whatever it does afterwards, so the distance between the two is
+/// the engine's own cost.
+/// </remarks>
+static async Task LargeDocuments()
+{
+    const int Megabytes = 100;
+    var assets = Path.Combine(RepositoryRoot(), "tests", "SharpCorePDF.Tests", "Assets");
+    var scratch = Path.Combine(Path.GetTempPath(), "scpdf-assets");
+    Directory.CreateDirectory(scratch);
+
+    var path = Pad(
+        Path.Combine(assets, "SafeWebCore.pdf"),
+        Path.Combine(scratch, $"large-{Megabytes}mb.pdf"),
+        Megabytes * 1024 * 1024);
+    var size = new FileInfo(path).Length;
+
+    Console.WriteLine(
+        $"environment: {RuntimeInformation.FrameworkDescription}, {RuntimeInformation.OSArchitecture}, "
+        + $"{Environment.ProcessorCount} logical cores, server GC {GCSettings.IsServerGC}");
+    Console.WriteLine(
+        $"large document: {size / 1024.0 / 1024.0:N1} MB of padded fixture ({Path.GetFileName(path)}); one process, "
+        + "median of three rounds, and the file is read from disk again in every round");
+    Console.WriteLine();
+
+    var inspector = new PdfInspectorService(new PdfDocumentReader());
+    var reader = new PdfContentReaderService(new PdfPageContentReader());
+    var merger = new PdfMergerService(new PdfDocumentReader(), new PdfMergeEngine());
+    var editor = new PdfDocumentEditorService(new PdfDocumentReader(), new PdfEditEngine());
+
+    // One warm-up on the same document, so JIT and the first page tree are not part of the first row.
+    await inspector.InspectAsync(new PdfFileSource(path));
+
+    await LargeRow("bytes read from disk, no parsing", size, () => ReadBytes(path));
+    await LargeRow(
+        "open + inspect",
+        size,
+        async () => (await inspector.InspectAsync(new PdfFileSource(path))).PageCount);
+    await LargeRow("merge 10 of its pages", size, () => MergeTen(merger, path));
+    await LargeRow("edit one page of it", size, () => EditOne(editor, path));
+    await LargeRow(
+        "text of page 1",
+        size,
+        async () => (await reader.ReadTextAsync(new PdfFileSource(path), PageRange.FromTo(1, 1))).Count);
+
+    Console.WriteLine(
+        $"{"",46}   live after GC {ManagedHeapBytes() / 1024.0 / 1024.0,5:N1} MB, "
+        + $"process peak working set {Process.GetCurrentProcess().PeakWorkingSet64 / 1024.0 / 1024.0,6:N1} MB");
+}
+
+/// <summary>Reads a file into memory and reports its length.</summary>
+/// <param name="path">The file to read.</param>
+/// <returns>The number of bytes read.</returns>
+static Task<long> ReadBytes(string path) => Task.FromResult((long)File.ReadAllBytes(path).Length);
+
+/// <summary>Merges the first ten pages of a document and reports the length of the result.</summary>
+/// <param name="merger">The merger to use.</param>
+/// <param name="path">The document to merge from.</param>
+/// <returns>The number of bytes written.</returns>
+static async Task<long> MergeTen(PdfMergerService merger, string path)
+{
+    var plan = MergePlan.Create().AddFile(path, pages: "1-10");
+
+    return (await merger.MergeToBytesAsync(plan)).Length;
+}
+
+/// <summary>Rotates the first page of a document and reports the length of the result.</summary>
+/// <param name="editor">The editor to use.</param>
+/// <param name="path">The document to edit.</param>
+/// <returns>The number of bytes written.</returns>
+/// <remarks>
+/// The output date is fixed so the row measures the edit and not the clock, and one operation is enough: the
+/// cost of an edit is the read, which is what the row is about.
+/// </remarks>
+static async Task<long> EditOne(PdfDocumentEditorService editor, string path)
+{
+    var plan = PdfEditPlan
+        .Create(PdfEditOutputOptions.Default with { ModificationDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero) })
+        .RotatePage(1, PageRotation.Clockwise90);
+
+    return (await editor.ApplyToArrayAsync(new PdfFileSource(path), plan)).Length;
+}
+
+/// <summary>Runs one large-document row three times and prints the median of each number.</summary>
+/// <param name="label">The name of the row.</param>
+/// <param name="inputBytes">The size of the document the row reads.</param>
+/// <param name="action">The read to measure.</param>
+/// <returns>A task that completes when the row is printed.</returns>
+static async Task LargeRow(string label, long inputBytes, Func<Task<long>> action)
+{
+    const int Rounds = 3;
+
+    var allocated = new List<long>(Rounds);
+    var elapsed = new List<double>(Rounds);
+    var completed = 0L;
+
+    for (var index = 0; index < Rounds; index++)
+    {
+        CollectForMeasurement();
+
+        var before = GC.GetTotalAllocatedBytes(precise: true);
+        var watch = Stopwatch.StartNew();
+
+        completed = await action();
+
+        watch.Stop();
+        allocated.Add(GC.GetTotalAllocatedBytes(precise: true) - before);
+        elapsed.Add(watch.Elapsed.TotalMilliseconds);
+    }
+
+    allocated.Sort();
+    elapsed.Sort();
+
+    var medianAllocated = allocated[allocated.Count / 2];
+    var medianElapsed = elapsed[elapsed.Count / 2];
+    var rate = inputBytes / 1024.0 / 1024.0 / (medianElapsed / 1000.0);
+
+    Console.WriteLine(
+        $"{label,-46} : {medianAllocated / 1024.0 / 1024.0,7:N1} MB allocated  {medianElapsed,8:N1} ms  "
+        + $"{medianAllocated / (double)inputBytes,5:N2}x input  {rate,7:N0} MB/s  units {completed:N0}");
 }
 
 /// <summary>Enumerates page details, stopping after the requested number of pages.</summary>

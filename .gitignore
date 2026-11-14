@@ -21,6 +21,13 @@ coverage*.xml
 .sonarqube/
 .tools/
 
+# veraPDF, unpacked by compliance.yml beside the tree; a local run of the same steps writes it here too
+.verapdf/
+verapdf-greenfield-*-installer.zip
+
+# The second implementation the cross-check runs, fetched from Maven Central
+preflight-app-*.jar
+
 # Stryker's default output directory, for a run that does not name --output; a run that does writes to artifacts/
 StrykerOutput/
 

@@ -14,17 +14,18 @@ internal static class PdfAProfileRules
     public static int Part(PdfAProfile profile) => profile switch
     {
         PdfAProfile.PdfA1B => 1,
-        PdfAProfile.PdfA2B => 2,
-        PdfAProfile.PdfA3B => 3,
+        PdfAProfile.PdfA2B or PdfAProfile.PdfA2U => 2,
+        PdfAProfile.PdfA3B or PdfAProfile.PdfA3U => 3,
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "The profile is not one the engine writes."),
     };
 
     /// <summary>Gets the conformance level the profile names.</summary>
     /// <param name="profile">The profile.</param>
-    /// <returns>The level, written as <c>pdfaid:conformance</c>; always <c>B</c> in this release.</returns>
+    /// <returns>The level, written as <c>pdfaid:conformance</c>: <c>B</c> or <c>U</c>.</returns>
     public static string Conformance(PdfAProfile profile) => profile switch
     {
         PdfAProfile.PdfA1B or PdfAProfile.PdfA2B or PdfAProfile.PdfA3B => "B",
+        PdfAProfile.PdfA2U or PdfAProfile.PdfA3U => "U",
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "The profile is not one the engine writes."),
     };
 
@@ -36,16 +37,18 @@ internal static class PdfAProfileRules
         PdfAProfile.PdfA1B => "PDF/A-1b",
         PdfAProfile.PdfA2B => "PDF/A-2b",
         PdfAProfile.PdfA3B => "PDF/A-3b",
+        PdfAProfile.PdfA2U => "PDF/A-2u",
+        PdfAProfile.PdfA3U => "PDF/A-3u",
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "The profile is not one the engine writes."),
     };
 
     /// <summary>Gets the PDF version a document written for the profile has.</summary>
     /// <param name="profile">The profile.</param>
-    /// <returns>PDF 1.4 for PDF/A-1b, PDF 1.7 for -2b and -3b.</returns>
+    /// <returns>PDF 1.4 for PDF/A-1b, PDF 1.7 for the other four.</returns>
     public static PdfVersion Version(PdfAProfile profile) => profile switch
     {
         PdfAProfile.PdfA1B => PdfVersion.V1_4,
-        PdfAProfile.PdfA2B or PdfAProfile.PdfA3B => PdfVersion.V1_7,
+        PdfAProfile.PdfA2B or PdfAProfile.PdfA3B or PdfAProfile.PdfA2U or PdfAProfile.PdfA3U => PdfVersion.V1_7,
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "The profile is not one the engine writes."),
     };
 
@@ -56,6 +59,20 @@ internal static class PdfAProfileRules
 
     /// <summary>Gets a value indicating whether the profile allows embedded files.</summary>
     /// <param name="profile">The profile.</param>
-    /// <returns><see langword="true"/> for PDF/A-3b, which allows any file as an attachment.</returns>
-    public static bool AllowsEmbeddedFiles(PdfAProfile profile) => profile == PdfAProfile.PdfA3B;
+    /// <returns><see langword="true"/> for the two PDF/A-3 profiles, which allow any file as an attachment.</returns>
+    public static bool AllowsEmbeddedFiles(PdfAProfile profile) =>
+        profile is PdfAProfile.PdfA3B or PdfAProfile.PdfA3U;
+
+    /// <summary>Gets the name an associated-file relationship is written as.</summary>
+    /// <param name="relationship">The relationship.</param>
+    /// <returns>The PDF name, for example <c>Data</c>.</returns>
+    public static string RelationshipName(PdfAssociatedFileRelationship relationship) => relationship switch
+    {
+        PdfAssociatedFileRelationship.Data => "Data",
+        PdfAssociatedFileRelationship.Source => "Source",
+        PdfAssociatedFileRelationship.Alternative => "Alternative",
+        PdfAssociatedFileRelationship.Supplement => "Supplement",
+        PdfAssociatedFileRelationship.Unspecified => "Unspecified",
+        _ => throw new ArgumentOutOfRangeException(nameof(relationship), relationship, "The relationship is not one ISO 19005-3 defines."),
+    };
 }

@@ -86,6 +86,26 @@ public sealed record PdfEditOutputOptions
     /// </remarks>
     public PdfAProfile? PdfAProfile { get; init; }
 
+    /// <summary>
+    /// Gets the output intent an archival result states, or <see langword="null"/> for the sRGB profile the
+    /// writer builds.
+    /// </summary>
+    /// <remarks>
+    /// Only an archival profile writes an output intent, so setting this without one is refused rather than
+    /// ignored: an ordinary edit copies whatever intent the source carried and adds none of its own.
+    /// </remarks>
+    public PdfOutputIntent? OutputIntent { get; init; }
+
+    /// <summary>
+    /// Gets the relationship the archival result states between itself and each embedded file.
+    /// </summary>
+    /// <remarks>
+    /// PDF/A-3 requires every embedded file to be associated with the document and to name that
+    /// association; every other profile forbids embedded files, so a relationship set beside a profile that
+    /// cannot carry one is refused rather than ignored.
+    /// </remarks>
+    public PdfAssociatedFileRelationship AssociatedFileRelationship { get; init; }
+
     /// <summary>Validates these options.</summary>
     /// <returns>Every problem found, or an empty list when the options are usable.</returns>
     public IReadOnlyList<string> Validate()
@@ -144,6 +164,30 @@ public sealed record PdfEditOutputOptions
                 errors.Add(
                     $"the PDF/A profile {profile} cannot be combined with encryption: ISO 19005 requires an archival document to be readable without a password.");
             }
+        }
+
+        if (OutputIntent is { } intent)
+        {
+            if (PdfAProfile is null)
+            {
+                errors.Add(
+                    "an output intent is written only for a PDF/A profile: set PdfAProfile, or leave OutputIntent unset.");
+            }
+
+            errors.AddRange(intent.Validate());
+        }
+
+        if (!Enum.IsDefined(AssociatedFileRelationship))
+        {
+            errors.Add(
+                $"the associated-file relationship '{(int)AssociatedFileRelationship}' is not defined.");
+        }
+        else if (AssociatedFileRelationship != PdfAssociatedFileRelationship.Unspecified
+            && PdfAProfile is not (SharpCorePDF.Domain.ValueObjects.PdfAProfile.PdfA3B
+                or SharpCorePDF.Domain.ValueObjects.PdfAProfile.PdfA3U))
+        {
+            errors.Add(
+                "an associated-file relationship is written only for PDF/A-3b, the one profile that allows embedded files.");
         }
 
         return errors;

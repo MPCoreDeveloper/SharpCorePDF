@@ -10,7 +10,7 @@ to copy a payload through the copy route. Section 8 records the authoring side: 
 page from nothing. Section 9 records the two Release 1.1 acceptance scenarios, the creator and the editor,
 before the code they measure exists.
 
-Recorded: 2026-10-15, .NET 11.0.0-rc.1.26425.128, x64, 12 logical cores, `Release`.
+Recorded: 2026-10-15, .NET 11.0.0, x64, 12 logical cores, `Release`.
 **No earlier record exists** — this is the baseline, and the first measurement of the engine, so nothing
 here is a before/after comparison except the merge output itself (see §4).
 
@@ -61,10 +61,12 @@ Allocations are the same under both GC modes to within 0.01 %, so they are quote
 
 Reading it:
 
-* **The bytes dominate, and copying them costs about one extra copy each way.** 2.10–2.29 bytes are
-  allocated per input byte on the large rows: the input is read into a buffer, copied into the output
-  buffer, and the pooled buffers behind both are reused. That 2.2× is the single biggest allocation
-  item left on the merge path.
+* **The bytes dominate, and they cost about one extra copy per read.** 2.10–2.29 bytes are allocated per
+  input byte on the large rows: the document is read into a buffer, the result is copied into the output
+  buffer, and the pooled buffers behind both are reused. That 2.2× is the single biggest allocation item
+  left on the merge path — and §10 shows that, for a partial selection, most of it is a *second read* of the
+  same source rather than the output copy. [`adr/0004-buffer-model.md`](adr/0004-buffer-model.md) records
+  what removing it would take.
 * **A source is cheap.** At constant total bytes, one merge of 1 MB costs 2,236 KB and 2.63 ms; the same
   megabyte spread over 150 sources costs 9,619 KB and 83.12 ms — that is **49 KB and 0.54 ms per extra
   source** (0.39 ms under server GC), of which most is the per-page work of a 6.7 KB document and not
@@ -237,7 +239,7 @@ is the open half of A7.
 
 ## 7. What a content read costs
 
-Recorded: 2026-10-21, .NET 11.0.0-rc.2.26504.105, x64, 12 logical cores, workstation GC, `Release`:
+Recorded: 2026-10-21, .NET 11.0.0, x64, 12 logical cores, workstation GC, `Release`:
 
 ```powershell
 dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --content
@@ -292,7 +294,7 @@ command under `DOTNET_gcServer=1`.
 
 ## 8. What authoring a page costs
 
-Recorded: 2026-10-21, .NET 11.0.0-rc.2.26504.105, x64, 12 logical cores, workstation GC, `Release`:
+Recorded: 2026-10-21, .NET 11.0.0, x64, 12 logical cores, workstation GC, `Release`:
 
 ```powershell
 dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --author
@@ -366,7 +368,7 @@ the tool printed.
 
 ## 9. The Release 1.1 creator and editor baselines
 
-Recorded: 2026-10-21, .NET 11.0.0-rc.2.26504.105, x64, 12 logical cores, workstation GC, `Release`:
+Recorded: 2026-10-21, .NET 11.0.0, x64, 12 logical cores, workstation GC, `Release`:
 
 ```powershell
 dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --creator
@@ -429,7 +431,7 @@ acceptance runs, not omissions from the baseline.
 
 ## 10. The 1.1.0 release re-run (T101)
 
-Recorded: 2026-10-23, .NET 11.0.0-rc.2.26504.105, x64, 12 logical cores, workstation GC, `Release`.
+Recorded: 2026-10-23, .NET 11.0.0, x64, 12 logical cores, workstation GC, `Release`.
 
 ```powershell
 dotnet run -c Release --project .\tools\SharpCorePDF.Measure                  # the twelve merge rows
@@ -530,7 +532,7 @@ the `1.1.0` record as it was taken.
 
 ## 11. Text layout: what the metrics and the placement were checked against
 
-Recorded: 2026-10-23, on the `1.2` working tree, .NET 11.0.0-rc.2.26504.105, x64. This section records the
+Recorded: 2026-10-23, on the `1.2` working tree, .NET 11.0.0, x64. This section records the
 external readings behind row 3 of [`parity.md`](parity.md), not an allocation baseline: the layout has no
 row in `tools/SharpCorePDF.Measure` yet, so the cost of wrapping and measuring is added there with T037 and
 re-read by T101.
@@ -572,7 +574,7 @@ stream and the expected `[0, 0, 595.28, 841.89]` media box for the fixed page.
 
 ## 12. Drawing: what a viewer painted, not only what the stream said
 
-Recorded: 2026-10-23, Windows x64, .NET SDK 11.0.100-rc.2.26504.105 running the `net11.0` leg of
+Recorded: 2026-10-23, Windows x64, .NET SDK 11.0.100 running the `net11.0` leg of
 `examples/SharpCorePDF.Examples`. This section records the external readings behind row 2 of
 [`parity.md`](parity.md): the operator tests of T022 prove what the content stream contains, and this run
 proves that a viewer paints what the stream meant.
@@ -623,7 +625,7 @@ the reason a render belongs in this record and not only a stream assertion.
 
 ## 13. The creator surface: a profile, bookmarks and an imported page
 
-Recorded: 2026-10-23, Windows x64, .NET SDK 11.0.100-rc.2.26504.105 running the `net11.0` leg of
+Recorded: 2026-10-23, Windows x64, .NET SDK 11.0.100 running the `net11.0` leg of
 `examples/SharpCorePDF.Examples`. This section records the external readings behind rows 4 and 7 of
 [`parity.md`](parity.md) and behind the `creator-parity` scenario of T036: one document that a single
 builder writes — a JPEG passed through, a PNG that states its own colour profile, an outline, an XMP
@@ -678,3 +680,67 @@ The image row is the RGBA logo being decoded, split and re-compressed on every b
 passed to `DrawImage` inside the measured window; the second row is the same document without it. The
 layout row is one `PdfTextLayouter.Layout` call over 60 sentences of 63 characters: 49 KB and 1.13 ms for
 60 lines, the per-character cost of the wrap, with the typeface parsed outside the window.
+
+## 10. What a 100 MB document costs
+
+The rows a roadmap about large documents needs, and the measurement
+[`adr/0004-buffer-model.md`](adr/0004-buffer-model.md) is decided on. One document — `SafeWebCore.pdf`
+padded with comment lines to 100 MB, so the row measures the engine and not a corpus of its own — read
+through `PdfFileSource`, which means the file is read from disk inside every round.
+
+```powershell
+$env:DOTNET_gcServer = "1"
+dotnet run -c Release --project .\tools\SharpCorePDF.Measure -- --large
+```
+
+| Row | Allocated | x input | Wall (median of 3) | Effective rate |
+| --- | --- | --- | --- | --- |
+| bytes read from disk, no parsing | 100.0 MB | 1.00 | 34.8 ms | 2 873 MB/s |
+| open + inspect | 100.0 MB | **1.00** | 235.5 ms | 425 MB/s |
+| merge 10 of its pages | 204.2 MB | **2.04** | 450.7 ms | 222 MB/s |
+| text of page 1 | 103.7 MB | 1.04 | 240.5 ms | 416 MB/s |
+
+The harness prints the live heap and the process peak once, at the end of a run, because they belong to the
+process rather than to a row: **132.4 MB live after a full collection** and **955.6 MB process peak working
+set** under server GC. Run on 2026-11-06, .NET 11.0.0, x64, 12 logical cores.
+
+Reading it:
+
+* **A read allocates the document once and nothing more.** Opening and inspecting 100 MB allocates 100 MB:
+  one array, which is the model. There is no second copy to remove in the read path, and a `PdfStreamSource`
+  or `PdfByteArraySource` pays nothing at all beyond that because `PdfByteReader` uses the bytes the stream
+  already owns.
+* **A merge of a file-backed source allocates it twice.** The output of that row is 931 273 B, so the second
+  100 MB is not the output buffer: the application layer reads the source to resolve the page selection and
+  the engine reads it again. That is the cost `ADR-004` removed below; the 2.05–2.29× recorded for
+  whole-document merges in §1 is the same double read, which the earlier explanation there ("copied into the
+  output buffer") only covered for documents whose output is as large as their input.
+* **Time is the larger cost.** 235 ms to open and inspect against 35 ms to read the same bytes: the 200 ms
+  difference is the cross-reference and page-tree work, and it is unchanged when the read chunk is raised
+  from 80 KiB to 1 MiB (210.8 ms, same allocations), so the chunk size is not where the time is.
+* **A page of text costs 4 MB on top of the document.** 103.7 MB for one page of glyphs, words and blocks
+  is the document plus the per-glyph read model, not a second copy of the file.
+
+### After the second read was removed (2026-11-07)
+
+`adr/0004-buffer-model.md` was accepted and the merge and the edit now hand the engine the bytes the
+inspection produced, so the same document is read once per operation. The same command, the same document,
+the same machine; the edit row was added with the change, which is why it appears only here:
+
+| Row | Before | After |
+| --- | --- | --- |
+| bytes read from disk, no parsing | 100.0 MB, 1.00x, 34.8 ms | 100.0 MB, 1.00x, 35.0 ms |
+| open + inspect | 100.0 MB, 1.00x, 235.5 ms | 100.0 MB, 1.00x, 213.5 ms |
+| merge 10 of its pages | 204.2 MB, **2.04x**, 450.7 ms | **104.2 MB, 1.04x**, 383.2 ms |
+| edit one page of it | not measured | **104.2 MB, 1.04x**, 378.4 ms |
+| text of page 1 | 103.7 MB, 1.04x, 240.5 ms | 103.7 MB, 1.04x, 224.2 ms |
+
+The merge and the edit each allocate **100 MB less** for a 100 MB document and produce the same result:
+931 273 B for the merge, 931 224 B for the edit of one page. The remaining 1.04x is the output buffer and the
+operation's own bookkeeping, and the wall time also fell in this run because the second read is gone as
+well as its allocation.
+
+The peak working set is *not* a clean comparison here: the five-row run prints 955.6 MB, the same figure
+the four-row run printed before, because the peak belongs to the process and the rows reuse the same 100 MB
+views; allocations are the number this change moves, and the peak moves only if a reader holds a document
+twice — which is exactly what the merge used to do between its two reads.

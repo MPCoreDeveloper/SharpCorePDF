@@ -46,9 +46,9 @@
     <IsTrimmable>true</IsTrimmable>
     <IsAotCompatible>true</IsAotCompatible>
 
-    <Version>1.5.0</Version>
-    <AssemblyVersion>1.5.0.0</AssemblyVersion>
-    <FileVersion>1.5.0.0</FileVersion>
+    <Version>1.6.0</Version>
+    <AssemblyVersion>1.6.0.0</AssemblyVersion>
+    <FileVersion>1.6.0.0</FileVersion>
     <Authors>MPCoreDeveloper</Authors>
     <Company>SharpCorePDF</Company>
     <Product>SharpCorePDF</Product>
@@ -64,7 +64,7 @@
       consumer reads before downloading. It stays a pointer rather than a copy: the changelog is the
       detail, and two copies of the same notes drift the moment one of them is edited.
     -->
-    <PackageReleaseNotes>1.5.0 - The reading surface grew a reusable session and two pieces of control: IPdfLayoutSession keeps one parse open, so the letters, the words and an export of the same pages cost one walk (the two most recent ranges are kept), PdfReadingOrderStrategy.RowBands reads a table row by row, and a page can paint in a colour space the caller names (SetFillColor/SetStrokeColor with FillPath/StrokePath). The scan allocates 5.3% less and extracts 23% colder and 15% warmer on the 200-page fixture; the endstream search and the PNG Up predictor are vectorised; a Mac-written font's MacRomanEncoding is read instead of reported, and a PAGE XML export is schema-valid. The packages are trim- and Native AOT-compatible, with the configuration-binding overload annotated as the one member outside that claim. Both legs (net10.0, net11.0) ship in one package. Details: https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PackageReleaseNotes>1.6.0 - The archival output is proven rather than described, and it names two more profiles. A pinned veraPDF 1.30.4 gate runs on every push and once a week (compliance.yml), cross-checked by Apache PDFBox preflight and Ghostscript, with the machine-readable reports kept as an artifact; validate-pdfa.py reads the report instead of the word PASS and refuses a validator older than the pin. PDF/A-2u and -3u join the three level-B profiles, the output intent can be the caller's own ICC profile (written verbatim, checked as an ICC profile before a byte is written), and a PDF/A-3 result associates every embedded file through /AF with a stated relationship. Beyond the archive: a page can state an opacity and a blend mode, a document's fonts can be read without opening them, a merge or an edit reads each source once instead of twice (a 100 MB merge allocates 104.2 MB instead of 204.2 MB), and configuration registration is trim- and Native AOT-compatible. Details: https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/CHANGELOG.md</PackageReleaseNotes>
   </PropertyGroup>
 
   <!--

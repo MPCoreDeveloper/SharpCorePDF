@@ -187,27 +187,11 @@ or pass it on the command line, which keeps the project file untouched:
 dotnet publish -c Release -r win-x64 -p:PublishAot=true
 ```
 
-`PublishTrimmed=true` alone works too, and the rule below applies to it as well.
+`PublishTrimmed=true` alone works too.
 
-**Register in code, not from configuration.** One member is outside the claim: the overload that binds a
-configuration section, `AddSharpCorePDF(IConfiguration)`, uses the framework's binder, which reads the
-option names by reflection and creates its converters at run time. It carries
-`[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`, so a trimmed or AOT publish reports the call at
-build time instead of failing at run time. An AOT application passes the options object — the second
-shape from *Register the services*:
-
-```csharp
-var services = new ServiceCollection()
-    .AddSharpCorePDF(PdfEngineOptions.Default with
-    {
-        MaxSourceBytes = 64L * 1024 * 1024,
-    })
-    .BuildServiceProvider();
-```
-
-Everything else — `AddSharpCorePDF()`, the merger, the reader, the authoring builder, the signer and the
-archival writer — is AOT-clean. The repository's own smoke application publishes this way, prints
-`aot=True`, merges two authored pages and reads them back on win-x64, linux-x64 and linux-arm64; the
+Every registration form is AOT-clean, including the overload that binds a configuration section. The
+repository's own smoke application publishes this way, binds engine options from an `AotPdf` section,
+prints `aot=True`, merges two authored pages and reads them back on win-x64, linux-x64 and linux-arm64; the
 workflow publishes and runs it for both Linux identifiers, and [`docs/aot.md`](../aot.md) records the
 evidence.
 

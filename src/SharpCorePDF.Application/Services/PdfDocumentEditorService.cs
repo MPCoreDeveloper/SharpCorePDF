@@ -19,15 +19,23 @@ namespace SharpCorePDF.Application.Services;
 public sealed class PdfDocumentEditorService : IPdfDocumentEditor
 {
     private readonly IPdfDocumentReader reader;
+    private readonly IPdfDocumentBytesReader? bytesReader;
     private readonly IPdfEditEngine engine;
 
     /// <summary>Initializes a new instance of the <see cref="PdfDocumentEditorService"/> class.</summary>
     /// <param name="reader">The reader used to inspect the source.</param>
     /// <param name="engine">The engine that writes the edited document.</param>
     /// <exception cref="ArgumentNullException">An argument is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// A reader that also implements <see cref="IPdfDocumentBytesReader"/> is preferred, because the edit
+    /// then hands the engine the bytes the inspection produced instead of reading the source twice
+    /// ([ADR-004](../../../docs/adr/0004-buffer-model.md)). A reader that does not is still accepted, and the
+    /// engine reads the source itself, exactly as before.
+    /// </remarks>
     public PdfDocumentEditorService(IPdfDocumentReader reader, IPdfEditEngine engine)
     {
         this.reader = reader ?? throw new ArgumentNullException(nameof(reader));
+        bytesReader = reader as IPdfDocumentBytesReader;
         this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
     }
 
@@ -51,12 +59,39 @@ public sealed class PdfDocumentEditorService : IPdfDocumentEditor
         plan.EnsureValid();
 
         var content = await source.OpenReadAsync(cancellationToken).ConfigureAwait(false);
+        Stream? captured = null;
 
         try
         {
-            var info = await reader
-                .ReadAsync(source.DisplayName, content, password, cancellationToken)
-                .ConfigureAwait(false);
+            // What the engine reads: the stream the caller's source opened, or — when the reader can hand
+            // its bytes back — a view of the array the inspection already filled, so the document is read
+            // once instead of twice.
+            var engineContent = content;
+            PdfDocumentInfo info;
+
+            if (bytesReader is not null)
+            {
+                var read = await bytesReader
+                    .ReadWithBytesAsync(source.DisplayName, content, password, cancellationToken)
+                    .ConfigureAwait(false);
+
+                info = read.Info;
+                captured = read.OpenRead();
+                engineContent = captured;
+            }
+            else
+            {
+                info = await reader
+                    .ReadAsync(source.DisplayName, content, password, cancellationToken)
+                    .ConfigureAwait(false);
+
+                // The engine reads the same stream from the start, so the position the reader left
+                // behind must not leak into the edit.
+                if (content.CanSeek && content.Position != 0)
+                {
+                    content.Position = 0;
+                }
+            }
 
             if (!info.IsReadable)
             {
@@ -66,20 +101,18 @@ public sealed class PdfDocumentEditorService : IPdfDocumentEditor
                 throw new PdfEncryptionException(source.DisplayName, info.RequiresPassword);
             }
 
-            // The engine reads the same stream from the start, so the position the reader left
-            // behind must not leak into the edit.
-            if (content.CanSeek && content.Position != 0)
-            {
-                content.Position = 0;
-            }
-
             return await engine
-                .ApplyAsync(source.DisplayName, content, plan, password, destination, cancellationToken)
+                .ApplyAsync(source.DisplayName, engineContent, plan, password, destination, cancellationToken)
                 .ConfigureAwait(false);
         }
         finally
         {
             await content.DisposeAsync().ConfigureAwait(false);
+
+            if (captured is not null)
+            {
+                await captured.DisposeAsync().ConfigureAwait(false);
+            }
         }
     }
 

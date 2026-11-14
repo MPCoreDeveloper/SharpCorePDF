@@ -116,7 +116,7 @@ the *type* of the result rather than its *value*.
 
 ## The first record
 
-Recorded: 2026-10-29, Windows 11 x64, .NET SDK 11.0.100-rc.2.26504.105, `dotnet-stryker` 5.0.0,
+Recorded: 2026-10-29, Windows 11 x64, .NET SDK 11.0.100, `dotnet-stryker` 5.0.0,
 `Release`, `Standard`, `net11.0`. **A scoped run, not a baseline**: `--mutate "**/PageRange.cs"` on
 `SharpCorePDF.Domain`, which is one value object out of one layer, taken to prove the pipeline end to end.
 No sweep of a whole layer has been recorded yet; the first scheduled run of `mutation.yml` is what a
@@ -247,7 +247,7 @@ layer, which is the shape of this codebase's guard clauses rather than a fault i
 
 ## The second record: the image code
 
-Recorded: 2026-10-31, Windows 11 x64, .NET SDK 11.0.100-rc.3.26522.148, `dotnet-stryker` 5.0.0, `Release`,
+Recorded: 2026-10-31, Windows 11 x64, .NET SDK 11.0.100, `dotnet-stryker` 5.0.0, `Release`,
 `Standard`, `net11.0`. Three files of `SharpCorePDF.Infrastructure` — the colour space an image states, the
 pixels its payload becomes, and the filters it is decoded through — taken because they are the newest code
 in the tree and because the first of them had no suite of its own before this reading:
@@ -679,3 +679,76 @@ removes shipped members. The conversion was reverted, and the measurement is rec
 What the pass kept: a word's text built once at its final length, a glyph list sized from the first page
 instead of doubling, the `endstream` search through the vector kernel, and a vector `Up` predictor. Those
 are the changes behind warm extraction 58.8 → 38.3 ms and allocations 33 183 → 29 557 KiB.
+
+## Seventh record — the font inspector, and what its survivors built (2026-11-06)
+
+The increment that added `PdfPageCanvas.SetAlpha` and `IPdfFontInspector` was read with four scoped runs
+over the files it touched (`--configuration Debug`, `--mutate` once per file), because the Release output
+folder was held open by a stale test host for the whole session.
+
+| File | First reading | Final reading | What moved |
+| --- | --- | --- | --- |
+| `Pdf/PdfFontDescriptorLookup.cs` | 42.55% (20/16) | **97.44%** (38/0) | a `/FontFile` and a `/FontFile3` font joined the fixture, an encoding dictionary that names a base encoding, a `CIDFontType0` descendant and a subset tag of exactly eight characters; eight `ThrowIfNull` guards were removed as unreachable |
+| `Reading/FontAccumulator.cs` | 69.44% (25/5) | **94.44%** (34/1) | a Type 3 font that states no `/CharProcs`, and a nested form read at a limit that cuts between the levels |
+| `Reading/PdfFontInspector.cs` | 46.67% (7/7) | **90.91%** (10/1) | an encrypted document the library wrote itself, read with and without its password; the redundant `?? page.Inherited…` fallback was removed once a survivor showed the page tree already merges a page's own attributes |
+| `PdfPageCanvas.cs` | 40.13% (63/70) | 42.04% (66/67) | the zero and opaque ends of the alpha interval, the two guard messages, and the PDF/A pairing |
+
+The canvas figure is a reading of the whole file, most of which this increment did not write: 24 mutants
+have no coverage at all and 67 survived in drawing code that predates it. Inside `SetAlpha` and its
+operation every mutant is killed except three block removals Stryker ignores and one it cannot compile.
+
+Two survivors remain in the new code, and both are unobservable rather than untested:
+
+- `PdfFontInspector` line 45, `ConfigureAwait(false)` mutated to `true`. The argument decides where a
+  continuation runs, not what the read returns; a library cannot assert it without asserting the
+  implementation of `Task`.
+- `FontAccumulator` line 109, the string `$"descriptor:{key}"`. It is a key handed to `WarnOnce` so the
+  same observation is reported once; any value that is unique per font behaves identically, and the mutant
+  produces a value that is still unique per font.
+
+The one survivor the first reading produced in `PdfPageCanvas`'s new code was an equality mutant on the
+alpha guard: `alpha is < 0.0 or > 1.0` flipped at a boundary, which no test could see because no test
+stated 0. `Accepts_a_zero_alpha` and `Accepts_an_opaque_selection_and_writes_no_state` were added for it,
+and the second one pinned a behaviour worth stating on its own: an opaque, normal selection is the state a
+page starts in, so it writes nothing.
+
+## Eighth record — the second read, and the two thin services (2026-11-07)
+
+ADR-004 was accepted and the merge and the edit stopped reading each source twice. The change is small and
+sits in two orchestration files, so the run is read for what it says about them rather than for its total.
+
+```powershell
+dotnet stryker --config-file stryker-config.json `
+  --project .\src\SharpCorePDF.Application\SharpCorePDF.Application.csproj `
+  --mutate "**/Services/PdfMergerService.cs" --mutate "**/Services/PdfDocumentEditorService.cs" `
+  --configuration Debug
+```
+
+| File | Score | Killed | Survived | No coverage | Compile errors | Mutants |
+| --- | --- | --- | --- | --- | --- | --- |
+| `Services/PdfMergerService.cs` | 39.13% | 9 | 14 | 0 | 4 | 34 |
+| `Services/PdfDocumentEditorService.cs` | 32.26% | 20 | 33 | 0 | 6 | 81 |
+
+What the new code owes, and paid: in `PdfMergerService` the branch itself (`bytesReader is not null`) is
+**killed**, and so is adding the captured stream to the list that gets disposed — the two mutants that would
+show a merge that reads twice or leaks the view it was handed. `SourceReadOnceTests` is what kills them.
+
+What survived, read one by one:
+
+- **The `ConfigureAwait(false)` arguments on the two new awaits** (mutated to `true`). The argument decides
+  where a continuation runs, not what the merge returns; a library cannot assert it without asserting the
+  implementation of `Task`. The same survivor appears in the font inspector's record and is accepted for the
+  same reason.
+- **The argument guards and the message strings** — `ArgumentNullException.ThrowIfNull(plan/destination)`,
+  the `CanWrite` check, and the split plan's two message literals. No test in either file's suite asserts a
+  guard's parameter name or a refusal text, so removing them changes nothing observable. That is a standing
+  gap in these two files rather than a product defect, and it is recorded here as the next thing to close if
+  their suite is ever extended.
+- **The rewind in the fallback branch** (three mutants on one condition and one block removal). This one is
+  worth the space it takes: it was verified by disabling the branch and running the whole suite — **all 1142
+  tests stayed green**, because the engine rewinds the same stream itself in `ReadSourcesAsync`. The branch is
+  therefore redundant with our engine and correct for a third-party one, since `ResolvedPdfSource` does not
+  promise an engine that the stream is at its start. A comment beside the branch now says exactly that, so the
+  survivor is explained in the code rather than only in this record.
+
+

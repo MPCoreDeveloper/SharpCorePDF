@@ -392,4 +392,17 @@ public enum PdfWarningKind
     /// rather than read as a shorter one.
     /// </summary>
     FormFieldDepthExceeded,
+
+    /// <summary>
+    /// A font resource a page selects could not be resolved or read as a font dictionary, so the font it
+    /// names is missing from the answer rather than reported from a guess.
+    /// </summary>
+    FontUnreadable,
+
+    /// <summary>
+    /// A font states no <c>/FontDescriptor</c>, so neither its embedded program nor its subset can be
+    /// reported. The font itself is still reported, because a font without a descriptor is a fact about
+    /// the document and not a failure to read it.
+    /// </summary>
+    FontDescriptorMissing,
 }

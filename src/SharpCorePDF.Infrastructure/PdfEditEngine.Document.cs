@@ -92,7 +92,17 @@ public sealed partial class PdfEditEngine
             CopyFromSource(copier, source, catalog, "Outlines");
         }
 
-        CopyNameTrees(reader, copier, source, catalog);
+        var names = CopyNameTrees(reader, copier, source, catalog);
+
+        if (profile is { } archivalEmbedding && PdfAProfileRules.AllowsEmbeddedFiles(archivalEmbedding))
+        {
+            WriteAssociatedFiles(reader, copier, writer, names, catalog, plan.Output.AssociatedFileRelationship);
+        }
+
+        if (names is not null)
+        {
+            catalog.Set("Names", names);
+        }
 
         if (profile is null)
         {
@@ -167,7 +177,7 @@ public sealed partial class PdfEditEngine
 
         if (profile is { } archival)
         {
-            WriteArchivalEntries(writer, catalog, archival, metadata);
+            WriteArchivalEntries(writer, catalog, archival, metadata, plan.Output.OutputIntent);
         }
 
         return catalog;
@@ -181,33 +191,48 @@ public sealed partial class PdfEditEngine
     /// <param name="catalog">The catalog being built.</param>
     /// <param name="profile">The profile the document is written for.</param>
     /// <param name="metadata">The document information the packet mirrors.</param>
+    /// <param name="outputIntent">The intent the caller supplied, or <see langword="null"/> for sRGB.</param>
     /// <remarks>
     /// The packet is never compressed, which PDF/A-1 requires and the later parts allow, and the output
-    /// intent names the sRGB colour space the profile was built for. Both replace whatever the source
-    /// carried: a packet that describes a different document would contradict the information
-    /// dictionary, and a copied intent would describe a colour space the pages may not use.
+    /// intent names the colour space the document states. Both replace whatever the source carried: a packet
+    /// that describes a different document would contradict the information dictionary, and a copied intent
+    /// would describe a colour space the pages may not use.
     /// </remarks>
     private static void WriteArchivalEntries(
         PdfWriter writer,
         PdfDictionary catalog,
         PdfAProfile profile,
-        PdfMetadata metadata)
+        PdfMetadata metadata,
+        PdfOutputIntent? outputIntent)
     {
-        var profileData = SRgbColorProfile.Bytes;
+        ReadOnlyMemory<byte> profileData = outputIntent?.IccProfile ?? SRgbColorProfile.Bytes;
+        var components = outputIntent?.NumberOfComponents ?? 3;
+        var identifier = outputIntent?.OutputConditionIdentifier ?? "sRGB IEC61966-2.1";
         var iccNumber = writer.AllocateObject();
 
         writer.WriteObject(
             iccNumber,
-            new PdfStream(new PdfDictionary().SetInteger("N", 3), profileData));
+            new PdfStream(new PdfDictionary().SetInteger("N", components), profileData));
 
         var intent = new PdfDictionary()
             .SetName("Type", "OutputIntent")
             .SetName("S", "GTS_PDFA1")
-            .Set("OutputCondition", PdfString.FromText("sRGB IEC61966-2.1"))
-            .Set("OutputConditionIdentifier", PdfString.FromText("sRGB IEC61966-2.1"))
-            .Set("RegistryName", PdfString.FromText(ColorRegistryName)) // NOSONAR S5332: an ICC registry identifier, not a request
-            .Set("Info", PdfString.FromText("sRGB IEC61966-2.1"))
+            .Set("OutputCondition", PdfString.FromText(outputIntent?.OutputCondition ?? identifier))
+            .Set("OutputConditionIdentifier", PdfString.FromText(identifier))
+            .Set("Info", PdfString.FromText(outputIntent?.Info ?? identifier))
             .Set("DestOutputProfile", new PdfReference(iccNumber, 0));
+
+        // The built-in intent names the ICC registry, because its identifier is a registered condition. A
+        // caller's own identifier has no registry unless the caller names one, and inventing it would state
+        // something about their profile that nobody verified.
+        if (outputIntent is null)
+        {
+            intent.Set("RegistryName", PdfString.FromText(ColorRegistryName)); // NOSONAR S5332: an ICC registry identifier, not a request
+        }
+        else if (outputIntent.RegistryName is { Length: > 0 } registry)
+        {
+            intent.Set("RegistryName", PdfString.FromText(registry)); // NOSONAR S5332: an ICC registry identifier, not a request
+        }
 
         var intentNumber = writer.AllocateObject();
         writer.WriteObject(intentNumber, intent);
@@ -230,7 +255,7 @@ public sealed partial class PdfEditEngine
     /// <param name="copier">The copier that writes the source objects into the result.</param>
     /// <param name="source">The catalog of the source.</param>
     /// <param name="catalog">The catalog being built.</param>
-    private static void CopyNameTrees(
+    private static PdfDictionary? CopyNameTrees(
         PdfFileReader reader,
         PdfObjectCopier copier,
         PdfDictionary? source,
@@ -249,13 +274,166 @@ public sealed partial class PdfEditEngine
             names.Set("EmbeddedFiles", copier.Clone(embedded));
         }
 
-        if (names.Count > 0)
-        {
-            catalog.Set("Names", names);
-        }
-
         // The older catalog-level /Dests entry is still written by some producers.
         CopyFromSource(copier, source, catalog, DestsEntry);
+
+        return names.Count > 0 ? names : null;
+    }
+
+    /// <summary>The deepest chain of name tree nodes the walk of the embedded files follows.</summary>
+    private const int MaxNameTreeDepth = 32;
+
+    /// <summary>
+    /// Associates every embedded file with the document, as PDF/A-3 requires, and flattens the name tree
+    /// so that the association and the tree name the same objects.
+    /// </summary>
+    /// <param name="reader">The source document.</param>
+    /// <param name="copier">The copier that writes the source objects into the result.</param>
+    /// <param name="writer">The writer of the result, for a specification with no object of its own.</param>
+    /// <param name="names">The name trees of the result, or <see langword="null"/> when there are none.</param>
+    /// <param name="catalog">The catalog being built, which receives the associations.</param>
+    /// <param name="relationship">The relationship to state when a file states none.</param>
+    /// <remarks>
+    /// ISO 19005-3 requires each embedded file to be reachable from the <c>EmbeddedFiles</c> name tree and to
+    /// be associated with the document, and the association has to name the relationship. A file that already
+    /// states one keeps it: the source's claim is evidence this writer does not have.
+    /// </remarks>
+    private static void WriteAssociatedFiles(
+        PdfFileReader reader,
+        PdfObjectCopier copier,
+        PdfWriter writer,
+        PdfDictionary? names,
+        PdfDictionary catalog,
+        PdfAssociatedFileRelationship relationship)
+    {
+        var files = new List<(string Name, PdfObject Value)>();
+        var sourceNames = reader.ResolveDictionary(reader.Catalog?.Get("Names"));
+
+        if (sourceNames?.Get("EmbeddedFiles") is not { } embedded || names is null)
+        {
+            return;
+        }
+
+        // The walk reads the source tree, not the copy: the copy holds object numbers of the result, and
+        // this reader resolves the numbers of the source.
+        CollectEmbeddedFiles(reader, embedded, files, 0);
+
+        if (files.Count == 0)
+        {
+            return;
+        }
+
+        var associated = new PdfArray();
+        var flattened = new PdfArray();
+
+        foreach (var (name, value) in files)
+        {
+            var reference = WriteAssociatedFile(reader, copier, writer, value, relationship);
+
+            flattened.Add(PdfString.FromText(name));
+            flattened.Add(reference);
+            associated.Add(reference);
+        }
+
+        catalog.Set("AF", associated);
+        names.Set("EmbeddedFiles", new PdfDictionary().Set("Names", flattened));
+    }
+
+    /// <summary>Walks an embedded-file name tree and collects its pairs, depth first.</summary>
+    /// <param name="reader">The source document.</param>
+    /// <param name="node">The node, or a reference to it.</param>
+    /// <param name="files">The list the pairs are added to.</param>
+    /// <param name="depth">How deep the walk already is.</param>
+    private static void CollectEmbeddedFiles(
+        PdfFileReader reader,
+        PdfObject? node,
+        List<(string Name, PdfObject Value)> files,
+        int depth)
+    {
+        if (depth > MaxNameTreeDepth || reader.Resolve(node) is not PdfDictionary dictionary)
+        {
+            return;
+        }
+
+        if (reader.ResolveArray(dictionary.Get("Names")) is { } pairs)
+        {
+            for (var index = 0; index + 1 < pairs.Items.Count; index += 2)
+            {
+                if (reader.Resolve(pairs.Items[index]) is PdfString name)
+                {
+                    files.Add((name.ToText(), pairs.Items[index + 1]));
+                }
+            }
+        }
+
+        if (reader.ResolveArray(dictionary.Get("Kids")) is { } kids)
+        {
+            foreach (var kid in kids.Items)
+            {
+                CollectEmbeddedFiles(reader, kid, files, depth + 1);
+            }
+        }
+    }
+
+    /// <summary>Writes one embedded file's specification as an object the association can point at.</summary>
+    /// <param name="reader">The source document.</param>
+    /// <param name="copier">The copier that writes the source objects into the result.</param>
+    /// <param name="writer">The writer of the result.</param>
+    /// <param name="value">The file specification, or a reference to it.</param>
+    /// <param name="relationship">The relationship to state when the source states none.</param>
+    /// <returns>The reference the name tree and the association both use.</returns>
+    private static PdfReference WriteAssociatedFile(
+        PdfFileReader reader,
+        PdfObjectCopier copier,
+        PdfWriter writer,
+        PdfObject value,
+        PdfAssociatedFileRelationship relationship)
+    {
+        if (value is PdfReference source)
+        {
+            var target = copier.Reserve(source.ObjectNumber);
+
+            if (reader.Resolve(source) is PdfDictionary)
+            {
+                copier.Override(source.ObjectNumber, body =>
+                {
+                    if (body is PdfDictionary specification)
+                    {
+                        StateRelationship(specification, relationship);
+                    }
+
+                    return body;
+                });
+            }
+
+            return new PdfReference(target, 0);
+        }
+
+        // A specification written as a direct dictionary has no object to point an association at, so it is
+        // written as one: the name tree and the association then name the same object rather than two
+        // dictionaries that describe the same file.
+        var number = writer.AllocateObject();
+        var body = (PdfDictionary)copier.Clone(value);
+
+        StateRelationship(body, relationship);
+        writer.WriteObject(number, body);
+
+        return new PdfReference(number, 0);
+    }
+
+    /// <summary>States the relationship on a file specification that does not state one already.</summary>
+    /// <param name="specification">The file specification, in the result.</param>
+    /// <param name="relationship">The relationship the caller asked for.</param>
+    private static void StateRelationship(
+        PdfDictionary specification,
+        PdfAssociatedFileRelationship relationship)
+    {
+        if (specification.Get("AFRelationship") is null)
+        {
+            specification.Set(
+                "AFRelationship",
+                new PdfName(PdfAProfileRules.RelationshipName(relationship)));
+        }
     }
 
     /// <summary>Copies one catalog entry of the source into the catalog of the result.</summary>

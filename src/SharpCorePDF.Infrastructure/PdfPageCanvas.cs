@@ -290,6 +290,54 @@ public sealed class PdfPageCanvas
         return this;
     }
 
+    /// <summary>
+    /// Sets the opacity and blend mode of the painting that follows, until the next call or a matching
+    /// <see cref="RestoreState"/>.
+    /// </summary>
+    /// <param name="alpha">The opacity of both fills and strokes, from 0 (invisible) to 1 (opaque).</param>
+    /// <param name="blendMode">How a painted pixel is combined with what is already on the page.</param>
+    /// <returns>This canvas, so calls can be chained.</returns>
+    /// <remarks>
+    /// <para>
+    /// The page states the pair as one <c>/ExtGState</c> dictionary and selects it with <c>gs</c>, so the
+    /// drawing calls that follow carry no opacity of their own. Two identical calls share one dictionary
+    /// rather than writing a second: a hundred translucent shapes select one state.
+    /// </para>
+    /// <para>
+    /// A paint that states an alpha of its own still wins, exactly as an explicit paint wins over a colour
+    /// selection: <c>new PdfPaint(color, alpha: 0.4)</c> paints at 0.4 whatever the state says, and the
+    /// state is what makes text, images and a blend mode reachable, because none of those states an
+    /// opacity. A selection followed by a paint of another alpha is two selections, and the writer says so.
+    /// </para>
+    /// <para>
+    /// PDF/A-1b forbids transparency, so a document written for that profile with an alpha below 1 or a
+    /// blend mode other than <see cref="PdfBlendMode.Normal"/> is refused by the archival pre-flight
+    /// rather than written with a label it does not deserve. PDF/A-2b and -3b keep it.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="alpha"/> is not a finite number between 0 and 1, or <paramref name="blendMode"/> is
+    /// not one the engine writes.
+    /// </exception>
+    public PdfPageCanvas SetAlpha(double alpha, PdfBlendMode blendMode = PdfBlendMode.Normal)
+    {
+        if (!double.IsFinite(alpha) || alpha is < 0.0 or > 1.0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(alpha), alpha, "An alpha must be finite and between 0 and 1.");
+        }
+
+        if (!Enum.IsDefined(blendMode))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(blendMode),
+                blendMode,
+                "The blend mode is not one the engine writes.");
+        }
+
+        operations.Add(new AlphaOperation(alpha, blendMode));
+        return this;
+    }
+
     /// <summary>Restricts subsequent drawing to the inside of a path.</summary>
     /// <param name="path">The clipping path, in points from the top-left corner.</param>
     /// <param name="fillRule">The rule that decides what is inside.</param>
@@ -596,6 +644,11 @@ internal sealed record SaveStateOperation : IPageOperation;
 
 /// <summary>A restored graphics state (<c>Q</c>).</summary>
 internal sealed record RestoreStateOperation : IPageOperation;
+
+/// <summary>An opacity and blend mode selected for the calls that follow (<c>gs</c>).</summary>
+/// <param name="Alpha">The opacity of both fills and strokes, from 0 to 1.</param>
+/// <param name="BlendMode">How a painted pixel is combined with what is already on the page.</param>
+internal sealed record AlphaOperation(double Alpha, PdfBlendMode BlendMode) : IPageOperation;
 
 /// <summary>A clipping path (<c>W</c> or <c>W*</c> followed by <c>n</c>).</summary>
 /// <param name="Path">The clipping path.</param>

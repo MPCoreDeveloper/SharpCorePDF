@@ -5,9 +5,15 @@ namespace SharpCorePDF.Domain.ValueObjects;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The number of each member is the part of ISO 19005 it names, which is also the value written as
-/// <c>pdfaid:part</c> in the XMP packet of the result. Every profile here is level B: the document
-/// keeps its visual appearance, and accessibility or Unicode mapping are not claimed.
+/// The number of the first three members is the part of ISO 19005 it names, which is also the value written
+/// as <c>pdfaid:part</c> in the XMP packet of the result. The two Unicode profiles carry values that are not
+/// part numbers, because an enum cannot hold two members with one value: part 2 is both PDF/A-2b and
+/// PDF/A-2u, and the part is derived from the member instead.
+/// </para>
+/// <para>
+/// Level B keeps the visual appearance; level U adds the rule that every glyph a document draws has a
+/// Unicode equivalent, which is what a text extractor or a search index needs. Every profile here is one of
+/// those two: accessibility, the tagged structure a level A document carries, is not claimed.
 /// </para>
 /// <para>
 /// A profile is a set of rules the writer enforces, not a promise of conformance. Conformance is
@@ -33,4 +39,14 @@ public enum PdfAProfile
     /// PDF/A-3b, ISO 19005-3: PDF/A-2b with any file allowed as an embedded attachment.
     /// </summary>
     PdfA3B = 3,
+
+    /// <summary>
+    /// PDF/A-2u, ISO 19005-2 level U: PDF/A-2b plus the rule that every glyph has a Unicode equivalent.
+    /// </summary>
+    PdfA2U = 4,
+
+    /// <summary>
+    /// PDF/A-3u, ISO 19005-3 level U: PDF/A-3b plus the rule that every glyph has a Unicode equivalent.
+    /// </summary>
+    PdfA3U = 5,
 }

@@ -49,6 +49,10 @@ internal static class PageContentWriter
                     content.RestoreState();
                     break;
 
+                case AlphaOperation alpha:
+                    content.SetAlpha(alpha.Alpha, alpha.BlendMode);
+                    break;
+
                 case ClipOperation clip:
                     content.SetClip(ToPdfPath(clip.Path, page.Height), clip.FillRule);
                     break;

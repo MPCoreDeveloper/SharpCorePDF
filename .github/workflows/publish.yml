@@ -140,8 +140,9 @@ jobs:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # The .NET 11 SDK is not on the hosted images yet. The "11.0.x" form takes the latest patch on
-      # that channel, prereleases included, so it follows the RC to GA on its own once .NET 11 ships.
+      # The "11.0.x" form takes the latest patch on the .NET 11 channel, so this job installs the GA SDK
+      # that shipped on 2026-11-10 and follows its patches without the version being spelled out here. The
+      # SDK is installed rather than assumed because the hosted images can lag a release.
       # The .NET 10 SDK is installed with it because the SDK layout is what carries a net10.0 host
       # pack and runtime: with the 11.0 SDK alone, the solution's RID-less net10.0 leg dies with
       # MSB3030 (obj/Release/net10.0/apphost not found) and the net10.0 test run has nothing to start

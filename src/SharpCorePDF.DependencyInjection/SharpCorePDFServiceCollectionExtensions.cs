@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -25,12 +24,6 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
 {
     /// <summary>The configuration section read when no other name is given.</summary>
     public const string DefaultConfigurationSection = "SharpCorePDF";
-
-    /// <summary>The reason the configuration-binding overload is not trim- or AOT-safe.</summary>
-    private const string BindingRequirement =
-        "Configuration binding reads the option names by reflection and creates its converters at run "
-        + "time. Build PdfEngineOptions in code and pass it to AddSharpCorePDF(PdfEngineOptions) in a "
-        + "trimmed or Native AOT application.";
 
     /// <summary>Registers SharpCorePDF with the default engine options.</summary>
     /// <param name="services">The service collection to add to.</param>
@@ -65,16 +58,18 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
     /// <returns>The same collection, so calls can be chained.</returns>
     /// <remarks>
     /// <para>
-    /// The bind is the configuration binder's, which reads the option names by reflection and creates its
-    /// converters at run time. Trimming can remove what it looks for and an AOT publish cannot generate it,
-    /// so the requirement is stated on the member instead of being discovered by a consumer's publish: a
-    /// trimmed or AOT application builds <see cref="PdfEngineOptions"/> in code and passes it to
-    /// <see cref="AddSharpCorePDF(IServiceCollection, PdfEngineOptions)"/>.
+    /// Binding is performed with ordinary property reads against the named section. That keeps this
+    /// overload trim- and Native AOT-compatible: <see cref="PdfEngineOptions"/> is a sealed record with
+    /// init-only members, so the framework binder would leave defaults in place and reflection-based
+    /// converters would require the annotations this library no longer carries.
+    /// </para>
+    /// <para>
+    /// Binding an absent section keeps the defaults. Present keys are applied one by one; a value the
+    /// configuration cannot parse is left as the default for that member, matching the binder's ordinary
+    /// behaviour for a scalar that does not convert.
     /// </para>
     /// </remarks>
     /// <exception cref="ArgumentNullException">An argument is <see langword="null"/>.</exception>
-    [RequiresUnreferencedCode(BindingRequirement)]
-    [RequiresDynamicCode(BindingRequirement)]
     public static IServiceCollection AddSharpCorePDF(
         this IServiceCollection services,
         IConfiguration configuration,
@@ -84,11 +79,10 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentException.ThrowIfNullOrWhiteSpace(sectionName);
 
-        services
-            .AddOptions<PdfEngineOptions>()
-            .Configure(engineOptions => configuration.GetSection(sectionName).Bind(engineOptions));
-
-        services.Replace(ServiceDescriptor.Singleton(sp => sp.GetRequiredService<IOptions<PdfEngineOptions>>().Value));
+        var bound = BindEngineOptions(configuration.GetSection(sectionName));
+        services.Replace(ServiceDescriptor.Singleton(bound));
+        services.Replace(ServiceDescriptor.Singleton<IOptions<PdfEngineOptions>>(
+            new OptionsWrapper<PdfEngineOptions>(bound)));
         return services.AddSharpCorePDFCore();
     }
 
@@ -103,16 +97,19 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
         services.TryAddSingleton(sp => new PdfPageContentReader(sp.GetRequiredService<PdfEngineOptions>()));
         services.TryAddSingleton(sp => new PdfLayoutReader(sp.GetRequiredService<PdfEngineOptions>()));
         services.TryAddSingleton(sp => new PdfObjectInspector(sp.GetRequiredService<PdfEngineOptions>()));
+        services.TryAddSingleton(sp => new PdfFontInspector(sp.GetRequiredService<PdfEngineOptions>()));
         services.TryAddSingleton(sp => new PdfDocumentSigner(sp.GetRequiredService<PdfEngineOptions>()));
         services.TryAddSingleton(sp => new PdfDocumentSignatureValidator(sp.GetRequiredService<PdfEngineOptions>()));
         services.TryAddSingleton(sp => new PdfAWriter(sp.GetRequiredService<PdfEngineOptions>()));
 
         services.TryAddSingleton<IPdfDocumentReader>(sp => sp.GetRequiredService<PdfDocumentReader>());
+        services.TryAddSingleton<IPdfDocumentBytesReader>(sp => sp.GetRequiredService<PdfDocumentReader>());
         services.TryAddSingleton<IPdfMergeEngine>(sp => sp.GetRequiredService<PdfMergeEngine>());
         services.TryAddSingleton<IPdfEditEngine>(sp => sp.GetRequiredService<PdfEditEngine>());
         services.TryAddSingleton<IPdfPageContentReader>(sp => sp.GetRequiredService<PdfPageContentReader>());
         services.TryAddSingleton<IPdfPageLayoutReader>(sp => sp.GetRequiredService<PdfLayoutReader>());
         services.TryAddSingleton<IPdfDocumentObjectInspector>(sp => sp.GetRequiredService<PdfObjectInspector>());
+        services.TryAddSingleton<IPdfDocumentFontInspector>(sp => sp.GetRequiredService<PdfFontInspector>());
         services.TryAddSingleton<IPdfDocumentSigner>(sp => sp.GetRequiredService<PdfDocumentSigner>());
         services.TryAddSingleton<IPdfDocumentSignatureValidator>(sp => sp.GetRequiredService<PdfDocumentSignatureValidator>());
         services.TryAddSingleton<IPdfDocumentAWriter>(sp => sp.GetRequiredService<PdfAWriter>());
@@ -122,10 +119,57 @@ public static class SharpCorePDFServiceCollectionExtensions // NOSONAR S101: the
         services.TryAddSingleton<IPdfContentReader, PdfContentReaderService>();
         services.TryAddSingleton<IPdfLayoutReader, PdfLayoutReaderService>();
         services.TryAddSingleton<IPdfObjectInspector, PdfObjectInspectorService>();
+        services.TryAddSingleton<IPdfFontInspector, PdfFontInspectorService>();
         services.TryAddSingleton<IPdfSigner, PdfSignerService>();
         services.TryAddSingleton<IPdfSignatureValidator, PdfSignatureValidatorService>();
         services.TryAddSingleton<IPdfAWriter, PdfAWriterService>();
 
         return services;
     }
+
+    /// <summary>Builds engine options from one configuration section without reflection.</summary>
+    /// <param name="section">The section whose keys are the option names.</param>
+    /// <returns>The bound options, with defaults for every key that is absent or unparsable.</returns>
+    private static PdfEngineOptions BindEngineOptions(IConfiguration section)
+    {
+        var defaults = PdfEngineOptions.Default;
+
+        return defaults with
+        {
+            MaxSourceBytes = ReadInt64(section, nameof(PdfEngineOptions.MaxSourceBytes), defaults.MaxSourceBytes),
+            MaxNestingDepth = ReadInt32(section, nameof(PdfEngineOptions.MaxNestingDepth), defaults.MaxNestingDepth),
+            MaxPagesPerSource = ReadInt32(section, nameof(PdfEngineOptions.MaxPagesPerSource), defaults.MaxPagesPerSource),
+            ReconstructCrossReferenceOnFailure = ReadBoolean(
+                section,
+                nameof(PdfEngineOptions.ReconstructCrossReferenceOnFailure),
+                defaults.ReconstructCrossReferenceOnFailure),
+            VerifyOutput = ReadBoolean(section, nameof(PdfEngineOptions.VerifyOutput), defaults.VerifyOutput),
+            WriteBinaryMarker = ReadBoolean(section, nameof(PdfEngineOptions.WriteBinaryMarker), defaults.WriteBinaryMarker),
+            MaxInlineContentBytes = ReadInt32(
+                section,
+                nameof(PdfEngineOptions.MaxInlineContentBytes),
+                defaults.MaxInlineContentBytes),
+        };
+    }
+
+    private static long ReadInt64(IConfiguration section, string key, long fallback) =>
+        long.TryParse(
+            section[key],
+            System.Globalization.NumberStyles.Integer,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var value)
+            ? value
+            : fallback;
+
+    private static int ReadInt32(IConfiguration section, string key, int fallback) =>
+        int.TryParse(
+            section[key],
+            System.Globalization.NumberStyles.Integer,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var value)
+            ? value
+            : fallback;
+
+    private static bool ReadBoolean(IConfiguration section, string key, bool fallback) =>
+        bool.TryParse(section[key], out var value) ? value : fallback;
 }

@@ -134,6 +134,8 @@ public sealed class PdfAWriter : IPdfDocumentAWriter
             ModificationDate = effective.ModificationDate,
             Producer = effective.Producer,
             DocumentId = effective.DocumentId,
+            OutputIntent = effective.OutputIntent,
+            AssociatedFileRelationship = effective.AssociatedFileRelationship,
         });
 
         // The source was consumed by the read above; the edit reads the bytes it was given, so the

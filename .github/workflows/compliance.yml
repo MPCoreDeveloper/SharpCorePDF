@@ -1,0 +1,239 @@
+# PDF/A conformance: the archival output is checked by an implementation that is not this one.
+#
+# The library writes the structures a profile requires and refuses what it cannot write correctly; it does
+# not claim conformance, because a profile is a claim a validator makes. This workflow is where that claim
+# is made, and it is the only place in the repository where veraPDF runs.
+#
+# It exists because the evidence used to live in a document: docs/parity.md records a run made by hand on
+# 2026-10-22 with veraPDF 1.30.3, and docs/release-checklist.md records that no validator was installed
+# when that release was built. A number typed into a markdown table cannot go red. This can.
+#
+# The validator is pinned rather than taken as latest, and validate-pdfa.py refuses a version below the pin
+# (--require-version): a document that passes on an older rule set has not answered the question this
+# repository is asking. Bumping the pin is a change with a diff, reviewed like any other.
+#
+# The documents come from the example a caller runs, not from a fixture only the tests can reach. The
+# `archive-pdfa` example writes one authored page for each profile, and SCPDF_ARCHIVE_SOURCE hands it a
+# real-world document the repository does not ship -- tests/SharpCorePDF.Tests/Assets/SafeWebCore.pdf, six
+# pages written by "Microsoft: Print To PDF". Every document is then validated against the profile it was
+# written for.
+#
+# The schedule is part of the trigger set on purpose: a validator upgrade changes the answer without this
+# repository changing a byte, and a weekly run is what turns that into a red build instead of a surprise
+# at an audit.
+#
+# veraPDF is the authority, and it is not the only reading of the bytes. The same documents are put
+# through Apache PDFBox preflight -- a second implementation, PDF/A-1 only in the 3.0 line, so for 2b and
+# 3b it is asked to parse the file rather than to judge it -- and through Ghostscript, a third
+# implementation that rewrites what it understood. Agreement between three independent parsers is a
+# stronger statement than one PASS, and a disagreement is a finding rather than a flake.
+#
+# veraPDF is installed from its own release site, unattended, with the auto-install XML its documentation
+# describes. Two details cost an hour to find the first time and are worth stating. The installer is an
+# IzPack jar that writes a lock file into the temporary directory, so a run that was killed leaves one
+# behind and the next run refuses to start; the step deletes it first. And the installer is a Java program,
+# which is why setup-java runs before it even though nothing here compiles Java outside the cross-check.
+#
+# Actions are pinned to commit hashes, not tags, for the reason ci.yml records.
+
+name: PDF/A conformance
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * 1'
+
+permissions:
+  contents: read
+
+env:
+  # The validator this repository ships against. veraPDF publishes it under a path that carries the minor
+  # band ("1.30"), which the install step derives from this value.
+  VERAPDF_VERSION: '1.30.4'
+  VERAPDF_INSTALL: ${{ github.workspace }}/.verapdf
+  # The second implementation: Apache PDFBox preflight, from Maven Central, which is a stable host with a
+  # path per version. The 3.0 line validates PDF/A-1 only, which is why the tool parses the other profiles
+  # instead of pretending to judge them.
+  PDFBOX_PREFLIGHT_VERSION: '3.0.8'
+
+jobs:
+  pdfa:
+    name: Validate the archival output
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # Both SDKs, for the reason ci.yml records: the 11.0 SDK on its own cannot produce the net10.0 app
+      # host the solution's tests need (MSB3030), and the example builds the solution's packages.
+      - name: Install the .NET SDKs
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: |
+            11.0.x
+            10.0.x
+
+      # veraPDF is a Java program, and so is its installer.
+      - name: Set up the JDK veraPDF runs on
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # Thirty-two megabytes from a slow host, once per version: the key names the version, so a bump is a
+      # fresh download and nothing else.
+      - name: Cache the veraPDF installer
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/verapdf
+          key: verapdf-${{ env.VERAPDF_VERSION }}-installer
+
+      # The second implementation is a 12 MB jar behind a stable URL, so it is cached for the same reason
+      # and keyed the same way.
+      - name: Cache the PDFBox preflight jar
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pdfbox
+          key: pdfbox-preflight-${{ env.PDFBOX_PREFLIGHT_VERSION }}
+
+      # The install is unattended: the XML below is the configuration a person would click through, and it
+      # selects the CLI alone. Everything the validator needs is unpacked into VERAPDF_INSTALL, which is
+      # also what validate-pdfa.py reads through VERAPDF_HOME.
+      - name: Install veraPDF
+        run: |
+          set -euo pipefail
+          band="${VERAPDF_VERSION%.*}"
+          archive="$HOME/.cache/verapdf/verapdf-greenfield-${VERAPDF_VERSION}-installer.zip"
+
+          mkdir -p "$(dirname "$archive")"
+
+          if [ ! -f "$archive" ]; then
+            curl --fail --silent --show-error --location --output "$archive" \
+              "https://software.verapdf.org/releases/${band}/verapdf-greenfield-${VERAPDF_VERSION}-installer.zip"
+          fi
+
+          rm -rf "$VERAPDF_INSTALL" "$RUNNER_TEMP/verapdf"
+          mkdir -p "$VERAPDF_INSTALL"
+          unzip -q "$archive" -d "$RUNNER_TEMP/verapdf"
+
+          printf '%s\n' \
+            '<?xml version="1.0" encoding="UTF-8"?>' \
+            '<AutomatedInstallation langpack="eng">' \
+            '  <com.izforge.izpack.panels.htmlhello.HTMLHelloPanel id="welcome" />' \
+            '  <com.izforge.izpack.panels.target.TargetPanel id="install_dir">' \
+            "    <installpath>${VERAPDF_INSTALL}</installpath>" \
+            '  </com.izforge.izpack.panels.target.TargetPanel>' \
+            '  <com.izforge.izpack.panels.packs.PacksPanel id="sdk_pack_select">' \
+            '    <pack index="0" name="veraPDF GUI" selected="false" />' \
+            '    <pack index="1" name="veraPDF CLI" selected="true" />' \
+            '    <pack index="2" name="veraPDF Documentation" selected="false" />' \
+            '    <pack index="3" name="veraPDF Sample Plugins" selected="false" />' \
+            '  </com.izforge.izpack.panels.packs.PacksPanel>' \
+            '  <com.izforge.izpack.panels.install.InstallPanel id="install" />' \
+            '  <com.izforge.izpack.panels.finish.FinishPanel id="finish" />' \
+            '</AutomatedInstallation>' \
+            > "$RUNNER_TEMP/auto-install.xml"
+
+          # A killed install leaves this behind and the next one refuses to start; the name is the
+          # application's, which is what the installer prints when it trips over it.
+          rm -f "/tmp/iz-veraPDF Software.tmp" "$TMPDIR/iz-veraPDF Software.tmp"
+
+          bash "$RUNNER_TEMP/verapdf/verapdf-greenfield-${VERAPDF_VERSION}/verapdf-install" \
+            "$RUNNER_TEMP/auto-install.xml"
+
+          ls -la "$VERAPDF_INSTALL"
+
+          # The pack ships a launcher named after the platform it was installed on -- verapdf.bat on
+          # Windows -- and the installer is not promised to write one for every host. When there is no
+          # executable launcher, the CLI jar is the launcher, and this wrapper gives validate-pdfa.py the
+          # command it looks for. The glob keeps the version out of the path.
+          if [ ! -x "$VERAPDF_INSTALL/verapdf" ]; then
+            printf '%s\n' '#!/usr/bin/env bash' \
+              "exec java -jar \"$VERAPDF_INSTALL\"/bin/cli-*.jar \"\$@\"" \
+              > "$VERAPDF_INSTALL/verapdf"
+            chmod +x "$VERAPDF_INSTALL/verapdf"
+          fi
+
+          "$VERAPDF_INSTALL/verapdf" --version
+
+      # Ghostscript is the third implementation and the only one the package manager has to provide; the
+      # PDFBox jar is fetched from Maven Central on a cache miss.
+      - name: Install Ghostscript and PDFBox preflight
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install --no-install-recommends --yes ghostscript
+
+          jar="$HOME/.cache/pdfbox/preflight-app-${PDFBOX_PREFLIGHT_VERSION}.jar"
+          mkdir -p "$(dirname "$jar")"
+
+          if [ ! -f "$jar" ]; then
+            curl --fail --silent --show-error --location --output "$jar" \
+              "https://repo1.maven.org/maven2/org/apache/pdfbox/preflight-app/${PDFBOX_PREFLIGHT_VERSION}/preflight-app-${PDFBOX_PREFLIGHT_VERSION}.jar"
+          fi
+
+          gs --version
+
+      - name: Write the archival documents
+        env:
+          # The example writes under the temporary directory. Naming it here makes the paths in the next
+          # step predictable rather than dependent on a default.
+          TMPDIR: ${{ runner.temp }}
+          # A document this repository did not write, handed to the example the way a caller would. Its
+          # conversion for all three profiles is the part of this gate that is about a real file.
+          SCPDF_ARCHIVE_SOURCE: ${{ github.workspace }}/tests/SharpCorePDF.Tests/Assets/SafeWebCore.pdf
+        run: dotnet run --project ./examples/SharpCorePDF.Examples -c Release -- archive-pdfa
+
+      # Every document is validated against the profile it was written for. --format xml takes the verdict
+      # from the machine-readable report, and --report-dir keeps that report for the artifact.
+      - name: Validate the archival documents
+        env:
+          VERAPDF_HOME: ${{ env.VERAPDF_INSTALL }}
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/SharpCorePDF.Examples/output"
+
+          for profile in 1b 2b 2u 3b 3u; do
+            python3 docs/tools/validate-pdfa.py \
+              --format xml --report-dir artifacts/pdfa --require-version "$VERAPDF_VERSION" \
+              --profile "$profile" \
+              "$output/archive-$profile.pdf" \
+              "$output/archive-source-$profile.pdf"
+          done
+
+      # The same documents, read by two more implementations. --strict-tools makes a missing tool a failure
+      # rather than a note, because a green run here is supposed to mean that all three agreed.
+      - name: Cross-validate with a second and a third implementation
+        env:
+          VERAPDF_HOME: ${{ env.VERAPDF_INSTALL }}
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/SharpCorePDF.Examples/output"
+          jar="$HOME/.cache/pdfbox/preflight-app-${PDFBOX_PREFLIGHT_VERSION}.jar"
+
+          for profile in 1b 2b 2u 3b 3u; do
+            python3 docs/tools/validate-pdfa-cross.py --strict-tools \
+              --require-version "$VERAPDF_VERSION" \
+              --pdfbox "$jar" \
+              --profile "$profile" \
+              "$output/archive-$profile.pdf" \
+              "$output/archive-source-$profile.pdf"
+          done
+
+      # The reports are the evidence and the documents are what the evidence is about, so both survive a
+      # failed run.
+      - name: Upload the reports and the documents they describe
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pdfa-conformance
+          path: |
+            artifacts/pdfa
+            ${{ runner.temp }}/SharpCorePDF.Examples/output/archive-*.pdf
+          if-no-files-found: warn

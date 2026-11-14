@@ -18,8 +18,8 @@ namespace SharpCorePDF.Domain.ValueObjects;
 /// so the writer drops them and reports that it did.
 /// </para>
 /// <para>
-/// The output intent of the result is sRGB, written from a profile the library builds itself. A
-/// caller-supplied ICC profile is not part of this release.
+/// The output intent of the result is sRGB, written from a profile the library builds itself, unless
+/// <see cref="OutputIntent"/> supplies one: that intent is written as given.
 /// </para>
 /// </remarks>
 public sealed record PdfAConversionOptions
@@ -49,6 +49,29 @@ public sealed record PdfAConversionOptions
     /// </summary>
     public string? DocumentId { get; init; }
 
+    /// <summary>
+    /// Gets the output intent the result states, or <see langword="null"/> for the sRGB profile the library
+    /// writes itself.
+    /// </summary>
+    /// <remarks>
+    /// A caller that archives for print supplies the profile its own workflow is calibrated against. The
+    /// intent is written as supplied, and the pages keep the colour operators they already had, so a CMYK
+    /// intent on a document that paints in device RGB is a mismatch a validator reports — not something this
+    /// library converts silently.
+    /// </remarks>
+    public PdfOutputIntent? OutputIntent { get; init; }
+
+    /// <summary>
+    /// Gets the relationship the result states between itself and each embedded file.
+    /// </summary>
+    /// <remarks>
+    /// Only PDF/A-3 allows embedded files, and it requires each one to be associated with the document and
+    /// to name that association. The default states <c>/Unspecified</c>: a conversion that has not been told
+    /// what a file means should not invent an answer. An embedded file that already names a relationship
+    /// keeps it.
+    /// </remarks>
+    public PdfAssociatedFileRelationship AssociatedFileRelationship { get; init; }
+
     /// <summary>Validates these options.</summary>
     /// <returns>Every problem found, or an empty list when the options are usable.</returns>
     public IReadOnlyList<string> Validate()
@@ -63,6 +86,17 @@ public sealed record PdfAConversionOptions
         if (DocumentId is { } documentId && (documentId.Length != 32 || !documentId.All(Uri.IsHexDigit)))
         {
             errors.Add($"the document identifier must be 32 hexadecimal digits, but is '{documentId}'.");
+        }
+
+        if (OutputIntent is { } intent)
+        {
+            errors.AddRange(intent.Validate());
+        }
+
+        if (!Enum.IsDefined(AssociatedFileRelationship))
+        {
+            errors.Add(
+                $"the associated-file relationship '{(int)AssociatedFileRelationship}' is not defined.");
         }
 
         return errors;

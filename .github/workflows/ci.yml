@@ -109,7 +109,7 @@ jobs:
     # not an assembly this repository builds, installs or ships -- every leg under test is net10.0 or
     # net11.0 -- but it is still a runtime this repository does not support, so it is not left to chance:
     # LatestMajor sends both tools to the highest installed GA major, which is the 10.0 runtime this job
-    # installs, and never to a prerelease major (11.0-rc2 is not a candidate). The legs under test are
+    # installs, and never to a prerelease major. The legs under test are
     # untouched: their runtimeconfigs name a version that is present, and a roll-forward only applies when
     # the requested one is missing. dotnet-sonarscanner already ships `netcoreapp3.1` with LatestMajor, so
     # this only makes that policy explicit for it and changes the collector.
@@ -124,8 +124,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Both SDKs, for the reason publish.yml records: the .NET 11 SDK is not on the hosted images yet,
-      # and the 11.0 SDK on its own cannot produce the net10.0 app host the test project needs (MSB3030).
+      # Both SDKs, for the reason publish.yml records: the SDKs are installed here rather than taken from
+      # the image, and the 11.0 SDK on its own cannot produce the net10.0 app host the test project needs
+      # (MSB3030).
       - name: Install the .NET SDKs
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:

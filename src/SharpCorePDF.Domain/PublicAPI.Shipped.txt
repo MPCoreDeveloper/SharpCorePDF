@@ -2580,3 +2580,113 @@ SharpCorePDF.Domain.Ports.IPdfLayoutSession.ReadBlocksAsync(SharpCorePDF.Domain.
 SharpCorePDF.Domain.Ports.IPdfLayoutSession.ReadHyperlinksAsync(SharpCorePDF.Domain.ValueObjects.PageRange range, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfHyperlink!>!>!
 SharpCorePDF.Domain.Ports.IPdfLayoutSession.ExportAsync(SharpCorePDF.Domain.ValueObjects.PageRange range, SharpCorePDF.Domain.ValueObjects.PdfLayoutFormat format, System.IO.Stream! destination, SharpCorePDF.Domain.ValueObjects.PdfLayoutOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfTextBlock!>!>!
 SharpCorePDF.Domain.Ports.IPdfLayoutReader.OpenAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.Ports.IPdfLayoutSession!>!
+SharpCorePDF.Domain.Ports.IPdfFontInspector
+SharpCorePDF.Domain.Ports.IPdfFontInspector.ReadFontsAsync(SharpCorePDF.Domain.Ports.IPdfContentSource! source, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfFontInfo!>!>!
+SharpCorePDF.Domain.ReadModels.PdfDocumentBytes
+SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfDocumentBytes!
+SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.Bytes.get -> System.ReadOnlyMemory<byte>
+SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.Bytes.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.Equals(SharpCorePDF.Domain.ReadModels.PdfDocumentBytes? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.Info.get -> SharpCorePDF.Domain.ReadModels.PdfDocumentInfo!
+SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.Info.init -> void
+SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.OpenRead() -> System.IO.Stream!
+SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.PdfDocumentBytes() -> void
+SharpCorePDF.Domain.ReadModels.PdfFontInfo
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.<Clone>$() -> SharpCorePDF.Domain.ReadModels.PdfFontInfo!
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.BaseFont.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.BaseFont.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.Encoding.get -> string?
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.Encoding.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.Equals(SharpCorePDF.Domain.ReadModels.PdfFontInfo? other) -> bool
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.HasToUnicode.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.HasToUnicode.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.IsEmbedded.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.IsSubset.get -> bool
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.IsSubset.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.Kind.get -> SharpCorePDF.Domain.ValueObjects.PdfFontKind
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.Kind.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.PageNumbers.get -> System.Collections.Generic.IReadOnlyList<int>!
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.PageNumbers.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.PdfFontInfo() -> void
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.Program.get -> SharpCorePDF.Domain.ValueObjects.PdfEmbeddedFontProgramKind
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.Program.init -> void
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.ResourceName.get -> string!
+SharpCorePDF.Domain.ReadModels.PdfFontInfo.ResourceName.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.AssociatedFileRelationship.get -> SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.AssociatedFileRelationship.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.OutputIntent.get -> SharpCorePDF.Domain.ValueObjects.PdfOutputIntent?
+SharpCorePDF.Domain.ValueObjects.PdfAConversionOptions.OutputIntent.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfAProfile.PdfA2U = 4 -> SharpCorePDF.Domain.ValueObjects.PdfAProfile
+SharpCorePDF.Domain.ValueObjects.PdfAProfile.PdfA3U = 5 -> SharpCorePDF.Domain.ValueObjects.PdfAProfile
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind.ActionForbidden = 7 -> SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind.AnnotationAppearanceMissing = 8 -> SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind.AttachmentForbidden = 5 -> SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind.CidSetMissing = 2 -> SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind.ExternalFileStream = 9 -> SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind.FilterForbidden = 6 -> SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind.FontNotEmbedded = 1 -> SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind.OptionalContentForbidden = 4 -> SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind.Other = 0 -> SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind.RemovableCatalogFeature = 10 -> SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind.RemovableFormFeature = 11 -> SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfARequirementKind.TransparencyForbidden = 3 -> SharpCorePDF.Domain.ValueObjects.PdfARequirementKind
+SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship
+SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship.Alternative = 3 -> SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship
+SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship.Data = 1 -> SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship
+SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship.Source = 2 -> SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship
+SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship.Supplement = 4 -> SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship
+SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship.Unspecified = 0 -> SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.AssociatedFileRelationship.get -> SharpCorePDF.Domain.ValueObjects.PdfAssociatedFileRelationship
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.AssociatedFileRelationship.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.OutputIntent.get -> SharpCorePDF.Domain.ValueObjects.PdfOutputIntent?
+SharpCorePDF.Domain.ValueObjects.PdfEditOutputOptions.OutputIntent.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfEmbeddedFontProgramKind
+SharpCorePDF.Domain.ValueObjects.PdfEmbeddedFontProgramKind.FontFile = 1 -> SharpCorePDF.Domain.ValueObjects.PdfEmbeddedFontProgramKind
+SharpCorePDF.Domain.ValueObjects.PdfEmbeddedFontProgramKind.FontFile2 = 2 -> SharpCorePDF.Domain.ValueObjects.PdfEmbeddedFontProgramKind
+SharpCorePDF.Domain.ValueObjects.PdfEmbeddedFontProgramKind.FontFile3 = 3 -> SharpCorePDF.Domain.ValueObjects.PdfEmbeddedFontProgramKind
+SharpCorePDF.Domain.ValueObjects.PdfEmbeddedFontProgramKind.None = 0 -> SharpCorePDF.Domain.ValueObjects.PdfEmbeddedFontProgramKind
+SharpCorePDF.Domain.ValueObjects.PdfEmbeddedFontProgramKind.Type3Procedural = 4 -> SharpCorePDF.Domain.ValueObjects.PdfEmbeddedFontProgramKind
+SharpCorePDF.Domain.ValueObjects.PdfFontKind
+SharpCorePDF.Domain.ValueObjects.PdfFontKind.CIDFontType0 = 6 -> SharpCorePDF.Domain.ValueObjects.PdfFontKind
+SharpCorePDF.Domain.ValueObjects.PdfFontKind.CIDFontType2 = 7 -> SharpCorePDF.Domain.ValueObjects.PdfFontKind
+SharpCorePDF.Domain.ValueObjects.PdfFontKind.MMType1 = 2 -> SharpCorePDF.Domain.ValueObjects.PdfFontKind
+SharpCorePDF.Domain.ValueObjects.PdfFontKind.TrueType = 4 -> SharpCorePDF.Domain.ValueObjects.PdfFontKind
+SharpCorePDF.Domain.ValueObjects.PdfFontKind.Type0 = 5 -> SharpCorePDF.Domain.ValueObjects.PdfFontKind
+SharpCorePDF.Domain.ValueObjects.PdfFontKind.Type1 = 1 -> SharpCorePDF.Domain.ValueObjects.PdfFontKind
+SharpCorePDF.Domain.ValueObjects.PdfFontKind.Type3 = 3 -> SharpCorePDF.Domain.ValueObjects.PdfFontKind
+SharpCorePDF.Domain.ValueObjects.PdfFontKind.Unknown = 0 -> SharpCorePDF.Domain.ValueObjects.PdfFontKind
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.<Clone>$() -> SharpCorePDF.Domain.ValueObjects.PdfOutputIntent!
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.Equals(SharpCorePDF.Domain.ValueObjects.PdfOutputIntent? other) -> bool
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.IccProfile.get -> System.ReadOnlyMemory<byte>
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.IccProfile.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.Info.get -> string?
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.Info.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.NumberOfComponents.get -> int
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.NumberOfComponents.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.OutputCondition.get -> string?
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.OutputCondition.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.OutputConditionIdentifier.get -> string!
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.OutputConditionIdentifier.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.PdfOutputIntent() -> void
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.RegistryName.get -> string?
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.RegistryName.init -> void
+SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.Validate() -> System.Collections.Generic.IReadOnlyList<string!>!
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.FontDescriptorMissing = 67 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.FontUnreadable = 66 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+override SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.ToString() -> string!
+override SharpCorePDF.Domain.ReadModels.PdfFontInfo.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ReadModels.PdfFontInfo.GetHashCode() -> int
+override SharpCorePDF.Domain.ReadModels.PdfFontInfo.ToString() -> string!
+override SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.Equals(object? obj) -> bool
+override SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.GetHashCode() -> int
+override SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.ToString() -> string!
+static SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.operator !=(SharpCorePDF.Domain.ReadModels.PdfDocumentBytes? left, SharpCorePDF.Domain.ReadModels.PdfDocumentBytes? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfDocumentBytes.operator ==(SharpCorePDF.Domain.ReadModels.PdfDocumentBytes? left, SharpCorePDF.Domain.ReadModels.PdfDocumentBytes? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfFontInfo.operator !=(SharpCorePDF.Domain.ReadModels.PdfFontInfo? left, SharpCorePDF.Domain.ReadModels.PdfFontInfo? right) -> bool
+static SharpCorePDF.Domain.ReadModels.PdfFontInfo.operator ==(SharpCorePDF.Domain.ReadModels.PdfFontInfo? left, SharpCorePDF.Domain.ReadModels.PdfFontInfo? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.operator !=(SharpCorePDF.Domain.ValueObjects.PdfOutputIntent? left, SharpCorePDF.Domain.ValueObjects.PdfOutputIntent? right) -> bool
+static SharpCorePDF.Domain.ValueObjects.PdfOutputIntent.operator ==(SharpCorePDF.Domain.ValueObjects.PdfOutputIntent? left, SharpCorePDF.Domain.ValueObjects.PdfOutputIntent? right) -> bool

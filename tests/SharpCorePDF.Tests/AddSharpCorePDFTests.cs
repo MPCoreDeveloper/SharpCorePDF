@@ -1,6 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using SharpCorePDF.Application.Extensions;
 using SharpCorePDF.Application.Ports;
 using SharpCorePDF.DependencyInjection;
@@ -8,7 +10,10 @@ using SharpCorePDF.Domain.Aggregates;
 using SharpCorePDF.Domain.Ports;
 using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure;
+using SharpCorePDF.Infrastructure.Authoring;
 using SharpCorePDF.Infrastructure.Extensions;
+using SharpCorePDF.Infrastructure.Pdf;
+using SharpCorePDF.Infrastructure.Reading;
 using SharpCorePDF.Infrastructure.Sources;
 
 namespace SharpCorePDF.Tests;
@@ -24,22 +29,57 @@ public sealed class AddSharpCorePDFTests
     {
         using var provider = new ServiceCollection().AddSharpCorePDF().BuildServiceProvider();
 
-        Assert.NotNull(provider.GetRequiredService<IPdfMerger>());
-        Assert.NotNull(provider.GetRequiredService<IPdfInspector>());
-        Assert.NotNull(provider.GetRequiredService<IPdfContentReader>());
-        Assert.NotNull(provider.GetRequiredService<IPdfDocumentReader>());
-        Assert.NotNull(provider.GetRequiredService<IPdfPageContentReader>());
-        Assert.NotNull(provider.GetRequiredService<IPdfPageLayoutReader>());
-        Assert.NotNull(provider.GetRequiredService<IPdfLayoutReader>());
-        Assert.NotNull(provider.GetRequiredService<IPdfObjectInspector>());
-        Assert.NotNull(provider.GetRequiredService<IPdfDocumentObjectInspector>());
-        Assert.NotNull(provider.GetRequiredService<IPdfMergeEngine>());
-
         Assert.Same(provider.GetRequiredService<IPdfMerger>(), provider.GetRequiredService<IPdfMerger>());
+        Assert.Same(provider.GetRequiredService<IPdfDocumentEditor>(), provider.GetRequiredService<IPdfDocumentEditor>());
+        Assert.Same(provider.GetRequiredService<IPdfInspector>(), provider.GetRequiredService<IPdfInspector>());
         Assert.Same(provider.GetRequiredService<IPdfContentReader>(), provider.GetRequiredService<IPdfContentReader>());
         Assert.Same(provider.GetRequiredService<IPdfLayoutReader>(), provider.GetRequiredService<IPdfLayoutReader>());
         Assert.Same(provider.GetRequiredService<IPdfObjectInspector>(), provider.GetRequiredService<IPdfObjectInspector>());
+        Assert.Same(provider.GetRequiredService<IPdfSigner>(), provider.GetRequiredService<IPdfSigner>());
+        Assert.Same(provider.GetRequiredService<IPdfSignatureValidator>(), provider.GetRequiredService<IPdfSignatureValidator>());
+        Assert.Same(provider.GetRequiredService<IPdfAWriter>(), provider.GetRequiredService<IPdfAWriter>());
+
+        Assert.Same(provider.GetRequiredService<PdfDocumentReader>(), provider.GetRequiredService<IPdfDocumentReader>());
+        Assert.Same(provider.GetRequiredService<PdfDocumentReader>(), provider.GetRequiredService<IPdfDocumentBytesReader>());
+        Assert.Same(provider.GetRequiredService<PdfMergeEngine>(), provider.GetRequiredService<IPdfMergeEngine>());
+        Assert.Same(provider.GetRequiredService<PdfEditEngine>(), provider.GetRequiredService<IPdfEditEngine>());
+        Assert.Same(provider.GetRequiredService<PdfPageContentReader>(), provider.GetRequiredService<IPdfPageContentReader>());
+        Assert.Same(provider.GetRequiredService<PdfLayoutReader>(), provider.GetRequiredService<IPdfPageLayoutReader>());
+        Assert.Same(provider.GetRequiredService<PdfObjectInspector>(), provider.GetRequiredService<IPdfDocumentObjectInspector>());
+        Assert.Same(provider.GetRequiredService<PdfDocumentSigner>(), provider.GetRequiredService<IPdfDocumentSigner>());
+        Assert.Same(provider.GetRequiredService<PdfDocumentSignatureValidator>(), provider.GetRequiredService<IPdfDocumentSignatureValidator>());
+        Assert.Same(provider.GetRequiredService<PdfAWriter>(), provider.GetRequiredService<IPdfDocumentAWriter>());
         Assert.Same(PdfEngineOptions.Default, provider.GetRequiredService<PdfEngineOptions>());
+    }
+
+    /// <summary>Null registration arguments are refused before any service is added.</summary>
+    [Fact]
+    public void Refuses_null_registration_arguments()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().Build();
+        var options = PdfEngineOptions.Default;
+
+        var nullServices = Assert.Throws<ArgumentNullException>(
+            () => SharpCorePDFServiceCollectionExtensions.AddSharpCorePDF(null!));
+        var nullOptions = Assert.Throws<ArgumentNullException>(
+            () => services.AddSharpCorePDF((PdfEngineOptions)null!));
+        var nullServicesWithOptions = Assert.Throws<ArgumentNullException>(
+            () => SharpCorePDFServiceCollectionExtensions.AddSharpCorePDF(null!, options));
+        var nullConfiguration = Assert.Throws<ArgumentNullException>(
+            () => services.AddSharpCorePDF((IConfiguration)null!));
+        var nullServicesWithConfiguration = Assert.Throws<ArgumentNullException>(
+            () => SharpCorePDFServiceCollectionExtensions.AddSharpCorePDF(null!, configuration));
+        var blankSection = Assert.Throws<ArgumentException>(
+            () => services.AddSharpCorePDF(configuration, " "));
+
+        Assert.Equal("services", nullServices.ParamName);
+        Assert.Equal("engineOptions", nullOptions.ParamName);
+        Assert.Equal("services", nullServicesWithOptions.ParamName);
+        Assert.Equal("configuration", nullConfiguration.ParamName);
+        Assert.Equal("services", nullServicesWithConfiguration.ParamName);
+        Assert.Equal("sectionName", blankSection.ParamName);
+        Assert.Empty(services);
     }
 
     /// <summary>The whole path a caller walks: build a plan, merge to a file, inspect the result.</summary>
@@ -72,25 +112,82 @@ public sealed class AddSharpCorePDFTests
         Assert.Equal("Outlined sample", info.Metadata.Title);
     }
 
-    /// <summary>Engine options can come from configuration.</summary>
+    /// <summary>Engine options can come from a custom configuration section without runtime binding.</summary>
     [Fact]
     public void Binds_the_engine_options_from_configuration()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["SharpCorePDF:MaxNestingDepth"] = "12",
+                ["Custom:Pdf:MaxSourceBytes"] = "1048576",
+                ["Custom:Pdf:MaxNestingDepth"] = "12",
+                ["Custom:Pdf:MaxPagesPerSource"] = "123",
+                ["Custom:Pdf:ReconstructCrossReferenceOnFailure"] = "false",
+                ["Custom:Pdf:VerifyOutput"] = "true",
+                ["Custom:Pdf:WriteBinaryMarker"] = "false",
+                ["Custom:Pdf:MaxInlineContentBytes"] = "4096",
+            })
+            .Build();
+
+        using var provider = new ServiceCollection().AddSharpCorePDF(configuration, "Custom:Pdf").BuildServiceProvider();
+        var options = provider.GetRequiredService<PdfEngineOptions>();
+
+        Assert.Equal(1_048_576, options.MaxSourceBytes);
+        Assert.Equal(12, options.MaxNestingDepth);
+        Assert.Equal(123, options.MaxPagesPerSource);
+        Assert.False(options.ReconstructCrossReferenceOnFailure);
+        Assert.True(options.VerifyOutput);
+        Assert.False(options.WriteBinaryMarker);
+        Assert.Equal(4096, options.MaxInlineContentBytes);
+        Assert.Same(options, provider.GetRequiredService<IOptions<PdfEngineOptions>>().Value);
+    }
+
+    /// <summary>The configuration overload is part of the trim and Native AOT compatibility claim.</summary>
+    [Fact]
+    public void Configuration_registration_has_no_trim_or_aot_requirements()
+    {
+        var registration = typeof(SharpCorePDFServiceCollectionExtensions).GetMethod(
+            nameof(SharpCorePDFServiceCollectionExtensions.AddSharpCorePDF),
+            [typeof(IServiceCollection), typeof(IConfiguration), typeof(string)]);
+
+        Assert.NotNull(registration);
+        Assert.Empty(registration.GetCustomAttributes(typeof(RequiresUnreferencedCodeAttribute), inherit: false));
+        Assert.Empty(registration.GetCustomAttributes(typeof(RequiresDynamicCodeAttribute), inherit: false));
+    }
+
+    /// <summary>An absent configuration section keeps the documented defaults.</summary>
+    [Fact]
+    public void Keeps_the_defaults_when_the_configuration_section_is_absent()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Other:MaxNestingDepth"] = "3",
+            })
+            .Build();
+
+        using var provider = new ServiceCollection().AddSharpCorePDF(configuration).BuildServiceProvider();
+
+        Assert.Equal(PdfEngineOptions.Default, provider.GetRequiredService<PdfEngineOptions>());
+    }
+
+    /// <summary>A value the configuration cannot parse is left as the default for that member.</summary>
+    [Fact]
+    public void Leaves_an_unparsable_configuration_value_as_its_default()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["SharpCorePDF:MaxNestingDepth"] = "not-a-number",
                 ["SharpCorePDF:VerifyOutput"] = "true",
-                ["SharpCorePDF:WriteBinaryMarker"] = "false",
             })
             .Build();
 
         using var provider = new ServiceCollection().AddSharpCorePDF(configuration).BuildServiceProvider();
         var options = provider.GetRequiredService<PdfEngineOptions>();
 
-        Assert.Equal(12, options.MaxNestingDepth);
+        Assert.Equal(PdfEngineOptions.Default.MaxNestingDepth, options.MaxNestingDepth);
         Assert.True(options.VerifyOutput);
-        Assert.False(options.WriteBinaryMarker);
     }
 
     /// <summary>Options that cannot work are reported instead of producing a broken document.</summary>

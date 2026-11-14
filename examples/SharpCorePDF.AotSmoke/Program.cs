@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SharpCorePDF.DependencyInjection;
 using SharpCorePDF.Domain.Aggregates;
@@ -22,10 +23,26 @@ using SharpCorePDF.Infrastructure.Sources;
 var expectAot = args.Contains("--expect-aot", StringComparer.Ordinal);
 var heading = PdfTypeface.Standard(StandardFont.Helvetica);
 
+var configuration = new ConfigurationBuilder()
+    .AddInMemoryCollection(new Dictionary<string, string?>
+    {
+        ["AotPdf:MaxSourceBytes"] = "8388608",
+        ["AotPdf:MaxNestingDepth"] = "72",
+        ["AotPdf:MaxPagesPerSource"] = "1234",
+        ["AotPdf:ReconstructCrossReferenceOnFailure"] = "false",
+        ["AotPdf:VerifyOutput"] = "true",
+        ["AotPdf:WriteBinaryMarker"] = "true",
+        ["AotPdf:MaxInlineContentBytes"] = "1024",
+    })
+    .Build();
+
 var services = new ServiceCollection();
-services.AddSharpCorePDF(PdfEngineOptions.Default with { VerifyOutput = true });
+services.AddSharpCorePDF(configuration, "AotPdf");
 
 using var provider = services.BuildServiceProvider();
+using var defaultProvider = new ServiceCollection().AddSharpCorePDF().BuildServiceProvider();
+var explicitOptions = PdfEngineOptions.Default with { MaxPagesPerSource = 321 };
+using var explicitProvider = new ServiceCollection().AddSharpCorePDF(explicitOptions).BuildServiceProvider();
 
 var plan = MergePlan.Create()
     .AddSource(PdfSource.Create(Author("AOT smoke one", "first.pdf")))
@@ -45,7 +62,29 @@ var read = await reader.ReadTextAsync(
 var text = string.Concat(read.Items.Select(block => block.Text));
 var pages = read.Items.Select(block => block.PageNumber).Distinct().Count();
 var dynamicCode = RuntimeFeature.IsDynamicCodeSupported;
+var configuredOptions = provider.GetRequiredService<PdfEngineOptions>();
 var problems = new List<string>();
+
+if (configuredOptions.MaxSourceBytes != 8_388_608
+    || configuredOptions.MaxNestingDepth != 72
+    || configuredOptions.MaxPagesPerSource != 1234
+    || configuredOptions.ReconstructCrossReferenceOnFailure
+    || !configuredOptions.VerifyOutput
+    || !configuredOptions.WriteBinaryMarker
+    || configuredOptions.MaxInlineContentBytes != 1024)
+{
+    problems.Add("the configuration-bound engine options do not match the AotPdf section");
+}
+
+if (!ReferenceEquals(PdfEngineOptions.Default, defaultProvider.GetRequiredService<PdfEngineOptions>()))
+{
+    problems.Add("the default registration did not supply PdfEngineOptions.Default");
+}
+
+if (!ReferenceEquals(explicitOptions, explicitProvider.GetRequiredService<PdfEngineOptions>()))
+{
+    problems.Add("the explicit registration did not supply the caller's options instance");
+}
 
 if (result.PageCount != 2)
 {

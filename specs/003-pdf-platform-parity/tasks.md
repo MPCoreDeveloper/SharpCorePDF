@@ -874,7 +874,7 @@ and veraPDF reports conformance for all three profiles.
   - The gate's own transcript is not a phase command: run
     `uv run --with pikepdf --with pypdf --with pymupdf python docs/tools/verify-cover.py --output artifacts\c5-transcript.md`
     and attach that file — it is C5's evidence for the tagged commit.
-  - **Run 2026-10-23**, Windows 11 x64, .NET SDK 11.0.100-rc.2.26504.105, Python 3.12.10, pikepdf 10.17.0 (qpdf inside), pypdf 6.19.0, PyMuPDF 2.0. Transcript: `artifacts/t104-release-transcript.md`; C5's own run: `artifacts/c5-transcript.md` → `pass — 0 expectation(s) broken`, 8,835-byte `cover.pdf`, `ok (246 ms)`.
+  - **Run 2026-10-23**, Windows 11 x64, .NET SDK 11.0.100, Python 3.12.10, pikepdf 10.17.0 (qpdf inside), pypdf 6.19.0, PyMuPDF 2.0. Transcript: `artifacts/t104-release-transcript.md`; C5's own run: `artifacts/c5-transcript.md` → `pass — 0 expectation(s) broken`, 8,835-byte `cover.pdf`, `ok (246 ms)`.
     - **Step 1 and step 8** — build 0/0; both legs 743/743; all 15 examples `ok (…)`; the four T102 checks (determinism, empty font, no network, no new package) as recorded there.
     - **Phase 1** — 34 builder tests pass; `author-page` `ok (228 ms)`; `verify-cover.py` breaks 0 expectations; `validate-pdf.py`: qpdf clean on `cover.pdf` (1 page, 14 objects, 6 streams decoded, 0 failed) and on `cover-and-summary.pdf` (3 pages, 19 objects, 8 streams).
     - **Phase 2** — 37 editor tests pass; `edit-pages` `ok (151 ms)` → 3 pages, page 2 `Clockwise90`, page 3 cropped, the only warning its `OutputVerified` signal; `validate-pdf.py` qpdf clean, 3 streams decoded; `pypdf` reads page 3's `cropbox` as `[36, 36, 806, 559]`.

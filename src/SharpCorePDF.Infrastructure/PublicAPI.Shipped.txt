@@ -247,3 +247,9 @@ SharpCorePDF.Infrastructure.PdfPageCanvas.SetFillColor(string! colorSpaceName, S
 SharpCorePDF.Infrastructure.PdfPageCanvas.SetStrokeColor(string! colorSpaceName, System.Collections.Generic.IReadOnlyList<double>! components) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
 SharpCorePDF.Infrastructure.PdfPageCanvas.FillPath(SharpCorePDF.Domain.ValueObjects.PdfPath! path) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
 SharpCorePDF.Infrastructure.PdfPageCanvas.StrokePath(SharpCorePDF.Domain.ValueObjects.PdfPath! path) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.PdfDocumentReader.ReadWithBytesAsync(string! sourceName, System.IO.Stream! content, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfDocumentBytes!>!
+SharpCorePDF.Infrastructure.PdfPageCanvas.SetAlpha(double alpha, SharpCorePDF.Domain.ValueObjects.PdfBlendMode blendMode = SharpCorePDF.Domain.ValueObjects.PdfBlendMode.Normal) -> SharpCorePDF.Infrastructure.PdfPageCanvas!
+SharpCorePDF.Infrastructure.Reading.PdfFontInspector
+SharpCorePDF.Infrastructure.Reading.PdfFontInspector.Options.get -> SharpCorePDF.Infrastructure.PdfEngineOptions!
+SharpCorePDF.Infrastructure.Reading.PdfFontInspector.PdfFontInspector(SharpCorePDF.Infrastructure.PdfEngineOptions? options = null) -> void
+SharpCorePDF.Infrastructure.Reading.PdfFontInspector.ReadFontsAsync(string! sourceName, System.IO.Stream! content, string? password = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<SharpCorePDF.Domain.ReadModels.PdfReadResult<SharpCorePDF.Domain.ReadModels.PdfFontInfo!>!>!
