@@ -20,6 +20,7 @@ internal static class Scenarios
         new("draw-shapes", "draw lines, paths, a clipping region and a transformed group on a page that did not exist", DrawingExamples.DrawShapesAsync),
         new("edit-pages", "edit a document that exists: insert, rotate, delete and crop in one pass", PdfEditExamples.EditPagesAsync),
         new("watermark", "stamp a watermark written from nothing over every page of a document", PdfEditExamples.WatermarkAsync),
+        new("stationery", "put a letterhead behind the first page and a footer behind the rest", PdfEditExamples.StationeryAsync),
         new("annotate", "comment on a document without touching its content: highlights, notes, a stamp and links", PdfEditExamples.AnnotateAsync),
         new("fill-form", "write a form, fill it by name, and flatten it so a reader without forms still shows the values", PdfEditExamples.FillFormAsync),
         new("no-container", "use the packages without a dependency injection container", SourceExamples.WithoutContainerAsync),

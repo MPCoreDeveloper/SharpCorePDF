@@ -121,6 +121,31 @@ page, and `DuplicatePage` makes both copies draw the same form.
 layer with an opacity below `1` or a blend mode other than `Normal` rather than writing the layer
 opaque without saying so. The validation happens when the plan is checked, before the source is read.
 
+### Stationery
+
+Stationery is the same layer applied by plan rather than one page at a time: a letterhead behind the
+first page, a footer behind the rest, and a default template for everything else. `PdfStationery`
+describes that mapping, and `ApplyStationery` records it in the edit plan:
+
+```csharp
+var stationery = PdfStationery.Create()
+    .Assign(new PdfFileSource("letterhead.pdf"), PageRange.Single(1))
+    .Assign(new PdfFileSource("footer.pdf"), PageRange.FromPage(2))
+    .AssignDefault(new PdfFileSource("plain.pdf"));
+
+var plan = PdfEditPlan.Create().ApplyStationery(stationery);
+```
+
+Assignments are tried last first, so a later, narrower assignment overrides an earlier, broader one. A
+page no assignment covers receives the default; `AssignNone(range)` leaves a range bare even when a
+default exists. A one-page template repeats across the pages it covers, while a multi-page template
+maps one page for one page, starting at the first page of the assignment; a range that reaches past the
+template's last page is refused when the plan runs.
+
+`ApplyStationery` adds one operation, and its pages are resolved against the document state the
+preceding operations leave behind: add it last when the background should cover the whole result. It is
+an underlay, so it obeys the same placement, opacity, blend and `PDF/A-1b` rules as `Underlay`.
+
 ## Document-level edits
 
 Four operations state a value of the document rather than of a page. Each replaces what the source
