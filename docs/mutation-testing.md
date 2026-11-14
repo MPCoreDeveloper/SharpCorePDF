@@ -835,3 +835,18 @@ The thirteen that remain, read one by one:
   layout fixtures in the suite are left-aligned, so `+` and `-` record the same operation. A centred or
   indented layout is the fixture that would close it.
 
+## RunLengthDecode — the first image codec (2026-11-14)
+
+`RunLengthDecode` joined the decoded filters, and its decoder is a new file, so it gets its own reading:
+
+| File | Score | Killed | Survived | No coverage | Mutants |
+| --- | --- | --- | --- | --- | --- |
+| `Pdf/PdfFilters.RunLength.cs` | **96.00%** | 22 | 1 | 2 | 31 |
+
+The one survivor is `control < RunLengthEndOfData` mutated to `<=`: the `control == RunLengthEndOfData`
+check above the branch already breaks on the end-of-data byte, so no input distinguishes the two
+comparisons. Two earlier survivors were statements rather than missing tests — a `Math.Max` capacity hint
+and a `count <= 0` guard whose empty write and zero step are the same behaviour — and both were **removed**
+rather than pinned, which is what a survivor is for. `PdfImageFilters` gained the whitelist entry and the
+dispatch case, and the RunLength tests exercise both through `Decode`.
+

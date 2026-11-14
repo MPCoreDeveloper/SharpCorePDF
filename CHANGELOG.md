@@ -18,6 +18,17 @@ feed ever served.
 contents of the layers, and the entry below is written against the published `preview.1` rather than
 against an empty feed.
 
+## [Unreleased]
+
+### Added
+
+- **Run-length images are decoded.** `RunLengthDecode` joins Flate, LZW and the two ASCII filters: a
+  bilevel or scan-style image that declares it now yields its samples — and `Gray8`, `Rgb24` or `Cmyk32`
+  pixels — rather than `ImageFilterUnsupported`, and a stream that ends without its end-of-data byte is
+  decoded as far as it goes. [`ADR-005`](docs/adr/0005-image-filter-decoders.md) scopes the remaining four
+  filters — `CCITTFaxDecode`, `DCTDecode`, `JPXDecode` and `JBIG2Decode` — with the evidence path each one
+  has to meet.
+
 ## [1.8.0] - 2026-11-14
 
 ### Added

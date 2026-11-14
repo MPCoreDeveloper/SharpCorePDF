@@ -342,19 +342,19 @@ public sealed partial class PdfContentReaderTests
         Assert.Equal(PdfContentFixtures.ChainSamples, lzw.DecodedPixels!.Value.ToArray());
     }
 
-    /// <summary>A filter the library does not decode is named and left raw.</summary>
-    [Theory]
-    [InlineData("RunLengthDecode")]
-    public async Task Keeps_a_filter_it_cannot_decode_untouched(string filter)
+    /// <summary>A run-length image is decoded to its samples, and those samples are exposed as pixels.</summary>
+    [Fact]
+    public async Task Decodes_a_run_length_image()
     {
         var source = Source(PdfContentFixtures.FilterChains(), "chains.pdf");
 
         var result = await Reader().ReadImagesAsync(source, PageRange.All, cancellationToken: Token);
-        var image = Assert.Single(result.Items, candidate => candidate.Filter == filter);
+        var image = Assert.Single(result.Items, candidate => candidate.Filter == "RunLengthDecode");
 
-        Assert.False(image.IsDecodable);
+        Assert.True(image.IsDecodable);
         Assert.Equal(PdfContentFixtures.ChainSamples, image.Data!.Value.ToArray());
-        Assert.Contains(result.Warnings, warning => warning.Kind == PdfWarningKind.ImageFilterUnsupported);
+        Assert.Equal("Gray8", image.PixelFormat);
+        Assert.Equal(PdfContentFixtures.ChainSamples, image.DecodedPixels!.Value.ToArray());
     }
 
     /// <summary>

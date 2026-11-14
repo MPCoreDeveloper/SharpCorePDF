@@ -358,6 +358,15 @@ internal static class PdfImageFilters
                     return true;
                 }
 
+                case "RunLengthDecode":
+                {
+                    var decoded = PdfFilters.DecodeRunLength(data);
+
+                    length = decoded.Length;
+                    bytes = Keep(decoded, cap);
+                    return true;
+                }
+
                 default:
                     // Unreachable: `Decode` passes only the names `IsDecodable` states, and every one of
                     // them has a case above. The arm exists because a switch has to end somewhere, and it
@@ -783,9 +792,9 @@ internal static class PdfImageFilters
 
     /// <summary>Determines whether a payload can be turned into samples by a filter with this name.</summary>
     /// <param name="name">The filter name, with its abbreviation expanded.</param>
-    /// <returns><see langword="true"/> for the four filters this class decodes.</returns>
+    /// <returns><see langword="true"/> for the five filters this class decodes.</returns>
     private static bool IsDecodable(string name) =>
-        name is "FlateDecode" or "LZWDecode" or "ASCIIHexDecode" or "ASCII85Decode";
+        name is "FlateDecode" or "LZWDecode" or "ASCIIHexDecode" or "ASCII85Decode" or "RunLengthDecode";
 
     /// <summary>Determines whether a filter is handed back raw instead of being decoded.</summary>
     /// <param name="name">The filter name, with its abbreviation expanded.</param>

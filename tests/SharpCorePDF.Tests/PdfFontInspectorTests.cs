@@ -103,7 +103,9 @@ public sealed class PdfFontInspectorTests
     [Fact]
     public async Task Writes_the_font_fixture_the_external_validator_reads()
     {
-        var path = Path.Combine(Path.GetTempPath(), "scpdf-fonts-fixture.pdf");
+        // A unique name: the mutation harness runs the suite once per project in parallel, and a fixed
+        // temp path lets one copy read a file another is still writing.
+        var path = Path.Combine(Path.GetTempPath(), $"scpdf-fonts-fixture-{Guid.NewGuid():N}.pdf");
 
         await File.WriteAllBytesAsync(path, PdfContentFixtures.Fonts(), Token);
 

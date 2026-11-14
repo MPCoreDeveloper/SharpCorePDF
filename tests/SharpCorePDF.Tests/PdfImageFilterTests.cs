@@ -82,6 +82,56 @@ public sealed class PdfImageFilterTests
         Assert.Equal("Hello", Text(Kept(Decode(Encoding.Latin1.GetBytes("48656C6C6F>"), ("Filter", new PdfName("AHx"))))));
         Assert.Equal("Hello", Text(Kept(Decode(Encoding.Latin1.GetBytes("87cURDj~>"), ("Filter", new PdfName("A85"))))));
         Assert.Equal("Hello", Text(Kept(Decode(TestLzw.Encode(Encoding.Latin1.GetBytes("Hello")), ("Filter", new PdfName("LZW"))))));
+        Assert.Equal("Hello", Text(Kept(Decode([4, (byte)'H', (byte)'e', (byte)'l', (byte)'l', (byte)'o', 128], ("Filter", new PdfName("RL"))))));
+    }
+
+    /// <summary>A literal run copies the bytes after it, and a repeat run states one byte many times.</summary>
+    [Fact]
+    public void Decodes_a_run_length_payload()
+    {
+        byte[] encoded = [4, (byte)'H', (byte)'e', (byte)'l', (byte)'l', (byte)'o', 254, (byte)'-', 128];
+
+        var payload = Decode(encoded, ("Filter", new PdfName("RunLengthDecode")));
+
+        Assert.True(payload.IsDecodable);
+        Assert.False(payload.Failed);
+        Assert.Equal("Hello---", Text(Kept(payload)));
+    }
+
+    /// <summary>A stream that ends without its end-of-data byte still yields the runs it stated.</summary>
+    [Fact]
+    public void Decodes_a_run_length_payload_that_stops_without_its_end_marker()
+    {
+        byte[] encoded = [4, (byte)'H', (byte)'e'];
+
+        var payload = Decode(encoded, ("Filter", new PdfName("RunLengthDecode")));
+
+        Assert.True(payload.IsDecodable);
+        Assert.Equal("He", Text(Kept(payload)));
+    }
+
+    /// <summary>The end-of-data byte stops the walk: bytes after it are not runs.</summary>
+    [Fact]
+    public void Stops_a_run_length_payload_at_its_end_marker()
+    {
+        byte[] encoded = [4, (byte)'H', (byte)'e', (byte)'l', (byte)'l', (byte)'o', 128, 0, (byte)'X'];
+
+        var payload = Decode(encoded, ("Filter", new PdfName("RunLengthDecode")));
+
+        Assert.True(payload.IsDecodable);
+        Assert.Equal("Hello", Text(Kept(payload)));
+    }
+
+    /// <summary>A run that ends mid-run contributes nothing rather than reading past the payload.</summary>
+    [Theory]
+    [InlineData(new byte[] { 255 }, new byte[] { })]
+    [InlineData(new byte[] { 0 }, new byte[] { })]
+    public void Decodes_a_run_length_payload_that_ends_mid_run(byte[] encoded, byte[] expected)
+    {
+        var payload = Decode(encoded, ("Filter", new PdfName("RunLengthDecode")));
+
+        Assert.True(payload.IsDecodable);
+        Assert.Equal(expected, Kept(payload));
     }
 
     /// <summary>JPEG is handed on as it is, and its abbreviation names the same filter.</summary>

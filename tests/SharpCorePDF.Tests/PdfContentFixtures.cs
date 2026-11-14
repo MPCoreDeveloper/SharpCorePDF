@@ -1073,7 +1073,7 @@ internal static class PdfContentFixtures
 
         var hexadecimal = builder.AddStream(header + "/Filter /ASCIIHexDecode", EncodeAsciiHex(ChainSamples));
         var lzw = builder.AddStream(header + "/Filter /LZWDecode", TestLzw.Encode(ChainSamples));
-        var runLength = builder.AddStream(header + "/Filter /RunLengthDecode", ChainSamples);
+        var runLength = builder.AddStream(header + "/Filter /RunLengthDecode", EncodeRunLength(ChainSamples));
 
         builder.Set(content, Content("/Chained Do /Hex Do /Lzw Do /Rle Do"));
         builder.Set(
@@ -1086,6 +1086,25 @@ internal static class PdfContentFixtures
         builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R >>");
 
         return builder.Build(catalog);
+    }
+
+    // A literal run of up to 128 bytes is a control byte of (count - 1) followed by the bytes, and the
+    // stream ends with the end-of-data control byte.
+    private static byte[] EncodeRunLength(byte[] data)
+    {
+        using var builder = new MemoryStream();
+
+        for (var offset = 0; offset < data.Length; offset += 128)
+        {
+            var count = Math.Min(128, data.Length - offset);
+
+            builder.WriteByte((byte)(count - 1));
+            builder.Write(data, offset, count);
+        }
+
+        builder.WriteByte(128);
+
+        return builder.ToArray();
     }
 
     // The two ASCII filters are encoded exactly as the specification states them, including the
