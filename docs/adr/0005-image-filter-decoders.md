@@ -71,6 +71,33 @@ and recorded, the way this repository treats every other file.
   there only when the specification allows it in an object stream, which `RunLengthDecode` and the four
   image codecs do not.
 
+## Fixtures for the CCITT slice (2026-11-14)
+
+The next slice starts from data rather than from a description. Two strips and the bitmap they must produce
+are committed beside the other image fixtures:
+
+- `tests/SharpCorePDF.Tests/Assets/parity/images/ccitt-g4.bin` — 26 bytes, Group 4, a 16 x 16 bilevel
+  fixture (a diagonal and a 6 x 6 block), written by Pillow 13.0.0 through libtiff.
+- `ccitt-g3.bin` — the same bitmap as Group 3 one-dimensional, 68 bytes.
+- `ccitt-expected.txt` — the 16 x 16 geometry and the 32-byte bitmap Pillow decodes (`tobytes()`, 1 is
+  white).
+
+The generator is the one that produced `lzw-tiff-strip.bin`: `Image.save(format='TIFF',
+compression='group4'|'group3')`, then a TIFF IFD read of `StripOffsets` (273) and `StripByteCounts` (279).
+
+Two facts the first attempt established, so the next one does not rediscover them:
+
+1. **The raw bitmap and `tobytes()` are complements.** Pillow's TIFF states a photometric that makes the
+   decoded samples the inverse of the mode-`1` pixels, so a decoder that fills black runs with 1 matches
+   `ccitt-expected.txt` only under the matching `BlackIs1` value.
+2. **A line may start with a zero-length white run.** The transition at position 0 is what a line that
+   starts black states; a decoder that records only transitions after the first pixel shifts the parity of
+   every later `b1`, and the Group 4 fixture then fails on its twelfth line (a vertical mode resolves to a
+   position left of the current one). The fix is to record every transition, including one at 0.
+
+The RunLength slice is shipped; the CCITT decoder is the open work, and the Group 4 fixture now decodes its
+first twelve lines correctly against this data.
+
 ## Status of the slices
 
 | Slice | State |
