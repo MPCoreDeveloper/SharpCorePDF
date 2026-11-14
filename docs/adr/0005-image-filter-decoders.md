@@ -76,11 +76,14 @@ and recorded, the way this repository treats every other file.
 The next slice starts from data rather than from a description. Two strips and the bitmap they must produce
 are committed beside the other image fixtures:
 
-- `tests/SharpCorePDF.Tests/Assets/parity/images/ccitt-g4.bin` — 26 bytes, Group 4, a 16 x 16 bilevel
-  fixture (a diagonal and a 6 x 6 block), written by Pillow 13.0.0 through libtiff.
+- `tests/SharpCorePDF.Tests/Assets/ccitt/ccitt-g4.bin` — 26 bytes, Group 4, a 16 x 16 bilevel fixture
+  (a diagonal and a 6 x 6 block), written by Pillow 13.0.0 through libtiff.
 - `ccitt-g3.bin` — the same bitmap as Group 3 one-dimensional, 68 bytes.
-- `ccitt-expected.txt` — the 16 x 16 geometry and the 32-byte bitmap Pillow decodes (`tobytes()`, 1 is
-  white).
+- `ccitt-expected.bin` — the 32 bytes Pillow decodes for that bitmap (`tobytes()`, 1 is white), rows padded
+  to a whole byte; the geometry is 16 x 16.
+
+They sit under `Assets/ccitt`, not `Assets/parity`, because `ParityCorpusTests` treats every file under
+`Assets/parity` as a manifest entry.
 
 The generator is the one that produced `lzw-tiff-strip.bin`: `Image.save(format='TIFF',
 compression='group4'|'group3')`, then a TIFF IFD read of `StripOffsets` (273) and `StripByteCounts` (279).
