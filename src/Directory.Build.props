@@ -49,9 +49,9 @@
     <IsTrimmable>true</IsTrimmable>
     <IsAotCompatible>true</IsAotCompatible>
 
-    <Version>1.7.0</Version>
-    <AssemblyVersion>1.7.0.0</AssemblyVersion>
-    <FileVersion>1.7.0.0</FileVersion>
+    <Version>1.8.0</Version>
+    <AssemblyVersion>1.8.0.0</AssemblyVersion>
+    <FileVersion>1.8.0.0</FileVersion>
     <Authors>MPCoreDeveloper</Authors>
     <Company>SharpCorePDF</Company>
     <Product>SharpCorePDF</Product>
@@ -67,7 +67,7 @@
       consumer reads before downloading. It stays a pointer rather than a copy: the changelog is the
       detail, and two copies of the same notes drift the moment one of them is edited.
     -->
-    <PackageReleaseNotes>1.6.0 - The archival output is proven rather than described, and it names two more profiles. A pinned veraPDF 1.30.4 gate runs on every push and once a week (compliance.yml), cross-checked by Apache PDFBox preflight and Ghostscript, with the machine-readable reports kept as an artifact; validate-pdfa.py reads the report instead of the word PASS and refuses a validator older than the pin. PDF/A-2u and -3u join the three level-B profiles, the output intent can be the caller's own ICC profile (written verbatim, checked as an ICC profile before a byte is written), and a PDF/A-3 result associates every embedded file through /AF with a stated relationship. Beyond the archive: a page can state an opacity and a blend mode, a document's fonts can be read without opening them, a merge or an edit reads each source once instead of twice (a 100 MB merge allocates 104.2 MB instead of 204.2 MB), and configuration registration is trim- and Native AOT-compatible. Details: https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <PackageReleaseNotes>1.8.0 - One call reports the whole picture: IPdfDiagnoser.DiagnoseAsync returns the document, its fonts, its signatures, an optional PDF/A pre-flight and the merged, de-duplicated warnings, assembled from the use cases the library already exposes, and tools/SharpCorePDF.Diagnostics prints it as text or JSON. PDF/A-4 (ISO 19005-4) is written: a PDF 2.0 document with pdfaid:part 4 and no conformance level, the same embedded fonts and sRGB output intent as the other profiles, and transparency allowed, validated with veraPDF beside the other six files. Every package ships a .snupkg beside the .nupkg, publish.yml pushes both, and a reproducible CI job packs the same commit twice and compares every entry. Since 1.6.0 the release also carries stationery (PdfStationery, a background template per page range with a default, written as a form XObject under the untouched content). Details: https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/CHANGELOG.md</PackageReleaseNotes>
   </PropertyGroup>
 
   <!--

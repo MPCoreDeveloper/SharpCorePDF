@@ -54,7 +54,8 @@ dotnet test .\tests\SharpCorePDF.Tests\SharpCorePDF.Tests.csproj -c Release -p:T
   → Passed! total: 1139, failed: 0, succeeded: 1139
 ```
 
-The suite grew from 1076 tests per leg (the count in `README.md`) to 1139.
+The suite grew from 1076 tests per leg (the count in `README.md`) to 1139 at this run; it is 1196 per leg
+on 2026-11-14.
 
 A **stale test host** from an earlier Release run held `tests/.../bin/Release/net11.0` open for the whole
 session, so the Release leg above was run with `-p:BaseOutputPath=artifacts\lockfree\`; the ordinary path

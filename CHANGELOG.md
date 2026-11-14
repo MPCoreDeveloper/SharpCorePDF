@@ -18,7 +18,7 @@ feed ever served.
 contents of the layers, and the entry below is written against the published `preview.1` rather than
 against an empty feed.
 
-## [Unreleased]
+## [1.8.0] - 2026-11-14
 
 ### Added
 

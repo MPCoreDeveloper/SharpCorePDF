@@ -6,7 +6,7 @@ pages from nothing, and changes the assembly of an existing document — which p
 order and with what rotation. It does all of that without calling a native library, a command line
 tool or a third-party PDF engine.
 
-This manual describes version **1.7.0** of the library. It is written for the developer who has to ship a
+This manual describes version **1.8.0** of the library. It is written for the developer who has to ship a
 feature, not only for the developer who wants to read source code: every chapter explains the behaviour you
 can rely on, the behaviour you should not rely on, and the code that exercises it.
 
@@ -45,13 +45,14 @@ converter that reads these chapters, the browser that lays the pages out, and th
 library writes. Chapter 26 is the font inspector: the fonts a document uses and whether each program
 travels with it.
 
-**This edition describes `1.7.0`, and every chapter describes what the package ships.** Since `1.4.0` the
+**This edition describes `1.8.0`, and every chapter describes what the package ships.** Since `1.4.0` the
 changes a caller can see in the API are additive: a page can paint in a colour space the caller names
 (Chapter 15), the layout reader can read a page as horizontal row bands for a document known to be a table
 (Chapter 21), and a session keeps one parse open across several questions about the same document
 (Chapter 20). `1.6.0` added the level-U PDF/A profiles, a caller-supplied output intent and the font
-inspector (Chapter 26); `1.7.0` adds the stationery plan — a background template per page range, with a
-default — and the overlay and underlay layers it builds on (Chapter 14). Chapters 16 to 19 were written
+inspector (Chapter 26); `1.7.0` added the stationery plan — a background template per page range, with a
+default — and the overlay and underlay layers it builds on (Chapter 14); `1.8.0` adds the one-call
+diagnostics report (Chapter 8) and PDF/A-4 (Chapter 24). Chapters 16 to 19 were written
 while `1.1.0` was the package on the feed, and each of their heads used to say which part of its surface
 `1.1.0` already carried; they now describe the surface as it stands. The numbers are kept rather than
 reassigned so that a cross-reference in one edition keeps pointing at the same chapter in the next.
@@ -79,9 +80,9 @@ GitHub documentation and the PDF. If you find a discrepancy between this text an
 is the source of truth; please open an issue so the text can be corrected. Chapter 25 describes how those
 files become the PDF you are reading.
 
-> **Version note.** This manual is written against 1.7.0. The public API is covered by an approved snapshot
+> **Version note.** This manual is written against 1.8.0. The public API is covered by an approved snapshot
 > in each project, so a change to a public member is a deliberate, reviewed event rather than an accident of
-> a refactoring. Code that compiles against 1.6.0 keeps compiling across this minor release — every addition
+> a refactoring. Code that compiles against 1.7.0 keeps compiling across this minor release — every addition
 > is additive — and the changelog records every addition and every change of behaviour.
 
 ## What you need

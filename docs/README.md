@@ -6,19 +6,20 @@ long-form reference for the API.
 
 ## The manual
 
-- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.7.0.pdf)** — 125 pages, A4, with a
+- **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.8.0.pdf)** — 125 pages, A4, with a
   linked contents page and PDF bookmarks.
 - **Read the chapters as Markdown** in [`manual/src`](manual/src). Each file is one chapter, and the
-  file-name order is the chapter order. This edition describes `1.7.0`. Chapters 16 to 19 were written
+  file-name order is the chapter order. This edition describes `1.8.0`. Chapters 16 to 19 were written
   while `1.1.0` was the package on the feed, and their heads used to say which part of their surface it
   already carried — the annotation writer and the form model shipped there, while the form writer, the
   text layouter and the JPEG, BMP and GIF readers are what `1.2.0` added. They now describe the surface as
-  it stands. The [`1.5.0`](SharpCorePDF-Manual-1.5.0.pdf), [`1.4.0`](SharpCorePDF-Manual-1.4.0.pdf),
-  [`1.3.0`](SharpCorePDF-Manual-1.3.0.pdf), [`1.2.0`](SharpCorePDF-Manual-1.2.0.pdf) and
-  [`1.1.0`](SharpCorePDF-Manual-1.1.0.pdf) editions stay beside this one as the record of what those
-  releases shipped, and the chapter numbers are kept so that a cross-reference survives both. The PDF and
-  the Markdown are in step: this edition includes Chapter 26 (fonts) and the stationery section in Chapter
-  14, and it is rebuilt before a release with
+  it stands. The [`1.7.0`](SharpCorePDF-Manual-1.7.0.pdf), [`1.5.0`](SharpCorePDF-Manual-1.5.0.pdf),
+  [`1.4.0`](SharpCorePDF-Manual-1.4.0.pdf), [`1.3.0`](SharpCorePDF-Manual-1.3.0.pdf),
+  [`1.2.0`](SharpCorePDF-Manual-1.2.0.pdf) and [`1.1.0`](SharpCorePDF-Manual-1.1.0.pdf) editions stay
+  beside this one as the record of what those releases shipped, and the chapter numbers are kept so that a
+  cross-reference survives both. The PDF and the Markdown are in step: this edition includes the
+  diagnostics report in Chapter 8, the stationery section in Chapter 14 and Chapter 26 (fonts), and it is
+  rebuilt before a release with
   (`dotnet run --project .\tools\SharpCorePDF.Manual`).
 
 | Chapter | What it covers |

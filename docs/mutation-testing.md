@@ -796,3 +796,42 @@ names — the redundant null guard, the exception message string, the four `Conf
 the two warning-merge statements — and the single kill that moved is a mutant 5.1.0's Safe Mode rejects
 at compile time rather than executes. No test changed, and no new survivor appeared.
 
+## PdfPageCanvas — the drawing surface (2026-11-14)
+
+The canvas carried the largest survivor set in the tree. The 1.6.0 increment measured it at **42.04%** and
+left it there because that increment had not written the drawing code; this pass read the survivors and
+closed them with tests that assert the operation the canvas records, not the content stream it becomes —
+the same distinction the font record draws between a font's fields and its bytes.
+
+| File | Score | Killed | Survived | No coverage | Mutants |
+| --- | --- | --- | --- | --- | --- |
+| `PdfPageCanvas.cs` (1.6.0) | 42.04% | 66 | 67 | 24 | 201 |
+| `PdfPageCanvas.cs` (this pass) | **85.99%** | 135 | 13 | 0 | 201 |
+
+`PdfPageCanvasTests` adds thirty-three cases (the suite moves from 1196 to 1229). They divide into three
+groups. **The guards** — every public method that takes a reference, and every one that takes a raw
+coordinate or size — are called with the null, NaN, zero and negative a caller can actually supply, so a
+removed `ThrowIfNull`/`ValidatePosition`/`ValidateSize` is a test that fails. **The geometry** — the ellipse
+test rebuilds the four cubic curves from the same bounds with the same `0.5522847498307936` constant and
+compares the segments point by point, so a sign flip or a doubled radius fails even though the rendered page
+would still look round. **The state counter** — one `SaveState` allows one `RestoreState`, and the second
+restore throws, which is what makes `stateDepth` a contract rather than a pair of tokens.
+
+The thirteen that remain, read one by one:
+
+- **The eight exception-message strings** (`L41`, `L84`, `L285`, `L540`, `L552`, `L557`, `L584`, `L589`):
+  no test asserts a refusal's wording, which is not a contract — the reason the merge, font and diagnoser
+  records already state.
+- **The three constructor guards** (`L36`): `PdfPageSize` refuses a non-positive dimension in its own
+  constructor, so the only invalid value a caller can still pass is `default(PdfPageSize)`, which is
+  `0 x 0`; at `0 x 0` the `||`, `&&`, `<=` and `<` variants all throw the same way, so no reachable input
+  distinguishes them. The guard stays for that `default` case.
+- **`ValidatePosition` in `DrawTextLayout`** (`L124`): a `PdfPoint` refuses a non-finite coordinate in its
+  constructor, so this call can never throw. It is the one guard this file keeps although no input reaches
+  it, because the alternative is a documented exception that cannot occur; the existing test in
+  `PdfDocumentBuilderTests.Drawing` passes `new PdfPoint(double.NaN, 0)`, which throws in `PdfPoint` before
+  `DrawTextLayout` is entered.
+- **`origin.X + run.Start.X`** (`L139`): the first run of a left-aligned line starts at x = 0, and the
+  layout fixtures in the suite are left-aligned, so `+` and `-` record the same operation. A centred or
+  indented layout is the fixture that would close it.
+

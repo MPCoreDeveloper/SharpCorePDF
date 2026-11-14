@@ -10,8 +10,8 @@
   question from a host that is. Read them as:
 
     nuget.org version  the vpre endpoint for the entry-point id, which read "unknown" until 1.0.0 was
-                       pushed on 2026-10-17, and reads 1.7.0 now; the four layer ids resolve too, at
-                       1.7.0 and 1.0.0-preview.1
+                       pushed on 2026-10-17, and reads 1.8.0 now; the four layer ids resolve too, at
+                       1.8.0 and 1.0.0-preview.1
     tests              the ci.yml runs: the build, both test legs and the SonarCloud analysis
     PDF/A              the compliance.yml runs: veraPDF 1.30.4, PDFBox preflight and Ghostscript
                        over the archival documents the archive-pdfa example writes
@@ -61,7 +61,7 @@ independent implementations (`qpdf` via `pikepdf`, and `pypdf`).
 The product boundary is recorded in [ADR-001](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/adr/0001-pdf-platform-boundary.md).
 The capability target is PDFsharp 6.5 for creation and processing and PdfPig 0.1.x for reading and layout
 analysis; rendering, conversion, OCR, conformance validation, services and CLIs stay outside the product.
-`1.7.0` ships that target for creation, editing and reading — authoring, page editing, over/under layers
+`1.8.0` ships that target for creation, editing and reading — authoring, page editing, over/under layers
 and stationery, reading with layout analysis, signatures and PDF/A — with the exceptions [`docs/parity.md`](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/parity.md)
 still records; that file names the release of every row and the test and external command behind it.
 Current capability is described below, not the target.
@@ -333,8 +333,8 @@ guide to the API: twenty-seven chapters, from the first merge to encryption, ins
 injection, the architecture, authoring a page, a cookbook of complete recipes, editing an existing document
 (including over/under layers and the stationery plan), extraction, layout analysis, the object graph, digital
 signatures, archival output, the fonts a document uses, and how the manual itself is built. Read it as
-[a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.7.0.pdf)
-(the 1.7.0 edition) or chapter by chapter as Markdown, starting with
+[a PDF](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/SharpCorePDF-Manual-1.8.0.pdf)
+(the 1.8.0 edition) or chapter by chapter as Markdown, starting with
 [Installation and First Merge](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/manual/src/03-installation.md).
 The [documentation index](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md)
 links every chapter and the supporting measurement, release and governance documents.

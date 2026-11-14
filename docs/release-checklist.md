@@ -13,6 +13,9 @@ symbols story" — so the gate reads without it, and nothing here depends on a d
 
 ## Where the repository stands, 2026-10-17
 
+The table below is the `1.0.0` baseline, kept as it was written. The current state is the most recent
+`G1–G9 at` section further down — `1.7.0` today, and `1.8.0` when it is cut.
+
 | Fact | State |
 | --- | --- |
 | Current `<Version>` | `1.0.0` (`src/Directory.Build.props`) |
@@ -595,6 +598,33 @@ The acceptance criteria of #6 are pinned one test each in
 `tests/SharpCorePDF.Tests/PdfDocumentEditorTests.StationeryAcceptance.cs`; the external `pikepdf`/`qpdf` run on
 the `stationery` example reported `qpdf check: no problems`, three pages, the three page sizes unchanged and
 `3` form XObjects with `0` image XObjects. The scoped Stryker run over `PdfStationery.cs` scored **100 %**.
+
+## G1–G9 at `1.8.0` (prepared, 2026-11-14)
+
+This version writes what the tree had gathered since `1.7.0`: the one-call diagnostics report (P4), PDF/A-4
+(ISO 19005-4), and the symbol packages with the reproducible-build comparison (G4). The tree is ready to tag;
+the tag and the push are the owner's step, and the rows below say which gates are checked and which are not yet.
+
+| Gate | State at `1.8.0` (in the working tree) | Evidence |
+| --- | --- | --- |
+| G0 — the id | **Closed** | the five ids are unchanged since `1.0.0`; `1.8.0` adds a version to ids the project already owns |
+| G1 — the surface | **Moved into `PublicAPI.Shipped.txt`** | the diagnostics surface (`IPdfDiagnoser`, `PdfDiagnosticsReport`, `PdfDiagnoserService`) and `PdfAProfile.PdfA4` were the `[Unreleased]` additions; 23 Domain and 3 Application entries moved, `PublicAPI.Unshipped.txt` is back to `#nullable enable`, and `RS0016`/`RS0017` are build errors |
+| G2 — the shipped leg | **Unchanged: both legs ship** | `dotnet pack` produces five `1.8.0` packages; the three layer packages carry `lib/net10.0` and `lib/net11.0` |
+| G3 — notes | **Written** | `CHANGELOG.md` holds `## [1.8.0] - 2026-11-14`, and `PackageReleaseNotes` in `src/Directory.Build.props` carries the same summary onto all five package pages |
+| G4 — symbols and reproducible binaries | **Yes, 2026-11-14** | every `dotnet pack` writes a `.snupkg`, `publish.yml` pushes both, and the `reproducible` CI job packs the same commit twice and compares every entry; code signing is still not done |
+| G6 — a dry run on the commit to be tagged | **Not run yet** | the owner's step, after `ci.yml` and `compliance.yml` finish on the commit to be tagged |
+| G9 — quality gate | **Green on the tree** | `dotnet build -c Release` → 0 warnings, 0 errors; `dotnet test` **1229 passed, 0 failed** on each leg (`net10.0` and `net11.0`) |
+| G7 — the tag equals `<Version>` | **Not yet** | `<Version>` is 1.8.0; `v1.8.0` is the tag the owner pushes on the commit this section will name |
+| G8 — the packages reach the feed | **Not yet** | the tag push runs `publish.yml`; the five `PUT …/api/v2/package` answers are the evidence, and they do not exist until it runs |
+
+The manual is the `1.8.0` edition: `docs/SharpCorePDF-Manual-1.8.0.pdf`, 27 chapters, 125 pages, 236 bookmarks,
+built by `tools/SharpCorePDF.Manual` from the same sources (`check: ok`).
+
+What is deliberately not in this version, and is tracked rather than implied:
+
+- **P5 — PDF/A-2u/-3u and -4f/-4u.** Still a decision gate with a veraPDF evidence path to agree (issue #10).
+- **The image filters the reader passes through** — `DCTDecode`, `JPXDecode`, `JBIG2Decode`,
+  `CCITTFaxDecode` and `RunLengthDecode` — remain `ImageFilterUnsupported`, the limit parity row 14 states.
 
 ## `1.6.0` (2026-11-14, tagged and published)
 

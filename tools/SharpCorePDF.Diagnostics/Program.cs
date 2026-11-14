@@ -20,6 +20,14 @@ namespace SharpCorePDF.Diagnostics;
 /// </remarks>
 internal static class Program
 {
+    // One instance: JsonSerializerOptions is immutable once used and expensive to build, so a per-call
+    // instance would be thrown away on the one run this tool has anyway (CA1869).
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() },
+    };
+
     private static async Task<int> Main(string[] args)
     {
         if (args.Length == 0 || args.Contains("--help") || args.Contains("-h"))
@@ -51,7 +59,7 @@ internal static class Program
                     index++;
                     if (index >= args.Length || !TryProfile(args[index], out var parsed))
                     {
-                        Console.Error.WriteLine("--profile needs one of 1b, 2b, 3b, 2u or 3u.");
+                        Console.Error.WriteLine("--profile needs one of 1b, 2b, 3b, 2u, 3u or 4.");
                         return 1;
                     }
 
@@ -92,13 +100,7 @@ internal static class Program
 
             if (json)
             {
-                var options = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    Converters = { new JsonStringEnumConverter() },
-                };
-
-                Console.WriteLine(JsonSerializer.Serialize(report, options));
+                Console.WriteLine(JsonSerializer.Serialize(report, JsonOptions));
             }
             else
             {
@@ -161,6 +163,7 @@ internal static class Program
             "3b" => PdfAProfile.PdfA3B,
             "2u" => PdfAProfile.PdfA2U,
             "3u" => PdfAProfile.PdfA3U,
+            "4" => PdfAProfile.PdfA4,
             _ => (PdfAProfile)(-1),
         };
 
@@ -171,7 +174,7 @@ internal static class Program
     {
         Console.WriteLine("SharpCorePDF diagnostics");
         Console.WriteLine();
-        Console.WriteLine("  SharpCorePDF.Diagnostics <file.pdf> [--password <p>] [--profile 1b|2b|3b|2u|3u] [--json]");
+        Console.WriteLine("  SharpCorePDF.Diagnostics <file.pdf> [--password <p>] [--profile 1b|2b|3b|2u|3u|4] [--json]");
         Console.WriteLine();
         Console.WriteLine("  --password  the user or owner password, when the document is encrypted");
         Console.WriteLine("  --profile   also run the PDF/A pre-flight for that profile");

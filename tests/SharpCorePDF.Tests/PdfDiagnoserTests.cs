@@ -108,7 +108,7 @@ public sealed class PdfDiagnoserTests
     [Fact]
     public async Task Refuses_a_null_source()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() => Diagnoser().DiagnoseAsync(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => Diagnoser().DiagnoseAsync(null!, cancellationToken: Token));
     }
 
     /// <summary>The container resolves the diagnoser, so an application does not have to wire it by hand.</summary>
@@ -129,7 +129,8 @@ public sealed class PdfDiagnoserTests
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             Diagnoser().DiagnoseAsync(
                 new PdfByteArraySource([], "empty.pdf"),
-                archivalProfile: (PdfAProfile)99));
+                archivalProfile: (PdfAProfile)99,
+                cancellationToken: Token));
     }
 
     /// <summary>A warning only the font read makes is part of the report, not lost in the merge.</summary>
@@ -147,7 +148,7 @@ public sealed class PdfDiagnoserTests
     {
         var source = new CountingSource(await File.ReadAllBytesAsync(TestAssets.Encrypted, Token), "encrypted.pdf");
 
-        var report = await Diagnoser().DiagnoseAsync(source);
+        var report = await Diagnoser().DiagnoseAsync(source, cancellationToken: Token);
 
         Assert.False(report.Document.IsReadable);
         Assert.Equal(1, source.Opens);

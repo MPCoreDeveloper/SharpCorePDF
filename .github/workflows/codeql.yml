@@ -1,0 +1,75 @@
+# Static analysis of the C# this repository ships, by CodeQL.
+#
+# ci.yml answers "does the change lower coverage, and what does SonarCloud say about it"; this answers
+# "does a second, independent engine find a security defect in the bytes we parse". The two are not
+# duplicates: the query packs are written by different people, and a library whose whole job is to read
+# untrusted bytes is worth scanning twice. docs/foundation-readiness.md names this pair as the evidence for
+# the "high priority on producing secure software" criterion -- Dependabot covers the dependencies, CodeQL
+# covers the code.
+#
+# The results land in the repository's Security tab (Code scanning alerts). That tab, and the SARIF upload
+# it stores, are a repository setting no file here can switch on; the workflow runs regardless and starts
+# reporting there once the setting exists. Dependabot's *security* updates are the sibling switch, in
+# Settings -> Code security.
+#
+# The build is the one the release ships: both target frameworks, Release configuration, no incremental
+# reuse. `build-mode: manual` is deliberate -- autobuild would pick a single project and could miss the
+# net10.0 leg, and the extractor reads the compiler, so the build has to be the real one.
+
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Once a week, so a query-pack update reaches the tree even when nothing is pushed.
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  security-events: write   # upload the SARIF results to the Security tab
+  packages: read           # pull the CodeQL query packs
+  actions: read
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze C#
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # The same two SDKs ci.yml installs: the 11.0 SDK alone cannot produce the net10.0 app host the
+      # test project and the smoke app need (MSB3030).
+      - name: Install the .NET SDKs
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: |
+            11.0.x
+            10.0.x
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@9418214df1f2c4b8128c770156c409013b07d6b9 # v3
+        with:
+          languages: csharp
+          build-mode: manual
+          # The default pack is the security suite; extended adds the queries a byte parser benefits
+          # from without turning the run into a style review.
+          queries: security-extended
+
+      - name: Build
+        run: dotnet build ./SharpCorePDF.slnx -c Release --no-incremental
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@9418214df1f2c4b8128c770156c409013b07d6b9 # v3
+        with:
+          category: "/language:csharp"

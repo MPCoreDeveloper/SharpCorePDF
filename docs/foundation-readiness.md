@@ -45,6 +45,26 @@ first — because stars, forks and outside issues are what the committee reads a
 None of this is a defect in the code; it is the arithmetic of a project that started two days ago. It
 is also the reason an application now would be judged on intent rather than on evidence.
 
+### Where it stands on 2026-11-14
+
+The verdict above is the 2026-10-17 snapshot and stays as it was written. Four weeks later the second half
+of it — activity — has moved, and the gap is no longer "never published a package":
+
+| Metric | Value on 2026-11-14 | Read |
+| --- | --- | --- |
+| Age | repository created **2026-10-15** | thirty days |
+| Commits | 107 on `main` | still a small project, but no longer a single line of history |
+| Issues open / closed | 0 / 5 | the tracker is in use: an outside report (#6) became a shipped feature (#9) |
+| Pull requests open / closed | 0 / 13 | every merge goes through the pull-request workflow |
+| Releases | 9 tags (`v1.0.0-preview.1`, `v1.0.0`, `v1.1.0` … `v1.7.0`) | a release every few days, each with notes and a gate record |
+| Packages | 5 ids on nuget.org, at `1.7.0` | the entry point and the four layers move together |
+| Stars / watches / forks | 0 / 0 / 0 | unchanged, and the honest read of "activity" for a Foundation application |
+
+The three documents still exist, and now so does `docs/release-checklist.md`'s per-version record through
+`1.7.0`. What is still missing is two settings and one outside commit: **GitHub Discussions**, **private
+vulnerability reporting**, and a commit from someone other than the owner. A stable release has not aged
+ninety days yet either — `1.0.0` landed 2026-10-17, so it reaches that mark on 2027-01-15.
+
 ## Eligibility criteria, one row each
 
 ### Open
@@ -145,12 +165,12 @@ The owner's decision, taken 2026-10-17: **the application is filed as soon as th
 That document holds the checklist, the state of each condition, and the answers to the form, so that filing
 costs an hour rather than a week of reconstruction.
 
-As of this date three conditions are true (the three documents exist) and five are not: nothing is
-published on nuget.org, so no stable release has aged 90 days either; no outside contribution exists;
-Discussions is off; and three of the five decisions below are unanswered — the package id and the account
-shape were decided on 2026-10-17. Two of the false conditions cost nothing but a settings toggle, and
-neither needs anybody else's time: **GitHub Discussions**, and **private vulnerability reporting**, without
-which the first channel in `SECURITY.md` does not resolve.
+As of 2026-11-14 the picture is: the three documents exist; the five ids are published at `1.7.0`, but no
+stable release has aged 90 days yet (`1.0.0` reaches that mark on 2027-01-15); no outside *commit* exists,
+though issue #6 was a real outside report; Discussions is still off; and the package id and account shape
+were decided on 2026-10-17. Two of the false conditions cost nothing but a settings toggle, and neither
+needs anybody else's time: **GitHub Discussions**, and **private vulnerability reporting**, without which
+the first channel in `SECURITY.md` does not resolve.
 
 ## What to do now, in the order that also serves the release
 
@@ -177,8 +197,11 @@ needs whether or not an application is ever filed:
    document cannot supply. A policy describes the process; a scanner watches the dependencies.
    **Partly done, 2026-10-17:** `.github/dependabot.yml` schedules version updates for the NuGet packages
    and the workflow actions, with the project folders listed one by one because the updater does not read
-   a `.slnx`. Alerts and *security* updates are still a repository setting (Settings → Code security), and
-   no file in this repository can switch them on.
+   a `.slnx`. **CodeQL added, 2026-11-14:** `.github/workflows/codeql.yml` runs the C# extractor over the
+   real Release build (both target frameworks) on every push to `main`, on pull requests, and once a week,
+   and uploads SARIF to the Security tab; the `security-extended` query pack is the reason a byte parser is
+   worth a second engine. Dependabot's *security* updates and Code scanning alerts are still repository
+   settings (Settings → Code security), and no file in this repository can switch them on.
 
 ## What not to do
 
