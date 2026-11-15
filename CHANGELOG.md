@@ -43,8 +43,9 @@ against an empty feed.
 - **Progressive JPEG images are decoded.** `DCTDecode` now reads the multi-scan form too: spectral
   selection and successive approximation accumulate in the quantised coefficient grids the scans share,
   and the inverse DCT runs once at the end, so a non-interleaved AC scan (one component) and an
-  interleaved DC scan (every component, MCU order) land on the same blocks. A 4:4:4, a 4:2:0 and a
-  grayscale progressive fixture each matches Pillow within two levels of every sample. The AC
+  interleaved DC scan (every component, MCU order) land on the same blocks. Seven progressive fixtures —
+  4:4:4, 4:2:0, grayscale, CMYK, a non-square 32 x 16 image, a sparse one that uses the EOB and zero runs,
+  and one with 150 restart markers — each matches Pillow within two levels of every sample. The AC
   refinement's two conventions — the sign bit is read before the correction bits, and 1 means positive —
   are recorded in [`ADR-005`](docs/adr/0005-image-filter-decoders.md), because getting either backwards
   still decodes every scan and leaves a handful of coefficients a step or two out.

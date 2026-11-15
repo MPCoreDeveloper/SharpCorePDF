@@ -42,7 +42,7 @@ Shipping order and acceptance criteria:
 | --- | --- | --- |
 | `RunLengthDecode` | — | **Done.** Literal and repeat runs, an optional end-of-data byte, a truncated stream decoded as far as it goes. `PdfImageFilterTests` and the `FilterChains` fixture pin it, and the image is exposed as `Gray8`. |
 | `CCITTFaxDecode` | Group 3 one-dimensional (`/K` = 0), Group 3 two-dimensional (`/K` > 0), Group 4 (`/K` < 0); `/Columns`, `/Rows`, `/BlackIs1`, `/EncodedByteAlign`, `/EndOfLine` | The decoded bilevel bits equal an independent decoder's output on the same bytes. Evidence: Pillow's CCITT reader through `pikepdf` on the fixture, and a real fax sample in `tests/.../Assets/parity/images`. |
-| `DCTDecode` | SOF0, SOF1, SOF2; restart markers; 1, 3 and 4 components; 4:4:4, 4:2:2, 4:2:0; YCbCr and CMYK/YCCK (Adobe APP14); EXIF orientation | Geometry and component count exact; every sample within **2 levels** of a reference decoder (an integer IDCT is allowed to differ by rounding). Evidence: Pillow on the `tests/SharpCorePDF.Tests/Assets/jpeg/jpeg-*.jpg` fixtures — baseline 4:4:4, grayscale, 4:2:0, CMYK and restart, plus progressive 4:4:4, 4:2:0 and grayscale — compared pixel by pixel, with the per-image maximum recorded in `docs/mutation-testing.md`. |
+| `DCTDecode` | SOF0, SOF1, SOF2; restart markers; 1, 3 and 4 components; 4:4:4, 4:2:2, 4:2:0; YCbCr and CMYK/YCCK (Adobe APP14); EXIF orientation | Geometry and component count exact; every sample within **2 levels** of a reference decoder (an integer IDCT is allowed to differ by rounding). Evidence: Pillow on the `tests/SharpCorePDF.Tests/Assets/jpeg/jpeg-*.jpg` fixtures — baseline 4:4:4, grayscale, 4:2:0, CMYK and restart, plus progressive 4:4:4, 4:2:0, grayscale, CMYK, non-square, sparse and restart-interval — compared pixel by pixel, with the per-image maximum recorded in `docs/mutation-testing.md`. |
 | `JPXDecode` | JP2 and raw J2K codestream; 5/3 reversible and 9/7 irreversible; tiles and tile-parts | Reversible path **bit-exact**; irreversible path within 2 levels. Evidence: `opj_decompress` on the same codestream. |
 | `JBIG2Decode` | Generic region, symbol dictionary, text region, MMR | Bit-exact bilevel output. Evidence: `jbig2dec` on the same stream. |
 
@@ -138,9 +138,13 @@ states) and `jpeg-restart.jpg` (restart markers).
 
 The progressive decoder followed on 2026-11-15: the scans' quantised coefficients are accumulated in one
 grid per component and the inverse DCT runs once at the end, so a non-interleaved AC scan (one component,
-its blocks) and an interleaved DC scan (every component, MCU order) both land on the same blocks. Three
-fixtures pin it — `jpeg-progressive.jpg` (32 x 32, quality 95, 4:4:4), `jpeg-progressive-420.jpg` (4:2:0)
-and `jpeg-progressive-gray.jpg` (one component) — each compared with Pillow's decode within two levels.
+its blocks) and an interleaved DC scan (every component, MCU order) both land on the same blocks. Seven
+fixtures pin it — `jpeg-progressive.jpg` (32 x 32, quality 95, 4:4:4), `jpeg-progressive-420.jpg` (4:2:0),
+`jpeg-progressive-gray.jpg` (one component), `jpeg-progressive-cmyk.jpg` (four components), and
+`jpeg-progressive-wide.jpg` (32 x 16, so the block counts differ), `jpeg-progressive-sparse.jpg` (flat
+areas, so the EOB runs and zero runs are used) and `jpeg-progressive-restart.jpg` (150 restart markers,
+so the predictors and the EOB run reset) — each compared with Pillow's decode within two levels. The
+truncated-stream theory cuts the entropy data at nine points and pins the refusals.
 Two details cost a debugging round and are written down because a first implementation gets both wrong
 without failing: in an AC refinement scan the sign bit of a new coefficient is read **before** the
 correction bits of the coefficients the run passes over, and a sign bit of **1 means positive** (0 means
