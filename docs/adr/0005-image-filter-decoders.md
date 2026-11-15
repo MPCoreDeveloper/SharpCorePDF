@@ -152,6 +152,24 @@ negative) — the inverse of the magnitude-field convention an AC first scan use
 decodes every scan to the end and leaves a handful of coefficients one or two steps out, which is why the
 acceptance is a pixel comparison and not "it decoded".
 
+## The JPX slice — stage 1 (2026-11-15)
+
+JPEG 2000 is the largest decoder this ADR scopes, so it lands in stages. The first stage is the container
+and the main header: a JP2's boxes — the signature, and the `jp2c` box that holds the codestream — or a raw
+J2K's SOC marker, then SIZ (the image and tile sizes and the components with their depth, sign and
+subsampling) and COD (the progression, the layer count, the colour transform, the decomposition levels and
+whether the transform is the reversible 5/3 or the irreversible 9/7). `JpxDecoder.TryReadHeader` states
+those values and refuses a container without a codestream or a main header without SIZ or COD.
+
+The fixtures are OpenJPEG's, through Pillow: `jpx-5-3.jp2` and `jpx-9-7.jp2` for the two transforms and
+`jpx-5-3.j2k` for the raw form, each 32 x 32 with three 8-bit components, five decomposition levels and no
+colour transform. The expected bytes are Pillow's decode of the same files, kept for the pixel stage.
+
+What is **not** done is the part that makes pixels: the packet headers and the tag trees, the EBCOT
+bit-plane passes with the MQ arithmetic decoder, the inverse 5/3 and 9/7 wavelets, and the reversible or
+irreversible colour transform. That is the next stage, and the status table says so rather than claiming
+the filter.
+
 ## Status of the slices
 
 | Slice | State |
@@ -159,5 +177,5 @@ acceptance is a pixel comparison and not "it decoded".
 | `RunLengthDecode` | **Implemented** (2026-11-14) |
 | `CCITTFaxDecode` | **Implemented** (2026-11-15) |
 | `DCTDecode` | **Baseline (SOF0/SOF1) and progressive (SOF2) implemented, fancy upsampling** (2026-11-15); `JPXDecode` next |
-| `JPXDecode` | Planned |
+| `JPXDecode` | **In progress** — the JP2 container and the codestream header are read (2026-11-15); the packets and the inverse wavelet are next |
 | `JBIG2Decode` | Planned |
