@@ -899,6 +899,59 @@ The survivors are the **variants the two fixtures do not carry**, not statements
   in part.
 
 Those tests are now in — `jpeg-420.jpg`, `jpeg-cmyk.jpg`, `jpeg-restart.jpg` and a truncated stream — and
-the score above predates them. The fancy upsampling that matches Pillow at every edge, and the progressive
-variant, are the ADR's next slice.
+the score above predates them. The fancy upsampling that matches Pillow at every edge followed, and the
+progressive variant's reading is below.
+
+## DCTDecode — progressive (SOF2) (2026-11-15)
+
+Scoped run over `Pdf/JpegDecoder.cs` after the progressive scans landed. The command is the 5.0.0
+project-mode form with a copy of `stryker-config.json` that restores the `test-projects` entry, because
+5.1.0 in this environment ignores the scope (the note at the end of this section has the evidence):
+
+```powershell
+"%TEMP%\stryker-tools\dotnet-stryker.exe" --config-file stryker-jpeg-config.json `
+  --project src\SharpCorePDF.Infrastructure\SharpCorePDF.Infrastructure.csproj `
+  --mutate "**/JpegDecoder.cs" --output artifacts\mutation\jpeg-progressive
+```
+
+20,004 mutants are created for the solution and the filter leaves **797** for the file (650 killed, 146
+survived, 1 timeout). The report is per file, so the whole decoder is read, not only the new region:
+
+| File | Score | Killed | Survived | No coverage | Mutants |
+| --- | --- | --- | --- | --- | --- |
+| `Pdf/JpegDecoder.cs` (baseline, 2026-11-15) | 61.65% | 351 | 114 | 105 | 671 |
+| `Pdf/JpegDecoder.cs` (with progressive) | **70.23%** | 650 (+1 timeout) | 146 | 130 | 1122 |
+
+The new region alone (line 520 onwards) reads **72.0%**: 411 killed, 65 survived, 95 without coverage, 71
+compile errors and 72 ignored. The survivors divide into the same two kinds the baseline reading named,
+plus the progressive variants the three fixtures do not carry:
+
+- **Restart markers inside a progressive scan** (L615–L661) have no fixture, so `mcu++` and the
+  `restartInterval` comparisons survive and the `TryReadRestart` call has no coverage. A progressive
+  stream with a DRI interval is the missing fixture.
+- **A square component grid makes a multiply and a divide the same number** (L604, L632): the 4:4:4 and
+  4:2:0 fixtures are 4 x 4 and 2 x 2 blocks, so `BlocksX * BlocksY` and `BlocksX / BlocksY` agree. A
+  non-square image, 16 x 32, kills both.
+- **The DC refinement's `|=` is equivalent to `^=` and `1 >> Al` to `1` at Al = 0** (L719): the fixture's
+  DC refinement runs at Al = 0. A stream that refines the DC at `Ah = 2, Al = 1` distinguishes them.
+- **An EOB run that skips a block whose coefficients are all zero is invisible** (L736, L799): the
+  fixture's chroma planes are nearly flat, so zeroing one block still lands within the two-level
+  tolerance. A chroma-heavy image makes the run's `eobRun--` observable.
+- **The baseline marker and segment edge cases** (L82–L248) and the **error branches** (the no-coverage
+  column) are unchanged from the baseline reading: a malformed stream is the only test that reaches them.
+
+None of the survivors is a statement to remove: each is a variant or a boundary the fixtures do not state,
+and they are recorded rather than papered over. The two conventions the progressive decoder had to get
+right — the sign bit before the correction bits, and 1 meaning positive — are killed by the three
+progressive fixtures, which is why they are written down in ADR-005.
+
+**Harness note (5.1.0).** On this workstation, `dotnet stryker` 5.1.0 in solution context mutates the whole
+tree however the scope is stated: the `mutate` entry in `stryker-config.json`, `--mutate` and `--since:main`
+all leave 23,042 mutants, and the documented 5.1.0 example (`--mutate "**/PdfDiagnoserService.cs"`, 13
+mutants in the 5.1.0 record above) reads the whole tree here. Project mode is refused with "Test projects
+cannot be specified when running Stryker in solution context". The reading above is therefore taken with a
+local 5.0.0 — `dotnet tool install dotnet-stryker --version 5.0.0 --tool-path %TEMP%\stryker-tools` — run
+from the repository root with `--project` and the command-line `--mutate`, which applies the filter (797 of
+20,004). The pin, the config and the workflow are unchanged; the version is stated because 5.1.0 rejected
+one mutant at compile time in the earlier comparison, so a 5.1.0 re-run may move a point either way.
 
