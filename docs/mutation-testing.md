@@ -874,3 +874,31 @@ is short; a wide fixture is the test that would close them.
 Three tests were added after the run — a stream without a row count, a bitmap above the budget, and a
 stream that stops mid-line — and their effect is not measured here.
 
+## DCTDecode — the baseline JPEG decoder (2026-11-15)
+
+The baseline decoder is a marker parser, a canonical Huffman decoder, an 8 x 8 inverse DCT and the colour
+paths. Its reading:
+
+| File | Score | Killed | Survived | No coverage | Mutants |
+| --- | --- | --- | --- | --- | --- |
+| `Pdf/JpegDecoder.cs` | **61.65%** | 351 | 114 | 105 | 671 |
+
+The survivors are the **variants the two fixtures do not carry**, not statements to remove:
+
+- **Marker and segment edge cases** (`L75`–`L121`): the fixtures have one valid layout, so a wrong length,
+  a standalone marker, or a segment that runs past the buffer is not reached.
+- **The parsers' alternate shapes** (`L207`–`L379`): a 16-bit quantisation table, a second Huffman table, a
+  frame with another component count, an Adobe APP14 segment, and a scan that names a table the frame does
+  not.
+- **The plane arithmetic and upsampling** (`L418`–`L452`, `L615`–`L616`): the 16 x 16 fixture is one MCU
+  with H = V = 1, so `x * H / maxH` is `x` and several offsets are zero; a 4:2:0 fixture is the test that
+  distinguishes them.
+- **Restart markers** (`L466`): the fixtures carry none.
+- **The colour paths for four components** (`L644`–`L659`): a CMYK/YCCK fixture is missing.
+- **The error branches** (`return false`): the no-coverage column, which a malformed-stream test covers only
+  in part.
+
+So the next tests are chosen by the survivors: a 4:2:0 fixture with the fancy upsampling Pillow uses, a
+CMYK fixture, a restart-interval fixture, and a malformed stream. The progressive variant is the ADR's next
+slice.
+

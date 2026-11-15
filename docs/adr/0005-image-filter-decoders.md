@@ -1,7 +1,8 @@
 # ADR-005: Decoding the image filters the reader passes through
 
-- **Status**: **Accepted** (2026-11-14) — `RunLengthDecode` (2026-11-14) and `CCITTFaxDecode` (2026-11-15)
-  implemented; `DCTDecode`, `JPXDecode` and `JBIG2Decode` accepted in that order, one release slice each
+- **Status**: **Accepted** (2026-11-14) — `RunLengthDecode` (2026-11-14), `CCITTFaxDecode` (2026-11-15) and
+  baseline `DCTDecode` (2026-11-15) implemented; progressive JPEG, `JPXDecode` and `JBIG2Decode` next, one
+  release slice each
 - **Date**: 2026-11-14
 - **Related**: [`docs/parity.md`](../parity.md) row 14,
   [`docs/manual/src/08-inspection.md`](../../manual/src/08-inspection.md),
@@ -129,12 +130,17 @@ wired; the budget rules then apply to the pixel buffer as they do to every other
 Order: SOF0 (baseline) first, against these fixtures; SOF1/SOF2 (extended and progressive) after it, with
 their own fixtures and the same ±2 tolerance.
 
+The baseline decoder is implemented: `PdfJpegFilterTests` decodes both fixtures within two levels of
+Pillow, and the contract above holds — `Data` is the stored JPEG, `DecodedPixels` the samples. Chroma
+subsampling is decoded with nearest-neighbour upsampling; a 4:2:0 fixture and the fancy upsampling that
+matches Pillow there are the next test, together with SOF2.
+
 ## Status of the slices
 
 | Slice | State |
 | --- | --- |
 | `RunLengthDecode` | **Implemented** (2026-11-14) |
 | `CCITTFaxDecode` | **Implemented** (2026-11-15) |
-| `DCTDecode` | Fixtures ready (2026-11-15); baseline decoder next |
+| `DCTDecode` | **Baseline (SOF0/SOF1) implemented** (2026-11-15); progressive (SOF2) next |
 | `JPXDecode` | Planned |
 | `JBIG2Decode` | Planned |

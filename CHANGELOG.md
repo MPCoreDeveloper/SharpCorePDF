@@ -34,6 +34,11 @@ against an empty feed.
   decoder is checked against Group 3 and Group 4 strips Pillow wrote through libtiff, with the bitmap
   Pillow decodes as the reference; [`ADR-005`](docs/adr/0005-image-filter-decoders.md) schedules
   `DCTDecode`, `JPXDecode` and `JBIG2Decode` next.
+- **Baseline JPEG images are decoded.** `DCTDecode` now yields samples — `Gray8` for one component,
+  `Rgb24` for three (YCbCr converted) and `Cmyk32` for four with the Adobe YCCK transform — while `Data`
+  keeps the stored JPEG and `DecodedPixels` carries the samples, so a caller can have either. Baseline and
+  extended sequential (SOF0/SOF1) are decoded; progressive (SOF2) and the fancy chroma upsampling a
+  subsampled fixture needs are the next step, per ADR-005.
 
 ## [1.8.0] - 2026-11-14
 

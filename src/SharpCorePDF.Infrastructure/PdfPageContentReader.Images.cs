@@ -225,6 +225,21 @@ public sealed partial class PdfPageContentReader
                     entry.Data,
                     maxInlineBytes);
 
+                // A DCT image keeps its stored JPEG in Data; the samples are decoded here, so a caller
+                // that wants the JPEG still has it and a caller that wants pixels gets them.
+                if (pixels is null
+                    && entry.IsDecodable
+                    && entry.Data is { } jpeg
+                    && entry.Filter?.Contains("DCTDecode", StringComparison.Ordinal) == true
+                    && JpegDecoder.TryDecode(jpeg, maxInlineBytes, out var jpegPixels, out var jpegFormat, out var jpegWidth, out var jpegHeight)
+                    && jpegPixels is not null
+                    && jpegWidth == entry.Width
+                    && jpegHeight == entry.Height)
+                {
+                    format = jpegFormat;
+                    pixels = jpegPixels;
+                }
+
                 images.Add(new PdfImageInfo
                 {
                     Id = entry.Id,
