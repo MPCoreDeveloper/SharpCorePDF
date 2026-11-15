@@ -43,6 +43,13 @@ internal sealed class JpegDecoder
     private int maxV;
     private int restartInterval;
     private int adobeTransform = -1;
+    private bool progressive;
+    private JpegComponent[] scanComponents = [];
+    private int scanStart;
+    private int scanEnd;
+    private int scanHigh;
+    private int scanLow;
+    private int eobRun;
 
     private JpegDecoder(ReadOnlyMemory<byte> data) => this.data = data;
 
@@ -148,8 +155,14 @@ internal sealed class JpegDecoder
 
                     break;
                 case 0xC2:
-                    // Progressive: accepted by ADR-005 after the baseline, not in this slice.
-                    return false;
+                    progressive = true;
+
+                    if (!ParseFrame(segment))
+                    {
+                        return false;
+                    }
+
+                    break;
                 case 0xDD:
                     if (segment.Length < 2)
                     {
@@ -167,18 +180,36 @@ internal sealed class JpegDecoder
                         return false;
                     }
 
-                    if (!DecodeScan(offset + length, maxBytes, out pixels, out format, out width, out height))
+                    if (!progressive)
+                    {
+                        if (!DecodeScan(offset + length, maxBytes, out pixels, out format, out width, out height))
+                        {
+                            return false;
+                        }
+
+                        return format is not null;
+                    }
+
+                    if (!DecodeProgressiveScan(offset + length, out var nextOffset))
                     {
                         return false;
                     }
 
-                    return format is not null;
+                    offset = nextOffset;
+                    continue;
             }
 
             offset += length;
         }
 
-        return false;
+        if (!progressive || !ReconstructProgressive() || !BuildOutput(maxBytes, out pixels, out format))
+        {
+            return false;
+        }
+
+        width = this.width;
+        height = this.height;
+        return true;
     }
 
     private static double[] CreateCosines()
@@ -350,6 +381,8 @@ internal sealed class JpegDecoder
             return false;
         }
 
+        var named = new JpegComponent[count];
+
         for (var index = 0; index < count; index++)
         {
             var id = segment[1 + (index * 2)];
@@ -363,7 +396,16 @@ internal sealed class JpegDecoder
 
             component.DcTable = tables >> 4;
             component.AcTable = tables & 15;
+            named[index] = component;
         }
+
+        this.scanComponents = named;
+
+        var tail = 1 + (count * 2);
+        scanStart = segment[tail];
+        scanEnd = segment[tail + 1];
+        scanHigh = segment[tail + 2] >> 4;
+        scanLow = segment[tail + 2] & 15;
 
         return true;
     }
@@ -400,6 +442,12 @@ internal sealed class JpegDecoder
         public int Stride { get; set; }
 
         public int Predictor { get; set; }
+
+        public int[] Coefficients { get; set; } = [];
+
+        public int BlocksX { get; set; }
+
+        public int BlocksY { get; set; }
     }
 
     private bool DecodeScan(
@@ -481,6 +529,414 @@ internal sealed class JpegDecoder
         return BuildOutput(maxBytes, out pixels, out format);
     }
 
+    private bool ReconstructProgressive()
+    {
+        var mcuWidth = 8 * maxH;
+        var mcuHeight = 8 * maxV;
+        var mcuColumns = (width + mcuWidth - 1) / mcuWidth;
+        var mcuRows = (height + mcuHeight - 1) / mcuHeight;
+        var samples = new byte[64];
+
+        foreach (var component in components)
+        {
+            var quant = quantisation[component.Quantisation];
+
+            if (quant is null)
+            {
+                return false;
+            }
+
+            component.Stride = mcuColumns * 8 * component.H;
+            component.Plane = new byte[component.Stride * mcuRows * 8 * component.V];
+
+            for (var blockY = 0; blockY < component.BlocksY; blockY++)
+            {
+                for (var blockX = 0; blockX < component.BlocksX; blockX++)
+                {
+                    var coefficients = component.Coefficients.AsSpan(((blockY * component.BlocksX) + blockX) * 64, 64);
+
+                    for (var index = 0; index < 64; index++)
+                    {
+                        coefficients[index] *= quant[index];
+                    }
+
+                    Idct(coefficients, samples);
+
+                    var x = blockX * 8;
+                    var y = blockY * 8;
+
+                    for (var row = 0; row < 8; row++)
+                    {
+                        samples.AsSpan(row * 8, 8).CopyTo(component.Plane.AsSpan(((y + row) * component.Stride) + x));
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private bool DecodeProgressiveScan(int dataStart, out int nextOffset)
+    {
+        nextOffset = dataStart;
+        var mcuWidth = 8 * maxH;
+        var mcuHeight = 8 * maxV;
+        var mcuColumns = (width + mcuWidth - 1) / mcuWidth;
+        var mcuRows = (height + mcuHeight - 1) / mcuHeight;
+
+        foreach (var component in components)
+        {
+            if (component.Coefficients.Length == 0)
+            {
+                component.BlocksX = mcuColumns * component.H;
+                component.BlocksY = mcuRows * component.V;
+                component.Coefficients = new int[component.BlocksX * component.BlocksY * 64];
+            }
+        }
+
+        var bits = new JpegBits(data.Span, dataStart);
+        eobRun = 0;
+        var mcu = 0;
+
+        if (scanComponents.Length == 1)
+        {
+            var component = scanComponents[0];
+            var total = component.BlocksX * component.BlocksY;
+
+            for (var blockY = 0; blockY < component.BlocksY; blockY++)
+            {
+                for (var blockX = 0; blockX < component.BlocksX; blockX++)
+                {
+                    if (!DecodeProgressiveBlock(ref bits, component, blockY, blockX))
+                    {
+                        return false;
+                    }
+
+                    mcu++;
+
+                    if (restartInterval > 0 && mcu % restartInterval == 0 && mcu < total)
+                    {
+                        if (!bits.TryReadRestart())
+                        {
+                            return false;
+                        }
+
+                        component.Predictor = 0;
+                        eobRun = 0;
+                    }
+                }
+            }
+        }
+        else
+        {
+            var total = mcuColumns * mcuRows;
+
+            for (var mcuY = 0; mcuY < mcuRows; mcuY++)
+            {
+                for (var mcuX = 0; mcuX < mcuColumns; mcuX++)
+                {
+                    foreach (var component in scanComponents)
+                    {
+                        for (var vertical = 0; vertical < component.V; vertical++)
+                        {
+                            for (var horizontal = 0; horizontal < component.H; horizontal++)
+                            {
+                                var blockY = (mcuY * component.V) + vertical;
+                                var blockX = (mcuX * component.H) + horizontal;
+
+                                if (!DecodeProgressiveBlock(ref bits, component, blockY, blockX))
+                                {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+
+                    mcu++;
+
+                    if (restartInterval > 0 && mcu % restartInterval == 0 && mcu < total)
+                    {
+                        if (!bits.TryReadRestart())
+                        {
+                            return false;
+                        }
+
+                        foreach (var component in scanComponents)
+                        {
+                            component.Predictor = 0;
+                        }
+
+                        eobRun = 0;
+                    }
+                }
+            }
+        }
+
+        nextOffset = bits.Position;
+        return true;
+    }
+
+    private bool DecodeProgressiveBlock(ref JpegBits bits, JpegComponent component, int blockY, int blockX)
+    {
+        var block = component.Coefficients.AsSpan(((blockY * component.BlocksX) + blockX) * 64, 64);
+
+        if (scanStart == 0)
+        {
+            if (scanHigh == 0)
+            {
+                var dcTable = dcTables[component.DcTable];
+
+                if (dcTable is null || !dcTable.TryRead(ref bits, out var size) || size > 11)
+                {
+                    return false;
+                }
+
+                var difference = 0;
+
+                if (size > 0)
+                {
+                    if (!bits.ReadBits(size, out var value))
+                    {
+                        return false;
+                    }
+
+                    difference = Extend(value, size);
+                }
+
+                component.Predictor += difference;
+                block[0] = component.Predictor * (1 << scanLow);
+                return true;
+            }
+
+            // DC refinement: the bit is the next magnitude bit of the coefficient.
+            if (!bits.TryReadBit(out var refinement))
+            {
+                return false;
+            }
+
+            if (refinement != 0)
+            {
+                block[0] |= 1 << scanLow;
+            }
+
+            return true;
+        }
+
+        var acTable = acTables[component.AcTable];
+
+        if (acTable is null)
+        {
+            return false;
+        }
+
+        if (scanHigh == 0)
+        {
+            if (eobRun > 0)
+            {
+                eobRun--;
+                return true;
+            }
+
+            var index = scanStart;
+
+            while (index <= scanEnd)
+            {
+                if (!acTable.TryRead(ref bits, out var symbol))
+                {
+                    return false;
+                }
+
+                var run = symbol >> 4;
+                var size = symbol & 15;
+
+                if (size == 0)
+                {
+                    if (run == 15)
+                    {
+                        index += 16;
+                        continue;
+                    }
+
+                    eobRun = 1 << run;
+
+                    if (run > 0)
+                    {
+                        if (!bits.ReadBits(run, out var extra))
+                        {
+                            return false;
+                        }
+
+                        eobRun += extra;
+                    }
+
+                    // The run counts the current block; the rest are the ones that follow it.
+                    eobRun--;
+                    return true;
+                }
+
+                index += run;
+
+                if (index > scanEnd || !bits.ReadBits(size, out var value))
+                {
+                    return false;
+                }
+
+                block[ZigZag[index]] = Extend(value, size) * (1 << scanLow);
+                index++;
+            }
+
+            return true;
+        }
+
+        // AC refinement: the bits of the coefficients a previous scan stated, plus new ones at this level.
+        if (eobRun > 0)
+        {
+            if (!RefineBand(ref bits, block, scanStart))
+            {
+                return false;
+            }
+
+            eobRun--;
+            return true;
+        }
+
+        var position = scanStart;
+
+        while (position <= scanEnd)
+        {
+            if (!acTable.TryRead(ref bits, out var symbol))
+            {
+                return false;
+            }
+
+            var run = symbol >> 4;
+            var size = symbol & 15;
+
+            if (size == 0)
+            {
+                if (run < 15)
+                {
+                    eobRun = 1 << run;
+
+                    if (run > 0)
+                    {
+                        if (!bits.ReadBits(run, out var extra))
+                        {
+                            return false;
+                        }
+
+                        eobRun += extra;
+                    }
+
+                    if (!RefineBand(ref bits, block, position))
+                    {
+                        return false;
+                    }
+
+                    eobRun--;
+                    return true;
+                }
+
+                // ZRL: sixteen zero coefficients, the nonzero ones refined on the way past.
+                var remaining = 16;
+
+                while (remaining > 0 && position <= scanEnd)
+                {
+                    if (block[ZigZag[position]] != 0)
+                    {
+                        if (!Refine(ref bits, block, position))
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        remaining--;
+                    }
+
+                    position++;
+                }
+
+                continue;
+            }
+
+            if (size != 1)
+            {
+                return false;
+            }
+
+            // The sign bit precedes the correction bits of the coefficients the run passes over.
+            if (!bits.TryReadBit(out var sign))
+            {
+                return false;
+            }
+
+            var newCoefficient = sign != 0 ? 1 << scanLow : -(1 << scanLow);
+
+            // Skip the run's zero coefficients, but refine every nonzero one after them — a nonzero
+            // coefficient does not consume the run, and its correction bit precedes the new coefficient.
+            while (position <= scanEnd)
+            {
+                if (block[ZigZag[position]] != 0)
+                {
+                    if (!Refine(ref bits, block, position))
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (run == 0)
+                    {
+                        break;
+                    }
+
+                    run--;
+                }
+
+                position++;
+            }
+
+            if (position > scanEnd)
+            {
+                return false;
+            }
+
+            block[ZigZag[position]] = newCoefficient;
+            position++;
+        }
+
+        return true;
+    }
+
+    private bool RefineBand(ref JpegBits bits, Span<int> block, int start)
+    {
+        for (var index = start; index <= scanEnd; index++)
+        {
+            if (block[ZigZag[index]] != 0 && !Refine(ref bits, block, index))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool Refine(ref JpegBits bits, Span<int> block, int index)
+    {
+        if (!bits.TryReadBit(out var bit))
+        {
+            return false;
+        }
+
+        if (bit != 0)
+        {
+            block[ZigZag[index]] += block[ZigZag[index]] > 0 ? 1 << scanLow : -(1 << scanLow);
+        }
+
+        return true;
+    }
+
     private bool DecodeBlock(ref JpegBits bits, JpegComponent component, int[] coefficients, byte[] samples)
     {
         var dcTable = dcTables[component.DcTable];
@@ -555,7 +1011,7 @@ internal sealed class JpegDecoder
     private static int Extend(int value, int size) =>
         value < (1 << (size - 1)) ? value - ((1 << size) - 1) : value;
 
-    private static void Idct(int[] coefficients, byte[] samples)
+    private static void Idct(ReadOnlySpan<int> coefficients, byte[] samples)
     {
         for (var y = 0; y < 8; y++)
         {
@@ -826,6 +1282,8 @@ internal sealed class JpegDecoder
 
             return true;
         }
+
+        public int Position => offset;
 
         public bool TryReadRestart()
         {

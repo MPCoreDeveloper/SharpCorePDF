@@ -39,7 +39,15 @@ against an empty feed.
   keeps the stored JPEG and `DecodedPixels` carries the samples, so a caller can have either. Baseline and
   extended sequential (SOF0/SOF1) are decoded, and a subsampled component is upsampled with libjpeg's
   3:1 fancy filter, so a 4:2:0 fixture matches a reference decoder within two levels. Progressive (SOF2)
-  is the next step, per ADR-005.
+  followed in the next entry.
+- **Progressive JPEG images are decoded.** `DCTDecode` now reads the multi-scan form too: spectral
+  selection and successive approximation accumulate in the quantised coefficient grids the scans share,
+  and the inverse DCT runs once at the end, so a non-interleaved AC scan (one component) and an
+  interleaved DC scan (every component, MCU order) land on the same blocks. A 4:4:4, a 4:2:0 and a
+  grayscale progressive fixture each matches Pillow within two levels of every sample. The AC
+  refinement's two conventions — the sign bit is read before the correction bits, and 1 means positive —
+  are recorded in [`ADR-005`](docs/adr/0005-image-filter-decoders.md), because getting either backwards
+  still decodes every scan and leaves a handful of coefficients a step or two out.
 
 ## [1.8.0] - 2026-11-14
 

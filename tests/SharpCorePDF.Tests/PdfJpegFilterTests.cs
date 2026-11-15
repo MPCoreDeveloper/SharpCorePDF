@@ -18,6 +18,12 @@ public sealed class PdfJpegFilterTests
     private static readonly byte[] CmykExpected = File.ReadAllBytes(Fixture("jpeg-cmyk-expected.bin"));
     private static readonly byte[] Restart = File.ReadAllBytes(Fixture("jpeg-restart.jpg"));
     private static readonly byte[] RestartExpected = File.ReadAllBytes(Fixture("jpeg-restart-expected.bin"));
+    private static readonly byte[] Progressive = File.ReadAllBytes(Fixture("jpeg-progressive.jpg"));
+    private static readonly byte[] ProgressiveExpected = File.ReadAllBytes(Fixture("jpeg-progressive-expected.bin"));
+    private static readonly byte[] Progressive420 = File.ReadAllBytes(Fixture("jpeg-progressive-420.jpg"));
+    private static readonly byte[] Progressive420Expected = File.ReadAllBytes(Fixture("jpeg-progressive-420-expected.bin"));
+    private static readonly byte[] ProgressiveGray = File.ReadAllBytes(Fixture("jpeg-progressive-gray.jpg"));
+    private static readonly byte[] ProgressiveGrayExpected = File.ReadAllBytes(Fixture("jpeg-progressive-gray-expected.bin"));
 
     private static string Fixture(string name) => Path.Combine(TestAssets.Folder, "jpeg", name);
 
@@ -92,6 +98,42 @@ public sealed class PdfJpegFilterTests
         Assert.Equal(32, width);
         Assert.Equal(32, height);
         Assert.InRange(MaxDifference(pixels!, RestartExpected), 0, 2);
+    }
+
+    /// <summary>A progressive JPEG states its coefficients across several scans and refines them.</summary>
+    [Fact]
+    public void Decodes_a_progressive_jpeg_within_two_levels()
+    {
+        Assert.True(JpegDecoder.TryDecode(Progressive, 1 << 20, out var pixels, out var format, out var width, out var height));
+
+        Assert.Equal("Rgb24", format);
+        Assert.Equal(32, width);
+        Assert.Equal(32, height);
+        Assert.InRange(MaxDifference(pixels!, ProgressiveExpected), 0, 2);
+    }
+
+    /// <summary>A progressive 4:2:0 JPEG interleaves the DC scan but not the chroma AC scans.</summary>
+    [Fact]
+    public void Decodes_a_subsampled_progressive_jpeg_within_two_levels()
+    {
+        Assert.True(JpegDecoder.TryDecode(Progressive420, 1 << 20, out var pixels, out var format, out var width, out var height));
+
+        Assert.Equal("Rgb24", format);
+        Assert.Equal(32, width);
+        Assert.Equal(32, height);
+        Assert.InRange(MaxDifference(pixels!, Progressive420Expected), 0, 2);
+    }
+
+    /// <summary>A single-component progressive JPEG refines one plane.</summary>
+    [Fact]
+    public void Decodes_a_grayscale_progressive_jpeg_within_two_levels()
+    {
+        Assert.True(JpegDecoder.TryDecode(ProgressiveGray, 1 << 20, out var pixels, out var format, out var width, out var height));
+
+        Assert.Equal("Gray8", format);
+        Assert.Equal(32, width);
+        Assert.Equal(32, height);
+        Assert.InRange(MaxDifference(pixels!, ProgressiveGrayExpected), 0, 2);
     }
 
     /// <summary>A pixel buffer above the budget is measured and nothing is kept.</summary>

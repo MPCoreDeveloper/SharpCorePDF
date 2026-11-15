@@ -1,8 +1,8 @@
 # ADR-005: Decoding the image filters the reader passes through
 
 - **Status**: **Accepted** (2026-11-14) — `RunLengthDecode` (2026-11-14), `CCITTFaxDecode` (2026-11-15) and
-  baseline `DCTDecode` (2026-11-15) implemented; progressive JPEG, `JPXDecode` and `JBIG2Decode` next, one
-  release slice each
+  `DCTDecode` (baseline 2026-11-15, progressive 2026-11-15) implemented; `JPXDecode` and `JBIG2Decode`
+  next, one release slice each
 - **Date**: 2026-11-14
 - **Related**: [`docs/parity.md`](../parity.md) row 14,
   [`docs/manual/src/08-inspection.md`](../../manual/src/08-inspection.md),
@@ -42,7 +42,7 @@ Shipping order and acceptance criteria:
 | --- | --- | --- |
 | `RunLengthDecode` | — | **Done.** Literal and repeat runs, an optional end-of-data byte, a truncated stream decoded as far as it goes. `PdfImageFilterTests` and the `FilterChains` fixture pin it, and the image is exposed as `Gray8`. |
 | `CCITTFaxDecode` | Group 3 one-dimensional (`/K` = 0), Group 3 two-dimensional (`/K` > 0), Group 4 (`/K` < 0); `/Columns`, `/Rows`, `/BlackIs1`, `/EncodedByteAlign`, `/EndOfLine` | The decoded bilevel bits equal an independent decoder's output on the same bytes. Evidence: Pillow's CCITT reader through `pikepdf` on the fixture, and a real fax sample in `tests/.../Assets/parity/images`. |
-| `DCTDecode` | SOF0, SOF1, SOF2; restart markers; 1, 3 and 4 components; 4:4:4, 4:2:2, 4:2:0; YCbCr and CMYK/YCCK (Adobe APP14); EXIF orientation | Geometry and component count exact; every sample within **2 levels** of a reference decoder (an integer IDCT is allowed to differ by rounding). Evidence: Pillow on the `parity/images/jpeg-*.jpg` fixtures, compared pixel by pixel, with the per-image maximum recorded in `docs/mutation-testing.md`'s sibling measurement note. |
+| `DCTDecode` | SOF0, SOF1, SOF2; restart markers; 1, 3 and 4 components; 4:4:4, 4:2:2, 4:2:0; YCbCr and CMYK/YCCK (Adobe APP14); EXIF orientation | Geometry and component count exact; every sample within **2 levels** of a reference decoder (an integer IDCT is allowed to differ by rounding). Evidence: Pillow on the `tests/SharpCorePDF.Tests/Assets/jpeg/jpeg-*.jpg` fixtures — baseline 4:4:4, grayscale, 4:2:0, CMYK and restart, plus progressive 4:4:4, 4:2:0 and grayscale — compared pixel by pixel, with the per-image maximum recorded in `docs/mutation-testing.md`. |
 | `JPXDecode` | JP2 and raw J2K codestream; 5/3 reversible and 9/7 irreversible; tiles and tile-parts | Reversible path **bit-exact**; irreversible path within 2 levels. Evidence: `opj_decompress` on the same codestream. |
 | `JBIG2Decode` | Generic region, symbol dictionary, text region, MMR | Bit-exact bilevel output. Evidence: `jbig2dec` on the same stream. |
 
@@ -127,14 +127,26 @@ document holds — and fills `DecodedPixels` from the new decoder, so a caller t
 and a caller that wants pixels gets them. `ImagePixels` stops excluding `DCTDecode` once `TryDecodeJpeg` is
 wired; the budget rules then apply to the pixel buffer as they do to every other decoded filter.
 
-Order: SOF0 (baseline) first, against these fixtures; SOF1/SOF2 (extended and progressive) after it, with
+Order: SOF0 (baseline) first, against these fixtures; SOF1 (extended) and SOF2 (progressive) after it, with
 their own fixtures and the same ±2 tolerance.
 
 The baseline decoder is implemented: `PdfJpegFilterTests` decodes both fixtures within two levels of
 Pillow, and the contract above holds — `Data` is the stored JPEG, `DecodedPixels` the samples. The variants
 the mutation survivors asked for are there too: `jpeg-420.jpg` (4:2:0, decoded with libjpeg's 3:1 fancy
 filter and within two levels of Pillow), `jpeg-cmyk.jpg` (four components, inverted as the `/Decode` array
-states) and `jpeg-restart.jpg` (restart markers). SOF2 is the next slice.
+states) and `jpeg-restart.jpg` (restart markers).
+
+The progressive decoder followed on 2026-11-15: the scans' quantised coefficients are accumulated in one
+grid per component and the inverse DCT runs once at the end, so a non-interleaved AC scan (one component,
+its blocks) and an interleaved DC scan (every component, MCU order) both land on the same blocks. Three
+fixtures pin it — `jpeg-progressive.jpg` (32 x 32, quality 95, 4:4:4), `jpeg-progressive-420.jpg` (4:2:0)
+and `jpeg-progressive-gray.jpg` (one component) — each compared with Pillow's decode within two levels.
+Two details cost a debugging round and are written down because a first implementation gets both wrong
+without failing: in an AC refinement scan the sign bit of a new coefficient is read **before** the
+correction bits of the coefficients the run passes over, and a sign bit of **1 means positive** (0 means
+negative) — the inverse of the magnitude-field convention an AC first scan uses. Getting either backwards
+decodes every scan to the end and leaves a handful of coefficients one or two steps out, which is why the
+acceptance is a pixel comparison and not "it decoded".
 
 ## Status of the slices
 
@@ -142,6 +154,6 @@ states) and `jpeg-restart.jpg` (restart markers). SOF2 is the next slice.
 | --- | --- |
 | `RunLengthDecode` | **Implemented** (2026-11-14) |
 | `CCITTFaxDecode` | **Implemented** (2026-11-15) |
-| `DCTDecode` | **Baseline (SOF0/SOF1) implemented, fancy upsampling** (2026-11-15); progressive (SOF2) next |
+| `DCTDecode` | **Baseline (SOF0/SOF1) and progressive (SOF2) implemented, fancy upsampling** (2026-11-15); `JPXDecode` next |
 | `JPXDecode` | Planned |
 | `JBIG2Decode` | Planned |
