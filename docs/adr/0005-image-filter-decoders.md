@@ -132,10 +132,9 @@ their own fixtures and the same ±2 tolerance.
 
 The baseline decoder is implemented: `PdfJpegFilterTests` decodes both fixtures within two levels of
 Pillow, and the contract above holds — `Data` is the stored JPEG, `DecodedPixels` the samples. The variants
-the mutation survivors asked for are there too: `jpeg-420.jpg` (4:2:0, nearest upsampling and a documented
-edge tolerance), `jpeg-cmyk.jpg` (four components, inverted as the `/Decode` array states) and
-`jpeg-restart.jpg` (restart markers). The fancy upsampling that matches Pillow at every edge, and SOF2,
-are the next tests.
+the mutation survivors asked for are there too: `jpeg-420.jpg` (4:2:0, decoded with libjpeg's 3:1 fancy
+filter and within two levels of Pillow), `jpeg-cmyk.jpg` (four components, inverted as the `/Decode` array
+states) and `jpeg-restart.jpg` (restart markers). SOF2 is the next slice.
 
 ## Status of the slices
 
@@ -143,6 +142,6 @@ are the next tests.
 | --- | --- |
 | `RunLengthDecode` | **Implemented** (2026-11-14) |
 | `CCITTFaxDecode` | **Implemented** (2026-11-15) |
-| `DCTDecode` | **Baseline (SOF0/SOF1) implemented** (2026-11-15); progressive (SOF2) next |
+| `DCTDecode` | **Baseline (SOF0/SOF1) implemented, fancy upsampling** (2026-11-15); progressive (SOF2) next |
 | `JPXDecode` | Planned |
 | `JBIG2Decode` | Planned |

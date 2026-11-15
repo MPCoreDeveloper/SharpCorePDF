@@ -50,18 +50,18 @@ public sealed class PdfJpegFilterTests
     }
 
     /// <summary>
-    /// A 4:2:0 JPEG halves the chroma in both directions. The decoder upsamples with the nearest sample,
-    /// where Pillow uses the fancy filter, so the tolerance is the edge difference rather than two levels.
+    /// A 4:2:0 JPEG halves the chroma in both directions; the decoder upsamples with the same 3:1 filter
+    /// libjpeg (and so Pillow) uses, which keeps the comparison inside the two-level tolerance.
     /// </summary>
     [Fact]
-    public void Decodes_a_subsampled_jpeg_within_the_upsampling_tolerance()
+    public void Decodes_a_subsampled_jpeg_within_two_levels()
     {
         Assert.True(JpegDecoder.TryDecode(Rgb420, 1 << 20, out var pixels, out var format, out var width, out var height));
 
         Assert.Equal("Rgb24", format);
         Assert.Equal(32, width);
         Assert.Equal(32, height);
-        Assert.InRange(MaxDifference(pixels!, Rgb420Expected), 0, 6);
+        Assert.InRange(MaxDifference(pixels!, Rgb420Expected), 0, 2);
     }
 
     /// <summary>

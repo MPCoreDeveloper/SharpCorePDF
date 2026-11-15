@@ -612,9 +612,16 @@ internal sealed class JpegDecoder
                 for (var component = 0; component < count; component++)
                 {
                     var source = components[component];
-                    var sx = (x * source.H) / maxH;
-                    var sy = (y * source.V) / maxV;
-                    samples[component] = source.Plane[(sy * source.Stride) + sx];
+                    samples[component] = Sample(
+                        source.Plane,
+                        source.Stride,
+                        source.Stride == 0 ? 0 : source.Plane.Length / source.Stride,
+                        x,
+                        y,
+                        source.H,
+                        source.V,
+                        maxH,
+                        maxV);
                 }
 
                 if (count == 1)
@@ -661,6 +668,61 @@ internal sealed class JpegDecoder
 
         pixels = output;
         return true;
+    }
+
+    /// <summary>
+    /// Reads one sample, upsampling a subsampled component with the 3:1 filter libjpeg calls fancy: an
+    /// even output position takes three parts of its sample and one of the neighbour before it, an odd one
+    /// three parts and one of the neighbour after it, rounded as libjpeg rounds.
+    /// </summary>
+    private static int Sample(
+        byte[] plane,
+        int stride,
+        int rows,
+        int x,
+        int y,
+        int horizontal,
+        int vertical,
+        int maxH,
+        int maxV)
+    {
+        if (horizontal == maxH && vertical == maxV)
+        {
+            return plane[(y * stride) + x];
+        }
+
+        var sx = (x * horizontal) / maxH;
+        var sy = (y * vertical) / maxV;
+        var fancyX = horizontal * 2 == maxH;
+        var fancyY = vertical * 2 == maxV;
+
+        if (!fancyX && !fancyY)
+        {
+            return plane[(sy * stride) + sx];
+        }
+
+        var left = Math.Max(sx - 1, 0);
+        var right = Math.Min(sx + 1, stride - 1);
+
+        var centre = Column(sx);
+        var before = Column(left);
+        var after = Column(right);
+
+        return x % 2 == 0
+            ? ((3 * centre) + before + 1) >> 2
+            : ((3 * centre) + after + 2) >> 2;
+
+        int Column(int column)
+        {
+            if (!fancyY)
+            {
+                return plane[(sy * stride) + column];
+            }
+
+            return y % 2 == 0
+                ? ((3 * plane[(sy * stride) + column]) + plane[(Math.Max(sy - 1, 0) * stride) + column] + 1) >> 2
+                : ((3 * plane[(sy * stride) + column]) + plane[(Math.Min(sy + 1, rows - 1) * stride) + column] + 2) >> 2;
+        }
     }
 
     private static byte Clamp(double value) =>

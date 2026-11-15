@@ -37,8 +37,9 @@ against an empty feed.
 - **Baseline JPEG images are decoded.** `DCTDecode` now yields samples — `Gray8` for one component,
   `Rgb24` for three (YCbCr converted) and `Cmyk32` for four with the Adobe YCCK transform — while `Data`
   keeps the stored JPEG and `DecodedPixels` carries the samples, so a caller can have either. Baseline and
-  extended sequential (SOF0/SOF1) are decoded; progressive (SOF2) and the fancy chroma upsampling a
-  subsampled fixture needs are the next step, per ADR-005.
+  extended sequential (SOF0/SOF1) are decoded, and a subsampled component is upsampled with libjpeg's
+  3:1 fancy filter, so a 4:2:0 fixture matches a reference decoder within two levels. Progressive (SOF2)
+  is the next step, per ADR-005.
 
 ## [1.8.0] - 2026-11-14
 
