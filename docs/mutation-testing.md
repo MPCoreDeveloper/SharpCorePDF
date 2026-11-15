@@ -898,7 +898,7 @@ The survivors are the **variants the two fixtures do not carry**, not statements
 - **The error branches** (`return false`): the no-coverage column, which a malformed-stream test covers only
   in part.
 
-So the next tests are chosen by the survivors: a 4:2:0 fixture with the fancy upsampling Pillow uses, a
-CMYK fixture, a restart-interval fixture, and a malformed stream. The progressive variant is the ADR's next
-slice.
+Those tests are now in — `jpeg-420.jpg`, `jpeg-cmyk.jpg`, `jpeg-restart.jpg` and a truncated stream — and
+the score above predates them. The fancy upsampling that matches Pillow at every edge, and the progressive
+variant, are the ADR's next slice.
 

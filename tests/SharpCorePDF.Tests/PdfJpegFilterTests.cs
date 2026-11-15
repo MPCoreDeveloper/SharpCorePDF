@@ -12,6 +12,12 @@ public sealed class PdfJpegFilterTests
     private static readonly byte[] RgbExpected = File.ReadAllBytes(Fixture("jpeg-444-expected.bin"));
     private static readonly byte[] Gray = File.ReadAllBytes(Fixture("jpeg-gray.jpg"));
     private static readonly byte[] GrayExpected = File.ReadAllBytes(Fixture("jpeg-gray-expected.bin"));
+    private static readonly byte[] Rgb420 = File.ReadAllBytes(Fixture("jpeg-420.jpg"));
+    private static readonly byte[] Rgb420Expected = File.ReadAllBytes(Fixture("jpeg-420-expected.bin"));
+    private static readonly byte[] Cmyk = File.ReadAllBytes(Fixture("jpeg-cmyk.jpg"));
+    private static readonly byte[] CmykExpected = File.ReadAllBytes(Fixture("jpeg-cmyk-expected.bin"));
+    private static readonly byte[] Restart = File.ReadAllBytes(Fixture("jpeg-restart.jpg"));
+    private static readonly byte[] RestartExpected = File.ReadAllBytes(Fixture("jpeg-restart-expected.bin"));
 
     private static string Fixture(string name) => Path.Combine(TestAssets.Folder, "jpeg", name);
 
@@ -43,6 +49,51 @@ public sealed class PdfJpegFilterTests
         Assert.InRange(MaxDifference(pixels, GrayExpected), 0, 2);
     }
 
+    /// <summary>
+    /// A 4:2:0 JPEG halves the chroma in both directions. The decoder upsamples with the nearest sample,
+    /// where Pillow uses the fancy filter, so the tolerance is the edge difference rather than two levels.
+    /// </summary>
+    [Fact]
+    public void Decodes_a_subsampled_jpeg_within_the_upsampling_tolerance()
+    {
+        Assert.True(JpegDecoder.TryDecode(Rgb420, 1 << 20, out var pixels, out var format, out var width, out var height));
+
+        Assert.Equal("Rgb24", format);
+        Assert.Equal(32, width);
+        Assert.Equal(32, height);
+        Assert.InRange(MaxDifference(pixels!, Rgb420Expected), 0, 6);
+    }
+
+    /// <summary>
+    /// Four components are CMYK, one byte each. A JPEG stores them inverted — 0 is full ink, which is what
+    /// the image's <c>/Decode</c> array states — while Pillow converts them to the conventional 0 = no ink,
+    /// so the comparison inverts Pillow's bytes.
+    /// </summary>
+    [Fact]
+    public void Decodes_a_cmyk_jpeg_to_four_components()
+    {
+        Assert.True(JpegDecoder.TryDecode(Cmyk, 1 << 20, out var pixels, out var format, out var width, out var height));
+
+        var expected = CmykExpected.Select(value => (byte)(255 - value)).ToArray();
+
+        Assert.Equal("Cmyk32", format);
+        Assert.Equal(32, width);
+        Assert.Equal(32, height);
+        Assert.InRange(MaxDifference(pixels!, expected), 0, 2);
+    }
+
+    /// <summary>Restart markers reset the predictors, and the decode continues after each of them.</summary>
+    [Fact]
+    public void Decodes_a_jpeg_with_restart_markers()
+    {
+        Assert.True(JpegDecoder.TryDecode(Restart, 1 << 20, out var pixels, out var format, out var width, out var height));
+
+        Assert.Equal("Rgb24", format);
+        Assert.Equal(32, width);
+        Assert.Equal(32, height);
+        Assert.InRange(MaxDifference(pixels!, RestartExpected), 0, 2);
+    }
+
     /// <summary>A pixel buffer above the budget is measured and nothing is kept.</summary>
     [Fact]
     public void Measures_a_pixel_buffer_above_the_budget_without_keeping_it()
@@ -58,6 +109,15 @@ public sealed class PdfJpegFilterTests
     [Fact]
     public void Refuses_a_stream_that_is_not_a_jpeg() =>
         Assert.False(JpegDecoder.TryDecode(new byte[] { 0, 0, 0, 0 }, 1 << 20, out _, out _, out _, out _));
+
+    /// <summary>A JPEG that stops inside a segment is refused rather than decoded as far as it got.</summary>
+    [Fact]
+    public void Refuses_a_truncated_jpeg()
+    {
+        var truncated = Rgb.AsSpan(0, 24).ToArray();
+
+        Assert.False(JpegDecoder.TryDecode(truncated, 1 << 20, out _, out _, out _, out _));
+    }
 
     private static int MaxDifference(ReadOnlySpan<byte> actual, ReadOnlySpan<byte> expected)
     {

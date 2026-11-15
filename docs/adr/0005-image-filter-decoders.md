@@ -131,9 +131,11 @@ Order: SOF0 (baseline) first, against these fixtures; SOF1/SOF2 (extended and pr
 their own fixtures and the same ±2 tolerance.
 
 The baseline decoder is implemented: `PdfJpegFilterTests` decodes both fixtures within two levels of
-Pillow, and the contract above holds — `Data` is the stored JPEG, `DecodedPixels` the samples. Chroma
-subsampling is decoded with nearest-neighbour upsampling; a 4:2:0 fixture and the fancy upsampling that
-matches Pillow there are the next test, together with SOF2.
+Pillow, and the contract above holds — `Data` is the stored JPEG, `DecodedPixels` the samples. The variants
+the mutation survivors asked for are there too: `jpeg-420.jpg` (4:2:0, nearest upsampling and a documented
+edge tolerance), `jpeg-cmyk.jpg` (four components, inverted as the `/Decode` array states) and
+`jpeg-restart.jpg` (restart markers). The fancy upsampling that matches Pillow at every edge, and SOF2,
+are the next tests.
 
 ## Status of the slices
 
