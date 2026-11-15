@@ -46,6 +46,7 @@
     <None Include="Assets\**\*.pdf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Assets\**\*.ttf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Assets\**\*.bin" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Assets\**\*.jpg" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Assets\parity\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

@@ -108,12 +108,33 @@ Two facts the first attempt established, so the next one does not rediscover the
 Both slices are shipped: the Group 4 fixture decodes every line against this data, the Group 3 fixture
 decodes as well, and `PdfCcittFilterTests` pins both.
 
+## Fixtures for the DCT slice (2026-11-15)
+
+The baseline decoder starts from a 4:4:4 reference so that chroma upsampling cannot mask a bug:
+
+- `tests/SharpCorePDF.Tests/Assets/jpeg/jpeg-444.jpg` — 16 x 16 RGB, quality 95, `subsampling=0`, written
+  by Pillow 13.0.0.
+- `jpeg-444-expected.bin` — the 768 bytes Pillow decodes from that file (`RGB`, 3 bytes per pixel).
+- `jpeg-gray.jpg` and `jpeg-gray-expected.bin` — the same bitmap as one component (256 bytes).
+
+The expected bytes are Pillow's decode of the JPEG, not the source pixels: JPEG is lossy, so the reference
+is the decoder's output, and the acceptance is a per-sample difference of at most 2.
+
+**The contract question the slice settles.** A `DCTDecode` image currently reports `Data` as the stored JPEG
+bytes and `DecodedPixels` as `null`. The slice keeps `Data` as the stored bytes — it is the payload the
+document holds — and fills `DecodedPixels` from the new decoder, so a caller that wants the JPEG still has it
+and a caller that wants pixels gets them. `ImagePixels` stops excluding `DCTDecode` once `TryDecodeJpeg` is
+wired; the budget rules then apply to the pixel buffer as they do to every other decoded filter.
+
+Order: SOF0 (baseline) first, against these fixtures; SOF1/SOF2 (extended and progressive) after it, with
+their own fixtures and the same ±2 tolerance.
+
 ## Status of the slices
 
 | Slice | State |
 | --- | --- |
 | `RunLengthDecode` | **Implemented** (2026-11-14) |
 | `CCITTFaxDecode` | **Implemented** (2026-11-15) |
-| `DCTDecode` | Planned — the next slice |
+| `DCTDecode` | Fixtures ready (2026-11-15); baseline decoder next |
 | `JPXDecode` | Planned |
 | `JBIG2Decode` | Planned |
