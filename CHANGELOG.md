@@ -28,6 +28,12 @@ against an empty feed.
   decoded as far as it goes. [`ADR-005`](docs/adr/0005-image-filter-decoders.md) scopes the remaining four
   filters — `CCITTFaxDecode`, `DCTDecode`, `JPXDecode` and `JBIG2Decode` — with the evidence path each one
   has to meet.
+- **CCITT fax images are decoded.** `CCITTFaxDecode` covers Group 3 (one- and two-dimensional) and Group 4
+  for bilevel images — `K`, `Columns`, `Rows`, `BlackIs1`, `EncodedByteAlign` and `EndOfLine` are honoured —
+  so a scanned page now yields its samples (and `Gray8` pixels) instead of `ImageFilterUnsupported`. The
+  decoder is checked against Group 3 and Group 4 strips Pillow wrote through libtiff, with the bitmap
+  Pillow decodes as the reference; [`ADR-005`](docs/adr/0005-image-filter-decoders.md) schedules
+  `DCTDecode`, `JPXDecode` and `JBIG2Decode` next.
 
 ## [1.8.0] - 2026-11-14
 

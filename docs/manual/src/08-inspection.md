@@ -233,8 +233,8 @@ component counts, or an `Indexed` space over any of them. An image that carries 
 case rather than an exception — its payload is its samples — so an inline image, which producers rarely
 compress, states its pixels the way a Flate one does. Nothing is left behind a filter either, because the
 filters an image realistically uses are decoded here — Flate and LZW, each with its predictor, the two
-ASCII encodings, and run-length — so an image that a viewer can show is an image whose samples this record
-states.
+ASCII encodings, run-length, and the CCITT fax codings (Group 3 and Group 4) — so an image that a viewer
+can show is an image whose samples this record states.
 
 Two things are unpacked on the way out rather than handed over as they lie in the file. Samples narrower than
 a byte are widened to the same scale, so a bilevel image yields `0` and `255` rather than `0` and `1`, a
@@ -251,7 +251,7 @@ which one it is:
 | Case | What the entry says | Why no pixels |
 | --- | --- | --- |
 | A `DCTDecode` image | `IsDecodable` true, `Filter` `DCTDecode`, `PixelFormat` null | The bytes are already a JPEG, which a caller can read; unpacking it here would mean shipping a second decoder. |
-| A filter the library passes through — `JPXDecode`, `JBIG2Decode`, `CCITTFaxDecode`, or a name it does not know | `IsDecodable` false, `Filter` names it, and the read warns with `ImageFilterUnsupported` | Nothing was decoded, so there are no samples to hand back. [`ADR-005`](../../adr/0005-image-filter-decoders.md) schedules these decoders, in that order. |
+| A filter the library passes through — `JPXDecode`, `JBIG2Decode`, or a name it does not know | `IsDecodable` false, `Filter` names it, and the read warns with `ImageFilterUnsupported` | Nothing was decoded, so there are no samples to hand back. [`ADR-005`](../../adr/0005-image-filter-decoders.md) schedules these decoders, in that order. |
 | A `Separation`, `DeviceN` or `Lab` space, sixteen bits per sample, a palette whose samples run past its table or whose table holds nothing, a width or height of zero, or a geometry the document does not state | `BitsPerComponent` or `ColorSpace` states which | The first needs a function evaluated, the second a rounding rule, the third a decision the file does not support, and the last a rectangle that is not there. Pixels are eight bit and channel-ordered by contract, so converting or guessing would hide the mismatch from the caller. |
 
 Neither a colour profile nor a tint transform is applied: the samples are what the document stores. That is

@@ -88,7 +88,7 @@ internal static class PdfImageFilters
                     buffered ? Buffer(current, maxInlineBytes) : null);
             }
 
-            if (!TryDecodeOne(name, current, forFilter, sourceName, maxInlineBytes, out var bytes, out var decodedLength))
+            if (!TryDecodeOne(name, current, forFilter, stream.Dictionary, sourceName, maxInlineBytes, out var bytes, out var decodedLength))
             {
                 return new PdfPayload(false, true, description, length, buffered ? Buffer(current, maxInlineBytes) : null);
             }
@@ -316,6 +316,7 @@ internal static class PdfImageFilters
         string name,
         ReadOnlyMemory<byte> data,
         PdfDictionary? parameters,
+        PdfDictionary? image,
         string sourceName,
         int cap,
         out byte[]? bytes,
@@ -366,6 +367,9 @@ internal static class PdfImageFilters
                     bytes = Keep(decoded, cap);
                     return true;
                 }
+
+                case "CCITTFaxDecode":
+                    return PdfFilters.TryDecodeCcitt(data, parameters, image, cap, out bytes, out length);
 
                 default:
                     // Unreachable: `Decode` passes only the names `IsDecodable` states, and every one of
@@ -792,9 +796,10 @@ internal static class PdfImageFilters
 
     /// <summary>Determines whether a payload can be turned into samples by a filter with this name.</summary>
     /// <param name="name">The filter name, with its abbreviation expanded.</param>
-    /// <returns><see langword="true"/> for the five filters this class decodes.</returns>
+    /// <returns><see langword="true"/> for the six filters this class decodes.</returns>
     private static bool IsDecodable(string name) =>
-        name is "FlateDecode" or "LZWDecode" or "ASCIIHexDecode" or "ASCII85Decode" or "RunLengthDecode";
+        name is "FlateDecode" or "LZWDecode" or "ASCIIHexDecode" or "ASCII85Decode"
+            or "RunLengthDecode" or "CCITTFaxDecode";
 
     /// <summary>Determines whether a filter is handed back raw instead of being decoded.</summary>
     /// <param name="name">The filter name, with its abbreviation expanded.</param>

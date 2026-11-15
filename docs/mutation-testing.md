@@ -850,3 +850,27 @@ and a `count <= 0` guard whose empty write and zero step are the same behaviour 
 rather than pinned, which is what a survivor is for. `PdfImageFilters` gained the whitelist entry and the
 dispatch case, and the RunLength tests exercise both through `Decode`.
 
+## CCITTFaxDecode — the fax codecs (2026-11-15)
+
+`CCITTFaxDecode` is the largest decoder in the tree: T.4's two run-length tables, the two-dimensional
+modes, Group 3's end-of-line and tag bits, and the bitmap the samples become. Its reading:
+
+| File | Score | Killed | Survived | No coverage | Mutants |
+| --- | --- | --- | --- | --- | --- |
+| `Pdf/PdfFilters.Ccitt.cs` | **78.80%** | 394 | 48 | 58 | 580 |
+
+The survivors divide into three groups. **The parameter defaults** — `columns` and `rows` falling back
+from the decode parameters to the image and then to 1728/0, `EncodedByteAlign`, `EndOfLine` — are guards
+whose alternatives produce the same bitmap for the fixtures, which state the geometry and leave both flags
+at their defaults. **The error branches** (`return false` for an out-of-range transition, a truncated run,
+a mode that does not decode) are the no-coverage column: the fixtures are valid streams, and the malformed
+stream test covers only the first of them. **The loop guard** (`++guard > columns * 2 + 64`) is never
+reached by a valid stream, and its mutants are equivalent for data that terminates.
+
+Two of the survivors are a **missing fixture** rather than an equivalent: a run longer than 63 pixels (a
+make-up code) and a Huffman code thirteen bits wide. The Pillow fixture is 16 x 16, so every run and code
+is short; a wide fixture is the test that would close them.
+
+Three tests were added after the run — a stream without a row count, a bitmap above the budget, and a
+stream that stops mid-line — and their effect is not measured here.
+

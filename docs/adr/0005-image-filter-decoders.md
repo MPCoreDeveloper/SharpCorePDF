@@ -1,7 +1,7 @@
 # ADR-005: Decoding the image filters the reader passes through
 
-- **Status**: **Accepted** (2026-11-14) — `RunLengthDecode` implemented; `CCITTFaxDecode`, `DCTDecode`,
-  `JPXDecode` and `JBIG2Decode` accepted in that order, one release slice each
+- **Status**: **Accepted** (2026-11-14) — `RunLengthDecode` (2026-11-14) and `CCITTFaxDecode` (2026-11-15)
+  implemented; `DCTDecode`, `JPXDecode` and `JBIG2Decode` accepted in that order, one release slice each
 - **Date**: 2026-11-14
 - **Related**: [`docs/parity.md`](../parity.md) row 14,
   [`docs/manual/src/08-inspection.md`](../../manual/src/08-inspection.md),
@@ -105,15 +105,15 @@ Two facts the first attempt established, so the next one does not rediscover the
    horizontal to `a2`, vertical to `a1`) — and to search for the first reference transition **strictly
    greater than `a0`**. With that, line 12's `b1` is 16, V-3 resolves to 13, and the line completes.
 
-The RunLength slice is shipped; the CCITT decoder is the open work, and the Group 4 fixture now decodes its
-first twelve lines correctly against this data.
+Both slices are shipped: the Group 4 fixture decodes every line against this data, the Group 3 fixture
+decodes as well, and `PdfCcittFilterTests` pins both.
 
 ## Status of the slices
 
 | Slice | State |
 | --- | --- |
 | `RunLengthDecode` | **Implemented** (2026-11-14) |
-| `CCITTFaxDecode` | Planned — the next slice |
-| `DCTDecode` | Planned |
+| `CCITTFaxDecode` | **Implemented** (2026-11-15) |
+| `DCTDecode` | Planned — the next slice |
 | `JPXDecode` | Planned |
 | `JBIG2Decode` | Planned |
