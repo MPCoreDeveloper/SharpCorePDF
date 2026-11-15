@@ -6,6 +6,9 @@ long-form reference for the API.
 
 ## The manual
 
+The [cloud-cost page](cloud-savings.md) states what the measured allocation and CPU time mean for a cloud
+bill, with the tariff left as a value to replace.
+
 - **[Read or download the manual as a PDF](SharpCorePDF-Manual-1.8.0.pdf)** — 125 pages, A4, with a
   linked contents page and PDF bookmarks.
 - **Read the chapters as Markdown** in [`manual/src`](manual/src). Each file is one chapter, and the

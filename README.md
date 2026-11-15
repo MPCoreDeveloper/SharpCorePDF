@@ -58,6 +58,9 @@ engine, no native binary and no licence to accept: the reader, the writer and th
 part of the package, and they are covered by tests against real-world documents and validated with
 independent implementations (`qpdf` via `pikepdf`, and `pypdf`).
 
+**What it saves you:** the measured allocation and wall time, the half-width working set, and an
+illustrative cloud-cost model are on [`docs/cloud-savings.md`](docs/cloud-savings.md).
+
 The product boundary is recorded in [ADR-001](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/adr/0001-pdf-platform-boundary.md).
 The capability target is PDFsharp 6.5 for creation and processing and PdfPig 0.1.x for reading and layout
 analysis; rendering, conversion, OCR, conformance validation, services and CLIs stay outside the product.
@@ -337,7 +340,9 @@ signatures, archival output, the fonts a document uses, and how the manual itsel
 (the 1.8.0 edition) or chapter by chapter as Markdown, starting with
 [Installation and First Merge](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/manual/src/03-installation.md).
 The [documentation index](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/README.md)
-links every chapter and the supporting measurement, release and governance documents.
+links every chapter and the supporting measurement, release and governance documents. The
+[cloud-cost page](https://github.com/MPCoreDeveloper/SharpCorePDF/blob/main/docs/cloud-savings.md)
+turns the measured allocation and CPU time into a bill, with the tariff left as a value to replace.
 
 This README remains the short tour: what the library does, how to install it, and how the repository is
 built, tested and published. The manual is where the behaviour of each option, the warning kinds and the
