@@ -1,13 +1,14 @@
 namespace SharpCorePDF.Infrastructure.Pdf;
 
 /// <summary>
-/// Decodes a baseline (SOF0) or extended sequential (SOF1) JPEG to its samples.
+/// Decodes a JPEG — baseline, extended sequential or progressive — to its samples.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The decoder is a baseline one: one scan, canonical Huffman coding, an 8 x 8 inverse DCT, and the three
-/// component layouts a PDF image states — Gray, RGB/YCbCr and CMYK/YCCK. Progressive (SOF2) is refused
-/// for now; ADR-005 records it as the next variant.
+/// The decoder reads the sequential form (SOF0/SOF1) and the progressive form (SOF2): a sequential scan
+/// is decoded in one pass, while a progressive file's scans accumulate quantised coefficients that the
+/// inverse DCT reconstructs once at the end. Both forms cover canonical Huffman coding, restart markers,
+/// an 8 x 8 inverse DCT and the component layouts a PDF image states — Gray, RGB/YCbCr and CMYK/YCCK.
 /// </para>
 /// <para>
 /// The samples are the values the JPEG stores, interleaved, one byte per component: <c>Gray8</c> for one
