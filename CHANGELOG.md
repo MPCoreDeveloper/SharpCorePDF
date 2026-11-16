@@ -22,6 +22,34 @@ against an empty feed.
 
 ### Added
 
+- **Twelve independent validation checks, in CI.** `validation.yml` puts the example output and a new
+  validation corpus — written by `tools/SharpCorePDF.Validation`, with a manifest of the text, passwords,
+  permissions, revisions and signature coverage each document must have — through qpdf, three text
+  extractors, four readers of the RC4/AES encryption matrix (qpdf, MuPDF, pypdf, pdf.js), fontTools and OTS,
+  PDFium against MuPDF, pyHanko, the incremental-update invariants and four synthesized hostile documents.
+  `robustness.yml` runs weekly: libFuzzer over the parser and the DCT, CCITT, LZW, Flate and RunLength
+  decoders, the veraPDF and pdf.js corpora one process per file, and the PDF/A writer judged by veraPDF over
+  the veraPDF corpus. `compliance.yml` cross-validates PDF/A-4 too. No shipped package changes; nothing new
+  reaches a consumer. [`docs/validation.md`](docs/validation.md) records each check, how it was shown to fail
+  before it was trusted, and the defects below.
+
+### Known defects, found by the new checks and not yet fixed
+
+Each is reproduced, pinned by a skipped test or a strict `--known-defect` flag that fails the run once the
+defect is fixed, and listed in [`docs/validation.md`](docs/validation.md#known-defects).
+
+- The signature validator does not require the gap between the byte ranges to be exactly the `/Contents`
+  string, so a gap carrying extra entries is still reported as covering the whole document.
+- An incremental update rewrites both elements of `/ID`, and appends a renumbered copy of the whole document
+  rather than the objects it changed — which also rewrites the signature dictionary after signing.
+- A merge copies a page that states no `/MediaBox` without one.
+- Hostile input: a Flate stream has no decoded-size limit, a chain of indirect `/Length` references overflows
+  the stack, an object stream's `/N` sizes an allocation unchecked, and a JPEG scan's Huffman table selector
+  is not range-checked.
+- Real-world input (the pdf.js test corpus): an empty name as a dictionary key stops a document opening, a
+  glyph with an upside-down box faults text extraction, and `PdfDate.TryParse` throws on an out-of-range
+  time-zone offset instead of answering false.
+
 - **Run-length images are decoded.** `RunLengthDecode` joins Flate, LZW and the two ASCII filters: a
   bilevel or scan-style image that declares it now yields its samples — and `Gray8`, `Rgb24` or `Cmyk32`
   pixels — rather than `ImageFilterUnsupported`, and a stream that ends without its end-of-data byte is

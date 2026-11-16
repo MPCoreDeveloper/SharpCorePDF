@@ -40,6 +40,10 @@ StrykerOutput/
 *.sln.docstates
 *.DotSettings.user
 
+# AI assistant state: prompts, transcripts and local settings stay on the machine that wrote them
+.claude/
+CLAUDE.local.md
+
 # Build logs
 *.binlog
 msbuild.log

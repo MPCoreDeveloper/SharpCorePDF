@@ -214,7 +214,9 @@ jobs:
 
       # The same documents, read by two more implementations. --strict-tools makes a missing tool a failure
       # rather than a note, because a green run here is supposed to mean that all three agreed. PDFBox 3.0.8
-      # and Ghostscript have no PDF/A-4 mode, so veraPDF is the only reading of that profile.
+      # and Ghostscript have no PDF/A-4 mode, so veraPDF stays the only verdict on that profile; PDFBox still
+      # parses the PDF 2.0 file and Ghostscript still rewrites it (as part 2), which is the reader test the
+      # other profiles get too.
       - name: Cross-validate with a second and a third implementation
         env:
           VERAPDF_HOME: ${{ env.VERAPDF_INSTALL }}
@@ -223,7 +225,7 @@ jobs:
           output="$RUNNER_TEMP/SharpCorePDF.Examples/output"
           jar="$HOME/.cache/pdfbox/preflight-app-${PDFBOX_PREFLIGHT_VERSION}.jar"
 
-          for profile in 1b 2b 2u 3b 3u; do
+          for profile in 1b 2b 2u 3b 3u 4; do
             python3 docs/tools/validate-pdfa-cross.py --strict-tools \
               --require-version "$VERAPDF_VERSION" \
               --pdfbox "$jar" \

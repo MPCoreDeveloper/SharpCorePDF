@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The harness behind the independent validation checks in .github/workflows/validation.yml and
+    .github/workflows/robustness.yml.
+
+    corpus   writes the documents the external validators read, with a manifest of what each one has to
+             say: the text it carries, the passwords and permissions it was encrypted with, its revisions
+             and its signer.
+    probe    opens one document through every read use case and exits with a code that says whether it was
+             read, refused, or broke the engine, so a corpus run can tell a damaged file from a bug.
+    replay   runs a fuzz target over saved inputs in process, which is how a crash libFuzzer found is
+             reproduced and how the seed corpus is checked on every run.
+    (none)   with SCPDF_FUZZ_TARGET set, hands the target to libFuzzer through SharpFuzz.
+
+    It is a maintainer tool like SharpCorePDF.Diagnostics: not packed, not referenced by anything, and
+    SharpFuzz never reaches a package.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <RootNamespace>SharpCorePDF.Validation</RootNamespace>
+    <AssemblyName>SharpCorePDF.Validation</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpCorePDF.Domain\SharpCorePDF.Domain.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.Application\SharpCorePDF.Application.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.Infrastructure\SharpCorePDF.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\SharpCorePDF.DependencyInjection\SharpCorePDF.DependencyInjection.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+    <PackageReference Include="SharpFuzz" Version="2.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The face the text and font checks embed: the subset the examples ship, so no system font is needed. -->
+    <None Include="..\..\examples\SharpCorePDF.Examples\Assets\DejaVuSans-subset.ttf" Link="Assets\DejaVuSans-subset.ttf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
