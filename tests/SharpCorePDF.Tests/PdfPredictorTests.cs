@@ -150,6 +150,39 @@ public sealed class PdfPredictorTests
     /// <param name="encoded">The predicted rows, as hexadecimal.</param>
     /// <param name="parameters">The decode parameters of the stream.</param>
     /// <returns>The decoded rows.</returns>
+    /// <summary>
+    /// A row size the declared columns, colours and bit depth multiply out to beyond what the engine decodes is
+    /// refused, whatever the product wraps to in 32 bits: 65536 × 65536 used to wrap to a row of zero bytes,
+    /// on which TIFF prediction looped forever, and 65536 × 32769 to a negative one, which escaped as an
+    /// <see cref="ArgumentOutOfRangeException"/>. The streaming decoder already refused both.
+    /// </summary>
+    /// <param name="predictor">The predictor.</param>
+    /// <param name="columns">The declared columns.</param>
+    /// <param name="colors">The declared colours.</param>
+    /// <param name="bitsPerComponent">The declared bit depth.</param>
+    [Theory(Timeout = 10_000)]
+    [InlineData(2, 65536, 65536, 8)]
+    [InlineData(2, 65536, 32769, 8)]
+    [InlineData(12, 65536, 65536, 8)]
+    [InlineData(12, 1 << 30, 1, 16)]
+    [InlineData(12, 4, 1, -8)]
+    [InlineData(12, 4, 1, 0)]
+    [InlineData(12, (8 * 1024 * 1024) + 1, 1, 8)]
+    public async Task Refuses_a_predicted_row_larger_than_the_engine_decodes(int predictor, int columns, int colors, int bitsPerComponent)
+    {
+        var parameters = Parameters(predictor, columns: columns, colors: colors, bitsPerComponent: bitsPerComponent);
+
+        await Assert.ThrowsAnyAsync<PdfException>(
+            () => Task.Run(() => Decode("0001020304050607", parameters), TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>A row of exactly the largest size the engine decodes is accepted.</summary>
+    [Fact]
+    public void Accepts_a_predicted_row_of_the_largest_size_the_engine_decodes() =>
+        Assert.Equal(
+            Convert.FromHexString("0001"),
+            Decode("0001", Parameters(12, columns: 8 * 1024 * 1024, colors: 1, bitsPerComponent: 8)));
+
     private static byte[] Decode(string encoded, PdfDictionary parameters) =>
         PdfFilters.Decode(
             Stream(Compress(Convert.FromHexString(encoded)), parameters),

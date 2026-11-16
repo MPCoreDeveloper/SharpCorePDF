@@ -48,6 +48,12 @@ internal sealed class PdfCrossReferenceTable
     /// <summary>Gets a value indicating whether the table was rebuilt by scanning the file.</summary>
     public bool WasReconstructed { get; internal set; }
 
+    /// <summary>
+    /// Gets a value indicating whether the section <c>startxref</c> points at is a cross-reference stream, so
+    /// a revision appended to the document writes its own section in that form.
+    /// </summary>
+    public bool NewestSectionIsStream { get; internal set; }
+
     /// <summary>Gets the number of entries.</summary>
     public int Count => Entries.Count;
 

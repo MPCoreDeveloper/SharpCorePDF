@@ -3,6 +3,7 @@ using SharpCorePDF.Domain.Exceptions;
 using SharpCorePDF.Domain.Ports;
 using SharpCorePDF.Domain.ValueObjects;
 using SharpCorePDF.Infrastructure;
+using SharpCorePDF.Infrastructure.Pdf;
 
 namespace SharpCorePDF.Tests;
 
@@ -84,6 +85,41 @@ public sealed class PdfDocumentSignerTests
         Assert.Contains(" /Prev ", text, StringComparison.Ordinal);
         Assert.Contains(" /AcroForm ", text, StringComparison.Ordinal);
         Assert.Contains(" /SigFlags 3", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A signature appended to a document whose newest section is a cross-reference stream ends its revision
+    /// in a stream too, and the signature is valid over the whole file; a classic table used to be appended.
+    /// </summary>
+    [Fact]
+    public async Task Signs_a_document_that_uses_cross_reference_streams_with_one()
+    {
+        var source = File.ReadAllBytes(TestAssets.Modern);
+        var signed = await SigningFixtures.SignAsync(source, SigningFixtures.Options(Certificate));
+
+        var reader = new PdfFileReader(signed, "signed.pdf", PdfEngineOptions.Default);
+        var validation = Assert.Single(await SigningFixtures.ValidateAsync(signed));
+
+        Assert.True(reader.CrossReferenceTable.NewestSectionIsStream);
+        Assert.False(reader.CrossReferenceTable.WasReconstructed);
+        Assert.Equal(PdfSignatureIntegrity.Valid, validation.Integrity);
+        Assert.True(validation.Signer.CoversWholeDocument);
+
+        // The revision lists the objects it wrote and the stream itself, and not the head of the free list,
+        // which the first revision already lists.
+        var section = Assert.IsType<PdfStream>(reader.Resolve(reader.CrossReferenceTable.Trailer.GetInteger("Size")!.Value - 1));
+        var index = Assert.IsType<PdfArray>(section.Dictionary.Get("Index"));
+
+        Assert.NotEqual(0, Assert.IsType<PdfInteger>(index.Items[0]).Value);
+    }
+
+    /// <summary>A signature appended to a document with a classic table ends in a classic table.</summary>
+    [Fact]
+    public async Task Signs_a_document_that_uses_a_classic_table_with_one()
+    {
+        var signed = await SigningFixtures.SignAsync(SigningFixtures.BuildDocument(), SigningFixtures.Options(Certificate));
+
+        Assert.False(new PdfFileReader(signed, "signed.pdf", PdfEngineOptions.Default).CrossReferenceTable.NewestSectionIsStream);
     }
 
     /// <summary>

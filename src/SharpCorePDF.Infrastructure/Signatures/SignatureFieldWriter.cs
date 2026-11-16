@@ -155,7 +155,7 @@ internal static class SignatureFieldWriter
         writer.WriteObject(widgetNumber, 0, Widget(options, pageNumber, signatureReference, appearanceNumber));
         writer.WriteObject(pageNumber, 0, PageWithWidget(reader, page, widgetReference));
         writer.WriteObject(catalogNumber, 0, new PdfDictionary(catalog.Entries).Set("AcroForm", AcroForm(reader, catalog, widgetReference)));
-        writer.Complete(Trailer(reader, catalogNumber));
+        writer.Complete(Trailer(reader, catalogNumber), asStream: reader.CrossReferenceTable.NewestSectionIsStream);
 
         var digest = SealRevision(buffer, byteRangeOffset, contentsStart, hexLength, options.HashAlgorithm);
         var value = await CmsBuilder.BuildAsync(digest, options, certificates, signingTime, cancellationToken).ConfigureAwait(false);

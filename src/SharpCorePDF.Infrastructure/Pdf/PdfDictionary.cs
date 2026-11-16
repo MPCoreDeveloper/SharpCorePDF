@@ -54,7 +54,9 @@ internal sealed class PdfDictionary : PdfObject
     /// <returns>This dictionary, so calls can be chained.</returns>
     public PdfDictionary Set(string key, PdfObject? value)
     {
-        ArgumentException.ThrowIfNullOrEmpty(key);
+        // The empty name — a solidus on its own — is a name PDF allows (ISO 32000-1 §7.3.5), and documents
+        // use it as a key; refusing it here refused the whole document while it was being parsed.
+        ArgumentNullException.ThrowIfNull(key);
 
         if (value is null)
         {

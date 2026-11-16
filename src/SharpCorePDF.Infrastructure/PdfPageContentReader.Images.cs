@@ -358,7 +358,7 @@ public sealed partial class PdfPageContentReader
                 return;
             }
 
-            if (TryDecodeStream(stream, out var formContent))
+            if (TryDecodeStream(stream, reader.Options.MaxDecodedStreamBytes, out var formContent))
             {
                 var formResources = reader.ResolveDictionary(stream.Dictionary.Get("Resources")) ?? resources;
                 var formMatrix = ReadMatrix(reader, stream.Dictionary.Get("Matrix")) ?? PdfMatrix.Identity;

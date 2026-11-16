@@ -36,6 +36,10 @@ internal static partial class PdfSerializer
                 output.WriteInteger(integer.Value);
                 break;
 
+            case PdfReal { Original: { } original }:
+                output.Write(original);
+                break;
+
             case PdfReal real:
                 output.WriteReal(real.Value);
                 break;

@@ -18,6 +18,24 @@ public sealed record PdfEngineOptions
     /// </summary>
     public long MaxSourceBytes { get; init; } = 512L * 1024 * 1024;
 
+    /// <summary>
+    /// Gets the largest number of bytes one filter of one stream may decode to. A stream that would decode
+    /// past it is refused with a <see cref="Domain.Exceptions.PdfSourceFormatException"/> instead of
+    /// exhausting the process.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="MaxSourceBytes"/> bounds what is read, not what it decodes to: Flate reaches about a
+    /// thousand to one, LZW four thousand and RunLength 128, so a one-megabyte document can ask for a
+    /// gigabyte. The default of 128 MiB is far above any real content stream, object stream or font program,
+    /// and low enough that refusing a stream at the limit — whose buffer doubles on the way there, on the
+    /// large-object heap, which the collector does not compact by default — stays reliably inside a 1 GiB
+    /// process when every read pass meets the same stream; the largest value accepted is the largest array
+    /// the runtime allows. An image is not refused by this limit — its samples are kept only
+    /// within <see cref="MaxInlineContentBytes"/> already — but every other stream the engine has to
+    /// materialise is: content, forms, object streams, cross-reference streams and font programs.
+    /// </remarks>
+    public long MaxDecodedStreamBytes { get; init; } = 128L * 1024 * 1024;
+
     /// <summary>Gets the maximum nesting depth of dictionaries and arrays.</summary>
     public int MaxNestingDepth { get; init; } = 64;
 
@@ -72,6 +90,11 @@ public sealed record PdfEngineOptions
         if (MaxSourceBytes < 1024)
         {
             errors.Add($"MaxSourceBytes must be at least 1024, but is {MaxSourceBytes}.");
+        }
+
+        if (MaxDecodedStreamBytes < 1024 || MaxDecodedStreamBytes > Array.MaxLength)
+        {
+            errors.Add($"MaxDecodedStreamBytes must be between 1024 and {Array.MaxLength}, but is {MaxDecodedStreamBytes}.");
         }
 
         if (MaxNestingDepth is < 4 or > 1024)

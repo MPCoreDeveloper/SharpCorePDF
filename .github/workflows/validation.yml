@@ -1,0 +1,220 @@
+# Independent validation: what readers that share no code with this library make of what it writes.
+#
+# ci.yml answers whether the code builds and the suite passes; compliance.yml whether the archival output
+# conforms. This workflow answers a third question -- whether other implementations read the documents the
+# way the library meant them -- because a writer that only ever reads its own output back cannot see the
+# mistakes it shares with itself. Every check here runs against the example output and against the validation
+# corpus that tools/SharpCorePDF.Validation writes, whose manifest states what each document has to say.
+#
+#   qpdf        validate-pdf.py: the file parses, every page reads, every stream decodes
+#   text        validate-text.py: pypdf, pdfminer.six and MuPDF extract the lines that were drawn
+#   encryption  validate-encryption.py and the pdf.js leg: four readers open the RC4/AES matrix with the right
+#               password, refuse the wrong one, and read the revision and the permissions that were asked for
+#   fonts       validate-fonts.py: fontTools and OTS read every embedded program, and the widths agree
+#   rendering   render-compare.py: PDFium and MuPDF paint the same pages
+#   incremental validate-incremental.py: every revision stands alone, /ID[0] holds, an update only appends
+#   signatures  validate-signatures.py --manifest: pyHanko agrees on integrity, trust and coverage
+#   fuzz seeds  every fuzz target runs over its seeds in process, so a harness that rots is noticed here and
+#               not in the weekly fuzzing run (robustness.yml)
+#   hostile     corpus-robustness.py over the documents it synthesizes for the failure classes the review named
+#   arlington   validate-arlington.py against the veraPDF Arlington service (report-only until a baseline exists)
+#
+# --known-defect / --known names a failure that is recorded and not yet fixed. Each is strict: when the
+# defect is fixed the check passes, the flag no longer matches, and the run fails until the flag is removed
+# in the same change as the fix.
+#
+# The validator versions are pinned in docs/tools/validation-requirements.txt, pdfjs-dist below.
+
+name: Independent validation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PDFJS_VERSION: '6.4.299'
+
+jobs:
+  readers:
+    name: Read by other implementations
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install the .NET SDKs
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: |
+            11.0.x
+            10.0.x
+
+      - name: Install the validators
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet -r docs/tools/validation-requirements.txt
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+          npm install --silent --no-save --prefix "$RUNNER_TEMP/pdfjs" "pdfjs-dist@${PDFJS_VERSION}"
+
+      - name: Build the examples and the validation harness
+        run: |
+          dotnet build ./examples/SharpCorePDF.Examples -c Release
+          dotnet build ./tools/SharpCorePDF.Validation -c Release
+
+      - name: Write the documents
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          dotnet run --project ./examples/SharpCorePDF.Examples -c Release --no-build
+          dotnet run --project ./tools/SharpCorePDF.Validation -c Release --no-build -- corpus "$RUNNER_TEMP/corpus"
+
+      # protected.pdf is encrypted with a password the example makes for the run and prints; the encrypted
+      # documents qpdf does check are the corpus's, whose passwords the manifest carries
+      # (validate-encryption.py runs qpdf --check on each of them with its password).
+      - name: qpdf
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=()
+          for file in "$RUNNER_TEMP"/SharpCorePDF.Examples/output/*.pdf "$RUNNER_TEMP"/corpus/*.pdf; do
+            case "$(basename "$file")" in protected.pdf|encrypted-*) continue ;; esac
+            files+=("$file")
+          done
+          python docs/tools/validate-pdf.py "${files[@]}"
+
+      - name: Text round trip
+        run: python docs/tools/validate-text.py "$RUNNER_TEMP/corpus"
+
+      - name: Encryption matrix
+        run: |
+          set -euo pipefail
+          python docs/tools/validate-encryption.py "$RUNNER_TEMP/corpus"
+          node docs/tools/validate-encryption-pdfjs.mjs "$RUNNER_TEMP/corpus" \
+            "$RUNNER_TEMP/pdfjs/node_modules/pdfjs-dist/legacy/build/pdf.mjs"
+
+      - name: Embedded fonts
+        run: |
+          python docs/tools/validate-fonts.py \
+            "$RUNNER_TEMP/SharpCorePDF.Examples/output" \
+            "$RUNNER_TEMP/corpus/text-embedded.pdf" "$RUNNER_TEMP/corpus/text-merged.pdf"
+
+      - name: Rendering, PDFium against MuPDF
+        run: |
+          python docs/tools/render-compare.py --report-dir artifacts/rendering --exclude protected.pdf \
+            "$RUNNER_TEMP/SharpCorePDF.Examples/output" \
+            "$RUNNER_TEMP/corpus/text-standard.pdf" "$RUNNER_TEMP/corpus/text-embedded.pdf" \
+            "$RUNNER_TEMP/corpus/text-merged.pdf" "$RUNNER_TEMP/corpus/incremental.pdf" \
+            "$RUNNER_TEMP/corpus/signed.pdf"
+
+      - name: Incremental update invariants
+        run: python docs/tools/validate-incremental.py "$RUNNER_TEMP/corpus"
+
+      - name: Signatures, pyHanko
+        run: python docs/tools/validate-signatures.py --manifest "$RUNNER_TEMP/corpus/manifest.json"
+
+      - name: Fuzz targets over their seeds
+        run: |
+          set -euo pipefail
+          tool=./tools/SharpCorePDF.Validation/bin/Release/net11.0/SharpCorePDF.Validation.dll
+          seeds="$RUNNER_TEMP/seeds"
+          dotnet "$tool" seed document "$seeds/document" tests/SharpCorePDF.Tests/Assets/parity/corpus "$RUNNER_TEMP/corpus"
+          dotnet "$tool" seed dct "$seeds/dct" tests/SharpCorePDF.Tests/Assets/jpeg/*.jpg
+          dotnet "$tool" seed ccitt "$seeds/ccitt" tests/SharpCorePDF.Tests/Assets/ccitt/ccitt-g3.bin tests/SharpCorePDF.Tests/Assets/ccitt/ccitt-g4.bin
+          for target in document dct ccitt; do
+            dotnet "$tool" replay "$target" "$seeds/$target"
+          done
+
+      # Each of the four documents reaches a failure class a review named, and each is now read: the decode
+      # limit, the length-chain bound, the /N bound and the JPEG scan-header checks closed them. A document
+      # that faults here again is a regression, so none is listed as known.
+      - name: Hostile documents
+        run: |
+          set -euo pipefail
+          python docs/tools/corpus-robustness.py --synthesize "$RUNNER_TEMP/hostile"
+          python docs/tools/corpus-robustness.py \
+            --probe ./tools/SharpCorePDF.Validation/bin/Release/net11.0/SharpCorePDF.Validation.dll \
+            --timeout 120 --report artifacts/hostile.json \
+            "$RUNNER_TEMP/hostile"
+
+      - name: Upload the documents and the reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: independent-validation
+          path: |
+            artifacts
+            ${{ runner.temp }}/corpus
+            ${{ runner.temp }}/SharpCorePDF.Examples/output/*.pdf
+          if-no-files-found: warn
+          retention-days: 14
+
+  arlington:
+    name: Arlington PDF Model
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The service's report format and the writer's baseline are confirmed by the first run on a runner; until
+    # then the job reports without blocking. Remove continue-on-error and pass --strict with the --accept list
+    # that run establishes.
+    continue-on-error: true
+
+    services:
+      arlington:
+        image: verapdf/arlington:v1.30.4
+        ports:
+          - 8080:8080
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install the .NET SDKs
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: |
+            11.0.x
+            10.0.x
+
+      - name: Write the documents
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          dotnet run --project ./examples/SharpCorePDF.Examples -c Release
+          dotnet run --project ./tools/SharpCorePDF.Validation -c Release -- corpus "$RUNNER_TEMP/corpus"
+
+      - name: Wait for the service
+        run: |
+          for attempt in $(seq 1 60); do
+            curl -sf http://localhost:8080/api/info > /dev/null && exit 0
+            sleep 2
+          done
+          echo "::error::the Arlington service did not answer on port 8080"
+          exit 1
+
+      - name: Check against the model
+        run: |
+          python3 docs/tools/validate-arlington.py --report-dir artifacts/arlington \
+            --exclude protected.pdf \
+            "$RUNNER_TEMP/SharpCorePDF.Examples/output" \
+            "$RUNNER_TEMP/corpus/text-standard.pdf" "$RUNNER_TEMP/corpus/text-embedded.pdf" \
+            "$RUNNER_TEMP/corpus/text-merged.pdf" "$RUNNER_TEMP/corpus/incremental.pdf" \
+            "$RUNNER_TEMP/corpus/signed.pdf"
+
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: arlington
+          path: artifacts/arlington
+          if-no-files-found: warn
+          retention-days: 14

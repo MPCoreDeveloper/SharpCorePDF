@@ -72,16 +72,25 @@ internal sealed partial class PdfFileReader
 
     /// <summary>
     /// Resolves a stream <c>/Length</c> that is itself an indirect reference. The guard set breaks
-    /// the cycle that such a reference creates when the length object is the stream itself.
+    /// the cycle that such a reference creates when the length object is the stream itself, and the
+    /// depth guard breaks a chain: a length that is a stream whose length is a stream, and so on.
     /// </summary>
     /// <param name="objectNumber">The object number of the length object.</param>
     /// <returns>The length, or <see langword="null"/> when it cannot be resolved safely.</returns>
+    /// <remarks>
+    /// Each link of a chain is resolved inside the one before it, so a chain of tens of thousands of
+    /// streams would overflow the stack — which no caller can catch: the process ends. A well-formed
+    /// length needs one level; past <see cref="PdfEngineOptions.MaxNestingDepth"/> the length is answered
+    /// as unknown, exactly as a cycle is, and the parser finds the end of the stream by its keyword.
+    /// </remarks>
     private long? ResolveIndirectLength(long objectNumber)
     {
-        if (!resolvingLengths.Add(objectNumber))
+        if (lengthResolutionDepth >= options.MaxNestingDepth || !resolvingLengths.Add(objectNumber))
         {
             return null;
         }
+
+        lengthResolutionDepth++;
 
         try
         {
@@ -89,6 +98,7 @@ internal sealed partial class PdfFileReader
         }
         finally
         {
+            lengthResolutionDepth--;
             resolvingLengths.Remove(objectNumber);
         }
     }

@@ -201,7 +201,10 @@ internal sealed class PdfSecurityHandler
         // The encryption dictionary states the key length in bits; a crypt filter of revision 4 and 5
         // states its own, in bytes, and it is the one the file key is actually derived with.
         var declaredBits = (int)(encryption.GetInteger("Length") ?? 40);
-        var keyBits = version >= 4 && cryptFilterBits is { } filterBits ? filterBits : declaredBits;
+        // AESV2 is AES-128 (ISO 32000-1, table 25): its key is sixteen bytes whatever length is declared, and a
+        // file that declares fewer was encrypted with sixteen by every producer that writes AESV2.
+        var statedBits = version >= 4 && cryptFilterBits is { } filterBits ? filterBits : declaredBits;
+        var keyBits = stringMethod == PdfCryptMethod.AesV2 || streamMethod == PdfCryptMethod.AesV2 ? 128 : statedBits;
         var encryptsMetadata = ReadEncryptsMetadata(encryption);
 
         byte[]? fileKey;

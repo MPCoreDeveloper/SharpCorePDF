@@ -17,6 +17,13 @@ public sealed partial class PdfMergeEngine
     /// <summary>The largest number of outline items that is copied, as a guard against damaged trees.</summary>
     private const int MaxOutlineItems = 100_000;
 
+    /// <summary>
+    /// The deepest level of bookmarks that is copied. The outline is walked recursively, one frame per level,
+    /// and a hostile file nested fifty thousand levels deep overflowed the stack and ended the process; a real
+    /// outline is a handful of levels deep.
+    /// </summary>
+    private const int MaxOutlineDepth = 256;
+
     /// <summary>The name of the entry that holds the first child of a bookmark or of the outline root.</summary>
     private const string FirstEntry = "First";
 
@@ -54,8 +61,9 @@ public sealed partial class PdfMergeEngine
             }
 
             var linkage = new OutlineLinkage();
-            var nodes = ReadChain(source.Reader, outline.Get(FirstEntry), context, source);
-            var chain = CopyChain(context, source, nodes, parent, linkage);
+            var walk = new OutlineWalk();
+            var nodes = ReadChain(source.Reader, outline.Get(FirstEntry), context, source, walk);
+            var chain = CopyChain(context, source, nodes, parent, linkage, walk, depth: 0);
 
             if (!chain.IsEmpty)
             {
@@ -102,12 +110,14 @@ public sealed partial class PdfMergeEngine
     /// <param name="first">The <c>/First</c> entry of the parent, or the <c>/Next</c> chain start.</param>
     /// <param name="context">The merge context.</param>
     /// <param name="source">The source being read.</param>
+    /// <param name="walk">The bookmarks of the source read so far.</param>
     /// <returns>The items of the chain, in document order.</returns>
     private static List<OutlineNode> ReadChain(
         PdfFileReader reader,
         PdfObject? first,
         PdfMergeContext context,
-        MergeSource source)
+        MergeSource source,
+        OutlineWalk walk)
     {
         var nodes = new List<OutlineNode>();
 
@@ -135,6 +145,17 @@ public sealed partial class PdfMergeEngine
                 break;
             }
 
+            // A bookmark reached a second time — through a /Next or /First that points back up the tree, or
+            // a child two parents share — is not copied again: a cycle would never end, and a shared child
+            // is walked once for each of its parents, which grows with the product of the levels.
+            if (!walk.Visited.Add(reference.ObjectNumber))
+            {
+                context.Warnings.Add(new(
+                    PdfWarningKind.BookmarkSkipped,
+                    $"'{source.DisplayName}': a bookmark is reached twice in the outline, which a tree does not allow; it was copied once."));
+                break;
+            }
+
             nodes.Add(new OutlineNode(reference.ObjectNumber, dictionary));
             reference = dictionary.GetReference("Next");
         }
@@ -155,13 +176,17 @@ public sealed partial class PdfMergeEngine
     /// <param name="nodes">The bookmarks of this level, in document order.</param>
     /// <param name="parent">The object number the bookmarks must point at as their parent.</param>
     /// <param name="linkage">The chain this level belongs to, used for links to the sibling level.</param>
+    /// <param name="walk">The bookmarks of the source read so far.</param>
+    /// <param name="depth">The level of the chain, zero for the top level.</param>
     /// <returns>What was copied.</returns>
     private static OutlineChain CopyChain(
         PdfMergeContext context,
         MergeSource source,
         List<OutlineNode> nodes,
         OutlineParent parent,
-        OutlineLinkage linkage)
+        OutlineLinkage linkage,
+        OutlineWalk walk,
+        int depth)
     {
         if (nodes.Count == 0)
         {
@@ -182,12 +207,10 @@ public sealed partial class PdfMergeEngine
             var position = index;
             var node = nodes[position];
             var itemParent = new OutlineParent { Target = targets[position] };
-            var children = CopyChain(
-                context,
-                source,
-                ReadChain(source.Reader, node.Dictionary.Get(FirstEntry), context, source),
-                itemParent,
-                new OutlineLinkage());
+            var below = depth + 1 < MaxOutlineDepth
+                ? ReadChain(source.Reader, node.Dictionary.Get(FirstEntry), context, source, walk)
+                : Truncate(node, context, source, walk);
+            var children = CopyChain(context, source, below, itemParent, new OutlineLinkage(), walk, depth + 1);
 
             descendants += children.TotalItems;
 
@@ -200,6 +223,35 @@ public sealed partial class PdfMergeEngine
         }
 
         return new OutlineChain(targets[0], targets[^1], nodes.Count, descendants);
+    }
+
+    /// <summary>Stops the walk at the deepest level copied, saying so once per source.</summary>
+    /// <param name="node">The bookmark whose children are not copied.</param>
+    /// <param name="context">The merge context.</param>
+    /// <param name="source">The source being read.</param>
+    /// <param name="walk">The bookmarks of the source read so far.</param>
+    /// <returns>No children.</returns>
+    private static List<OutlineNode> Truncate(OutlineNode node, PdfMergeContext context, MergeSource source, OutlineWalk walk)
+    {
+        if (node.Dictionary.Get(FirstEntry) is not null && !walk.WasTruncated)
+        {
+            walk.WasTruncated = true;
+            context.Warnings.Add(new(
+                PdfWarningKind.BookmarksTruncated,
+                $"'{source.DisplayName}': the bookmarks are nested more than {MaxOutlineDepth} levels deep; the levels below were skipped."));
+        }
+
+        return [];
+    }
+
+    /// <summary>What the walk of one source's outline has seen.</summary>
+    private sealed class OutlineWalk
+    {
+        /// <summary>Gets the object numbers of the bookmarks read so far.</summary>
+        public HashSet<long> Visited { get; } = [];
+
+        /// <summary>Gets or sets a value indicating whether a level was cut at the depth limit.</summary>
+        public bool WasTruncated { get; set; }
     }
 
     /// <summary>A parent object number that is filled in after the outline has been walked.</summary>

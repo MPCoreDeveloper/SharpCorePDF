@@ -103,6 +103,42 @@ public sealed partial class PdfContentReaderTests
         Assert.Equal("second", Encoding.Latin1.GetString(materialised.Span));
     }
 
+    /// <summary>
+    /// A file specification in the embedded files tree that only names a file outside the document — the shape
+    /// of the veraPDF corpus file <c>isartor-6-1-11-t01-fail-a.pdf</c> — is listed with a warning and a length
+    /// of zero, and copying it writes no bytes; it used to be refused as if the caller had passed a file of
+    /// another document. A file the document does not have is still refused.
+    /// </summary>
+    [Fact]
+    public async Task Copies_nothing_for_a_listed_file_that_embeds_no_stream()
+    {
+        var builder = new PdfBuilder();
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var page = builder.Add("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>");
+        var specification = builder.Add("<< /Type /Filespec /F (img/pageA4.pdf) >>");
+
+        builder.Set(catalog, $"<< /Type /Catalog /Pages {pages} 0 R /Names << /EmbeddedFiles << /Names [(pageA4.pdf) {specification} 0 R] >> >> >>");
+        builder.Set(pages, $"<< /Type /Pages /Kids [{page} 0 R] /Count 1 >>");
+
+        var source = Source(builder.Build(catalog), "external.pdf");
+        var reader = Reader();
+        var result = await reader.ReadEmbeddedFilesAsync(source, cancellationToken: Token);
+        var file = Assert.Single(result.Items);
+
+        using var destination = new MemoryStream();
+
+        await reader.CopyEmbeddedFileDataAsync(source, file, destination, cancellationToken: Token);
+
+        Assert.Equal("img/pageA4.pdf", file.Id);
+        Assert.Equal(0, file.ByteLength);
+        Assert.Empty(destination.ToArray());
+        AssertWarning(result.Warnings, PdfWarningKind.EmbeddedFileUnreadable);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => reader.CopyEmbeddedFileDataAsync(source, file with { Id = "other.pdf" }, Stream.Null, cancellationToken: Token));
+    }
+
     /// <summary>A document without attachments yields an empty result rather than an exception.</summary>
     [Fact]
     public async Task Returns_an_empty_result_for_a_document_without_embedded_files()

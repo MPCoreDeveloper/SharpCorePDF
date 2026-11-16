@@ -472,6 +472,11 @@ prints what qpdf makes of its encryption dictionary. It is the check that caught
 has had so far: a hexadecimal string written with name escapes, which `qpdf` rejected as damage. The
 encrypted documents the merge engine writes were checked the same way with qpdf, pikepdf and pypdf.
 
+It is one of twelve such checks, and all of them now run in `validation.yml` and `robustness.yml` against
+the example output and a validation corpus whose manifest says what each document has to say.
+[`docs/validation.md`](docs/validation.md) lists them, how each was shown to fail before it was trusted, how
+to run them locally, and the defects they have found that are not fixed yet.
+
 ### Asking whether the tests would notice
 
 ```powershell
@@ -510,6 +515,8 @@ deliberately not the publishing workflow, so a pull request is checked without a
 | The gate read for the tagged commit, the pack, the package check, the push to nuget.org | `publish.yml` | a `v*` tag, a manual dispatch with `publish: true` |
 | Mutation testing: what the suite would notice changing, reported and not gated | `mutation.yml` | Mondays, a manual dispatch |
 | PDF/A conformance: veraPDF 1.30.4 plus PDFBox preflight and Ghostscript over the archival documents the example writes, versions pinned | `compliance.yml` | a push to `main`, a pull request, Mondays, a manual dispatch |
+| Independent readers: qpdf, three text extractors, four readers over the encryption matrix, fontTools and OTS, PDFium against MuPDF, pyHanko, the incremental-update invariants and the hostile documents ([`docs/validation.md`](docs/validation.md)) | `validation.yml` | a push to `main`, a pull request, a manual dispatch |
+| Robustness: libFuzzer over the parser and every decoder, the veraPDF and pdf.js corpora, and the PDF/A writer judged by veraPDF over the veraPDF corpus | `robustness.yml` | Tuesdays, a manual dispatch |
 
 The analysis runs in the runner rather than on SonarCloud's side, which is what lets it carry coverage:
 the scanner session opens before the build, the measured test leg runs inside it, and it closes after it,

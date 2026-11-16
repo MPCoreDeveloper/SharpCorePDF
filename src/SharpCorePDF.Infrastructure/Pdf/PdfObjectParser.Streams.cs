@@ -91,13 +91,23 @@ internal sealed partial class PdfObjectParser
         _ => null,
     };
 
+    /// <summary>
+    /// The most <c>endstream</c> candidates a compressed stream is inflated for. Each is inflated from the
+    /// start of the data, so the work grows with the square of the candidates, and a hostile file can hold
+    /// one every ten bytes.
+    /// </summary>
+    private const int MaximumInflatedCandidates = 16;
+
     private PdfStream ReadStreamByScanning(PdfDictionary dictionary, int dataStart)
     {
         var data = lexer.Data;
         var isCompressed = PdfFilters.HasFlateCompression(dictionary);
         var searchFrom = dataStart;
+        var inflated = 0;
         ReadOnlyMemory<byte>? firstCandidate = null;
         var firstCandidateEnd = dataStart;
+        ReadOnlyMemory<byte>? inflatingCandidate = null;
+        var inflatingCandidateEnd = dataStart;
 
         while (searchFrom < data.Length)
         {
@@ -118,20 +128,46 @@ internal sealed partial class PdfObjectParser
                 firstCandidateEnd = index + 9;
             }
 
-            // The candidate has to be decrypted before it can be decompressed, because the stream of
-            // an encrypted document is deflated first and encrypted second.
-            if (!isCompressed || PdfFilters.TryInflate(candidate, out _))
+            if (!isCompressed)
             {
-                Position = index + 9;
-                TryReadKeyword("endstream");
-                return new PdfStream(dictionary, candidate);
+                return EndScannedStream(dictionary, candidate, index + 9);
+            }
+
+            // The candidate has to be decrypted before it can be decompressed, because the stream of
+            // an encrypted document is deflated first and encrypted second. A deflate stream cut short
+            // inflates without complaint to the bytes in front of the cut, so a candidate is taken at once
+            // only when its data is complete; the first that merely inflates is kept for when none is.
+            if (inflated++ < MaximumInflatedCandidates && PdfFilters.TryInflate(candidate, out var decoded))
+            {
+                if (PdfFilters.EndsWithAdler32Of(candidate.Span, decoded))
+                {
+                    return EndScannedStream(dictionary, candidate, index + 9);
+                }
+
+                if (inflatingCandidate is null)
+                {
+                    inflatingCandidate = candidate;
+                    inflatingCandidateEnd = index + 9;
+                }
             }
 
             searchFrom = index + 9;
         }
 
-        Position = firstCandidateEnd;
-        return new PdfStream(dictionary, firstCandidate ?? ReadOnlyMemory<byte>.Empty);
+        return inflatingCandidate is { } inflating
+            ? EndScannedStream(dictionary, inflating, inflatingCandidateEnd)
+            : EndScannedStream(dictionary, firstCandidate ?? ReadOnlyMemory<byte>.Empty, firstCandidateEnd);
+    }
+
+    /// <summary>Ends a stream the scan delimited, behind the <c>endstream</c> keyword it chose.</summary>
+    /// <param name="dictionary">The stream dictionary.</param>
+    /// <param name="body">The body the scan chose.</param>
+    /// <param name="keywordEnd">The offset just behind the keyword that ends the body.</param>
+    /// <returns>The stream.</returns>
+    private PdfStream EndScannedStream(PdfDictionary dictionary, ReadOnlyMemory<byte> body, int keywordEnd)
+    {
+        Position = keywordEnd;
+        return new PdfStream(dictionary, body);
     }
 
     /// <summary>Removes the end of line that a writer puts between the data and the keyword.</summary>

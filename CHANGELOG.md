@@ -22,6 +22,105 @@ against an empty feed.
 
 ### Added
 
+- **Twelve independent validation checks, in CI.** `validation.yml` puts the example output and a new
+  validation corpus — written by `tools/SharpCorePDF.Validation`, with a manifest of the text, passwords,
+  permissions, revisions and signature coverage each document must have — through qpdf, three text
+  extractors, four readers of the RC4/AES encryption matrix (qpdf, MuPDF, pypdf, pdf.js), fontTools and OTS,
+  PDFium against MuPDF, pyHanko, the incremental-update invariants and four synthesized hostile documents.
+  `robustness.yml` runs weekly: libFuzzer over the parser and the DCT, CCITT, LZW, Flate and RunLength
+  decoders, the veraPDF and pdf.js corpora one process per file, and the PDF/A writer judged by veraPDF over
+  the veraPDF corpus. `compliance.yml` cross-validates PDF/A-4 too. No shipped package changes; nothing new
+  reaches a consumer. [`docs/validation.md`](docs/validation.md) records each check, how it was shown to fail
+  before it was trusted, and the defects below.
+
+- **`PdfEngineOptions.MaxDecodedStreamBytes`** (128 MiB by default) bounds what one stream may decode to.
+  `MaxSourceBytes` bounds the input only, and Flate reaches about a thousand to one.
+
+### Fixed
+
+- **Security: signature wrapping.** The validator required only that the byte range start at 0 and end at the
+  end of the file, so bytes written into the unsigned gap could close the signature value early and add
+  entries while the digest still matched, and the signature was reported valid and covering the whole
+  document. The gap must now be exactly one hexadecimal string equal to the dictionary's `/Contents`;
+  anything else is `MalformedByteRange`, integrity `Unknown`, and `CoversWholeDocument` false.
+- **Security: decompression bombs.** Flate, LZW and RunLength streams decoded without a limit, so a 1.1 MB
+  document took the process past 1 GiB. They now stop at `MaxDecodedStreamBytes`; buffer growth no longer
+  overflows past 1 GiB.
+- **Security: stack overflow.** A chain of streams whose `/Length` is the next stream was resolved by
+  recursion, and 60,000 links ended the process. The chain is followed no deeper than `MaxNestingDepth`;
+  past it the stream is found by its `endstream` keyword, as for a `/Length` cycle.
+- **Security: allocations sized by the file.** An object stream's `/N` sized two arrays before anything checked
+  it (513 bytes asked for 16 GiB), and a JPEG frame's 16-bit width and height sized the sample planes before
+  the caller's budget was consulted. `/N` is now bounded by what the stream can hold, a JPEG above the budget
+  is measured from its header without being decoded — the same answer as before, without the allocation —
+  and the working sizes are computed in 64 bits.
+
+- **A JPEG scan header is checked before it is used.** A Huffman table selector above 3, and a progressive
+  scan whose spectral selection runs past coefficient 63 or starts after it ends, indexed past the decoder's
+  tables (`IndexOutOfRangeException`); such a scan is now refused and the image reported undecodable.
+- **The empty name is a dictionary key like any other.** `/` on its own is a name PDF allows; four documents
+  of the pdf.js test corpus use it as a key and did not open at all (`ArgumentException`).
+- **A glyph drawn upside down has a box.** A negative font size made `PdfGlyph.BoundingBox` throw, so text
+  extraction faulted on the page.
+- **`PdfDate.TryParse` answers instead of throwing** for a time-zone offset beyond fourteen hours, which it
+  now reads as no offset; one malformed `/CreationDate` no longer fails the inspection of the document.
+
+- **An incremental update appends what changed, and only that.** `UseIncrementalUpdate` appended a copy of
+  the whole document under new object numbers: the file grew by its own size per edit, and the signature
+  dictionary of a signed source was written again after signing, so validators that look at what changed
+  after a signature (pyHanko, Acrobat) saw the signed field as modified. The edited document's objects now
+  keep their numbers and an object written exactly as the source already states it is left out — rotating a
+  page of a signed document appends 716 bytes and three objects instead of 20,969 bytes and twelve.
+- **An incremental update keeps the permanent identifier.** The first element of `/ID` is the source's in
+  every revision, as ISO 32000-1 §14.4 requires; only the second element is new.
+
+- **A merge writes a media box for a page that states none.** Every page of a PDF needs one; a source page
+  with none, and none to inherit, was copied without it, and each reader assumed its own size. It is now
+  written with the A4 box the inspection already describes it with, and `PageSizeAssumed` says so.
+- **Copied real numbers keep their value.** A merge or an edit rewrote every real it copied to five decimals —
+  a Type 3 font matrix of `0.000012` became `0.00001`, seventeen percent off, and `0.000004` became `0`. A real
+  read from a document is now written back from its own text. A real too large for the formatter's buffer no
+  longer fails the write of the whole document (found by the `document` fuzz target in its first run).
+- **The image copy route refuses damaged Flate data with `PdfSourceFormatException`** instead of letting the
+  decompressor's `InvalidDataException`, or the `ZLibException` it throws for some inputs, reach the caller
+  (both found by the `flate` fuzz target).
+- **An edit reads a page's rotation the way the inspection does.** A `/Rotate` that is not a multiple of 90
+  made the edit engine throw `ArgumentOutOfRangeException` (found by the `document` fuzz target), and a real
+  or indirect `/Rotate` was read as no rotation at all. Both now take the nearest quarter turn, the rotation
+  the inspection already reported, and a value beyond the range of `int` is reduced instead of wrapped.
+- **Annotations satisfy the Arlington model.** A free text annotation states the `/DA` ISO 32000-1 requires,
+  and every annotation appearance states its `/Resources` (found by the Arlington check in its first run).
+- **A cross-reference table whose offsets moved is rebuilt.** Bytes inserted or removed after a table was
+  written — a converted line ending, a prepended byte order mark — leave a table that parses and offsets that
+  land inside other objects. Reconstruction used to run only when no table or no catalog was found; it now
+  also runs when the catalog's offset, or most of a sample of offsets, does not land on its own object.
+- **Reconstruction looks inside object streams.** A PDF 1.5 file whose cross-reference stream is lost keeps
+  its catalog and pages in object streams, which a scan for object headers cannot see; it was refused with
+  "no document catalog". The objects of every object stream the scan finds are now indexed, and `/Root` is
+  taken from the dictionary of the last cross-reference stream.
+- **Hardening.** AESV2 always uses a sixteen-byte key, as AES-128 requires, so a file that declares a shorter
+  one opens. A predicted row is sized in 64 bits on the whole-buffer path too: declared columns and colours
+  whose product wrapped to zero looped forever, and to a negative number threw `ArgumentOutOfRangeException`.
+  A stream whose length is wrong is cut where its compressed data is complete — where its Adler-32 matches —
+  rather than at the first `endstream` whose bytes inflate, and at most sixteen candidates are inflated. A
+  reference to a generation the table does not list resolves to null, as ISO 32000-1 reads it.
+- **A revision appended to a file that uses cross-reference streams ends in one.** Edits and signatures
+  appended a classic table chained to a stream; they now write the form the document uses.
+- **Copying a listed attachment that embeds nothing writes nothing.** A file specification in the embedded
+  files tree that only names an external file is listed, with a warning and a length of zero; copying it
+  threw `ArgumentException` as if the caller had passed a file of another document (found by the veraPDF
+  corpus run, `isartor-6-1-11-t01-fail-a.pdf`).
+- **A merge walks a deep or looping outline without ending the process.** The outline was copied
+  recursively, one stack frame per level, and a source nested about fifty thousand levels deep overflowed
+  the stack. The walk stops at 256 levels with `BookmarksTruncated`, and a bookmark reached a second time
+  — a `/First` or `/Next` that points back up the tree, or a child two parents share — is copied once and
+  reported with `BookmarkSkipped` (found by the `document` fuzz target).
+- **Rebuilding a table passes over the offsets it cannot read.** Reconstruction keeps the damaged table's
+  entries beside the ones its scan finds, and the search for a cross-reference stream's trailer sliced the
+  document at each of their offsets unchecked: one past the end of the file, or beyond the range of an
+  index, threw `ArgumentOutOfRangeException` instead of letting the rebuild find the catalog (found by the
+  `document` fuzz target).
+
 - **Run-length images are decoded.** `RunLengthDecode` joins Flate, LZW and the two ASCII filters: a
   bilevel or scan-style image that declares it now yields its samples — and `Gray8`, `Rgb24` or `Cmyk32`
   pixels — rather than `ImageFilterUnsupported`, and a stream that ends without its end-of-data byte is

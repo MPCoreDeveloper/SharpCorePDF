@@ -290,11 +290,18 @@ public sealed partial class PdfEditEngine
     /// <summary>Reserves the object number of every page that is written.</summary>
     /// <param name="writer">The writer of the result.</param>
     /// <param name="layout">The pages in output order.</param>
-    private static void AllocatePageTargets(PdfWriter writer, List<EditedPage> layout)
+    /// <param name="keepNumbersOf">The document an incremental update is appended to, whose pages keep their numbers, or <see langword="null"/>.</param>
+    private static void AllocatePageTargets(PdfWriter writer, List<EditedPage> layout, PdfFileReader? keepNumbersOf)
     {
+        var kept = new HashSet<long>();
+
         foreach (var page in layout)
         {
-            page.TargetNumber = writer.AllocateObject();
+            // In an appended revision a page of the source stays the object it was; a second occurrence of the
+            // same page — a duplicate — is a new page and gets a number of its own.
+            page.TargetNumber = page.Reader == keepNumbersOf && kept.Add(page.Source.ObjectNumber)
+                ? checked((int)page.Source.ObjectNumber)
+                : writer.AllocateObject();
         }
     }
 
@@ -483,16 +490,11 @@ public sealed partial class PdfEditEngine
     }
 
     /// <summary>Reads the rotation a page declares, before any edit is applied.</summary>
+    /// <param name="reader">The document the page belongs to.</param>
     /// <param name="page">The page.</param>
     /// <returns>The normalised rotation.</returns>
-    private static PageRotation ReadRotation(SourcePage page)
-    {
-        var declared = page.Dictionary.GetInteger("Rotate")
-            ?? page.Inherited.GetInteger("Rotate")
-            ?? 0;
-
-        return PageRotationExtensions.Normalize((int)declared);
-    }
+    private static PageRotation ReadRotation(PdfFileReader reader, SourcePage page) =>
+        Pdf.PdfDocumentInspection.ReadRotation(reader, page);
 
     private static void EnsurePage(List<EditedPage> layout, int pageNumber, int index, string sourceName)
     {
@@ -1026,7 +1028,7 @@ public sealed partial class PdfEditEngine
         public int TargetNumber { get; set; }
 
         public PageRotation EffectiveRotation =>
-            PageRotationExtensions.Normalize(ReadRotation(Source).Degrees + AddedRotation.Degrees);
+            PageRotationExtensions.Normalize(ReadRotation(Reader, Source).Degrees + AddedRotation.Degrees);
 
         public EditedPage Copy()
         {

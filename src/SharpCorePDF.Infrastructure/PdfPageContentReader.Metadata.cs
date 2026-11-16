@@ -35,7 +35,7 @@ public sealed partial class PdfPageContentReader
             return new PdfXmpResult { Warnings = [.. reader.Warnings, .. warnings] };
         }
 
-        if (!TryDecodeStream(stream, out var packet))
+        if (!TryDecodeStream(stream, reader.Options.MaxDecodedStreamBytes, out var packet))
         {
             warnings.Add(new(
                 PdfWarningKind.XmpPacketMalformed,
@@ -179,13 +179,21 @@ public sealed partial class PdfPageContentReader
         }
 
         var reader = await OpenAsync(sourceName, content, password, cancellationToken).ConfigureAwait(false);
-        var stream = FindEmbeddedStream(reader, file.Id);
 
-        if (stream is null)
+        if (!TryFindEmbeddedStream(reader, file.Id, out var stream))
         {
             throw new ArgumentException(
                 $"'{file.Id}' is not an embedded file of '{sourceName}'.",
                 nameof(file));
+        }
+
+        // A specification that only names a file outside the document is listed, with a warning and a length
+        // of zero, and copies as what it holds: nothing. Refusing it as a caller's mistake contradicted the
+        // listing the caller took it from.
+        if (stream is null)
+        {
+            await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
+            return;
         }
 
         await PdfImageFilters
@@ -250,9 +258,12 @@ public sealed partial class PdfPageContentReader
     /// <summary>Finds the embedded stream whose identifier is the one asked for.</summary>
     /// <param name="reader">The document.</param>
     /// <param name="id">The identifier of the file.</param>
-    /// <returns>The stream, or <see langword="null"/> when the document has no such file.</returns>
-    private static PdfStream? FindEmbeddedStream(PdfFileReader reader, string id)
+    /// <param name="stream">The stream, or <see langword="null"/> when the file's specification embeds none.</param>
+    /// <returns><see langword="true"/> when the document lists a file with that identifier.</returns>
+    private static bool TryFindEmbeddedStream(PdfFileReader reader, string id, out PdfStream? stream)
     {
+        stream = null;
+
         var entries = new List<KeyValuePair<string, PdfObject>>();
         var names = reader.ResolveDictionary(reader.Catalog?.Get("Names"));
 
@@ -282,11 +293,12 @@ public sealed partial class PdfPageContentReader
 
             if (string.Equals(identifier, id, StringComparison.Ordinal))
             {
-                return FindEmbeddedStream(reader, specification);
+                stream = FindEmbeddedStream(reader, specification);
+                return true;
             }
         }
 
-        return null;
+        return false;
     }
 
     /// <summary>Reads the name a file specification gives the file.</summary>

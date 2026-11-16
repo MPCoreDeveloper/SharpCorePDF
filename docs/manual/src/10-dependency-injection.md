@@ -144,6 +144,7 @@ defaults are deliberately permissive:
 | Option | Default | Effect |
 | --- | --- | --- |
 | `MaxSourceBytes` | 512 MiB | Largest source read into memory; larger sources are rejected |
+| `MaxDecodedStreamBytes` | 128 MiB | Largest size one stream may decode to; a stream that would decode past it is refused |
 | `MaxNestingDepth` | 64 | Maximum dictionary/array nesting, page-tree depth and form field tree depth |
 | `MaxPagesPerSource` | 100 000 | Declared page limit; see the note below |
 | `ReconstructCrossReferenceOnFailure` | `true` | Rebuild a damaged or missing cross-reference table by scanning |
@@ -154,8 +155,15 @@ The source limit is enforced by the reader, and exceeding it throws `PdfSourceFo
 detail that names the limit. It is not a streaming cap: the whole source is held in memory while it is
 processed, so the practical ceiling is your process's memory budget, not the number on the option.
 
-`MaxNestingDepth` has four effects. It bounds how deep an object graph may be parsed, it bounds the
-page-tree walk, it bounds the form field tree, and it bounds the tree the signature search descends. A
+`MaxDecodedStreamBytes` bounds what a stream decodes to, which the source limit does not: Flate reaches about
+a thousand to one, so a one-megabyte document can ask for a gigabyte. A content stream, form or font program
+past the limit is reported as unreadable through the warning list, as other undecodable content is; an object
+or cross-reference stream past it refuses the document with `PdfSourceFormatException`. Images are not refused
+by it — their samples are carried only within `MaxInlineContentBytes` already.
+
+`MaxNestingDepth` has five effects. It bounds how deep an object graph may be parsed, it bounds how many
+streams deep a chain of indirect `/Length` references is followed (past it, the stream is found by its
+`endstream` keyword), it bounds the page-tree walk, it bounds the form field tree, and it bounds the tree the signature search descends. A
 page tree that is cut off contributes a `PageTreeTooDeep` warning rather than failing the merge; a field
 tree that is cut off contributes `FormFieldDepthExceeded` together with the fields above the cut, and the
 search for signatures reports the same warning and adds a `PdfSignatureProblemKind.FormFieldTreeTooDeep`
@@ -176,7 +184,7 @@ file is binary; the marker costs a few bytes and prevents a class of corruption 
 hard to diagnose.
 
 > `MaxPagesPerSource` is part of the options record but this version does not enforce it. Do not rely on
-> it as a security boundary. For untrusted input, set `MaxSourceBytes`, inspect the document with
+> it as a security boundary. For untrusted input, set `MaxSourceBytes` and `MaxDecodedStreamBytes`, inspect the document with
 > `IPdfInspector` and reject it if `PageCount` exceeds your own limit, before building a plan.
 
 ## Configuration file

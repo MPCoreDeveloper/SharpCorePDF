@@ -66,7 +66,12 @@ internal sealed partial class PdfCrossReferenceReader
             }
         }
 
-        if (table.Count == 0 || !table.Trailer.ContainsKey("Root"))
+        // A table that reads cleanly can still be wrong: bytes inserted or removed after it was written — a
+        // converted line ending, a prepended byte order mark — move every object, and each offset then lands
+        // in the middle of something else. Such a table is rebuilt like a table that did not parse.
+        if (table.Count == 0
+            || !table.Trailer.ContainsKey("Root")
+            || (options.ReconstructCrossReferenceOnFailure && !OffsetsLandOnObjects()))
         {
             Reconstruct();
         }
@@ -79,6 +84,56 @@ internal sealed partial class PdfCrossReferenceReader
         }
 
         return table;
+    }
+
+    /// <summary>
+    /// Determines whether the table's offsets land on the objects they name: the catalog's, and a sample of
+    /// the others, each has to point at the <c>n g obj</c> header of its own number.
+    /// </summary>
+    /// <returns><see langword="false"/> when the catalog's offset misses, or most of the sample does.</returns>
+    private bool OffsetsLandOnObjects()
+    {
+        const int Sample = 32;
+
+        if (table.Trailer.GetReference("Root") is { } root
+            && table.Get(root.ObjectNumber) is { Type: XrefEntryType.Uncompressed } rootEntry
+            && !HeaderNames(rootEntry))
+        {
+            return false;
+        }
+
+        var sampled = 0;
+        var missed = 0;
+
+        foreach (var entry in table.Entries.Values
+            .Where(entry => entry.Type == XrefEntryType.Uncompressed)
+            .OrderBy(entry => entry.ObjectNumber)
+            .Take(Sample))
+        {
+            sampled++;
+
+            if (!HeaderNames(entry))
+            {
+                missed++;
+            }
+        }
+
+        return missed * 2 <= sampled;
+    }
+
+    /// <summary>Determines whether an entry's offset is the header of the object it names.</summary>
+    /// <param name="entry">The entry.</param>
+    /// <returns><see langword="true"/> when the bytes at the offset are <c>n g obj</c> for its own number.</returns>
+    private bool HeaderNames(XrefEntry entry)
+    {
+        if (entry.Offset < 0 || entry.Offset >= data.Length)
+        {
+            return false;
+        }
+
+        var parser = new PdfObjectParser(data, sourceName, (int)entry.Offset, null, options.MaxNestingDepth);
+
+        return parser.TryReadIndirectHeader(out var objectNumber, out _) && objectNumber == entry.ObjectNumber;
     }
 
     private long? FindStartXref()
@@ -106,8 +161,13 @@ internal sealed partial class PdfCrossReferenceReader
     {
         var probe = new PdfLexer(data, (int)offset);
 
-        return probe.TryReadKeyword("xref")
-            ? ReadClassicTable((int)offset, isNewest)
-            : ReadCrossReferenceStream((int)offset, isNewest);
+        if (probe.TryReadKeyword("xref"))
+        {
+            return ReadClassicTable((int)offset, isNewest);
+        }
+
+        table.NewestSectionIsStream |= isNewest;
+
+        return ReadCrossReferenceStream((int)offset, isNewest);
     }
 }

@@ -150,12 +150,11 @@ internal static class AppearanceStreams
             .SetName("Type", "XObject")
             .SetName("Subtype", "Form")
             .Set("BBox", ToArray(bounds))
-            .SetName("Filter", "FlateDecode");
+            .SetName("Filter", "FlateDecode")
 
-        if (resources.Count > 0)
-        {
-            dictionary.Set("Resources", resources);
-        }
+            // Stated even when empty: a form XObject without /Resources leaves a reader to borrow the page's,
+            // a PDF 1.1 fallback the Arlington model of PDF 1.7 and later no longer allows.
+            .Set("Resources", resources);
 
         return new PdfStream(dictionary, EmbeddedImage.Compress(operators));
     }

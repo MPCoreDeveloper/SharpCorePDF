@@ -15,6 +15,31 @@ namespace SharpCorePDF.Tests;
 /// </remarks>
 public sealed class PdfTextScannerTests
 {
+    /// <summary>
+    /// A glyph drawn upside down — a negative font size, which a flipped text or font matrix produces — has a
+    /// box all the same: its descender is above its ascender, and the box is taken between them.
+    /// </summary>
+    [Fact]
+    public void Gives_a_glyph_drawn_upside_down_a_box()
+    {
+        var glyph = new SharpCorePDF.Domain.ReadModels.PdfGlyph
+        {
+            Text = "A",
+            PageNumber = 1,
+            X = 10,
+            Y = 100,
+            Width = 6,
+            FontSize = -10,
+        };
+
+        var box = glyph.BoundingBox;
+
+        Assert.Equal(92d, box.Bottom, 6);
+        Assert.Equal(102d, box.Top, 6);
+        Assert.Equal(10d, box.Left, 6);
+        Assert.Equal(16d, box.Right, 6);
+    }
+
     /// <summary>A string the scanner can take as a slice of the stream.</summary>
     /// <param name="content">The content stream.</param>
     /// <param name="expected">The text the shown string must decode to.</param>

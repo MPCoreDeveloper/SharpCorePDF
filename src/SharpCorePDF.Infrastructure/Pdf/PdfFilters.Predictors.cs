@@ -33,15 +33,16 @@ internal static partial class PdfFilters
 
         ValidatePredictor(predictor, bitsPerComponent, sourceName);
 
+        var rowLength = PredictedRowLength(columns, colors, bitsPerComponent, sourceName);
+
         if (predictor == 2)
         {
-            return ApplyTiffPredictor(data, colors, columns);
+            return ApplyTiffPredictor(data, colors, rowLength);
         }
 
         var bytesPerPixel = Math.Max(1, colors * bitsPerComponent / 8);
-        var rowLength = (columns * colors * bitsPerComponent + 7) / 8;
 
-        if (rowLength <= 0 || data.Length <= rowLength)
+        if (data.Length <= rowLength)
         {
             return data;
         }
@@ -192,10 +193,8 @@ internal static partial class PdfFilters
         }
     }
 
-    private static byte[] ApplyTiffPredictor(byte[] data, int colors, int columns)
+    private static byte[] ApplyTiffPredictor(byte[] data, int colors, int rowLength)
     {
-        var rowLength = columns * colors;
-
         for (var row = 0; row + rowLength <= data.Length; row += rowLength)
         {
             UndoTiffRow(data.AsSpan(row, rowLength), colors);
@@ -292,6 +291,32 @@ internal static partial class PdfFilters
     /// </summary>
     private const int MaximumPredictedRowBytes = 8 * 1024 * 1024;
 
+    /// <summary>Gets the length of a predicted row, refusing one the engine does not decode.</summary>
+    /// <param name="columns">The samples in a row, at least one.</param>
+    /// <param name="colors">The components of a pixel, at least one.</param>
+    /// <param name="bitsPerComponent">The bits of each sample.</param>
+    /// <param name="sourceName">The name of the source, used in diagnostics.</param>
+    /// <returns>The bytes of a row, without the filter type byte PNG prediction adds.</returns>
+    /// <exception cref="PdfUnsupportedFeatureException">The row is empty, negative or larger than the engine decodes.</exception>
+    /// <remarks>
+    /// The product is taken in 64 bits: in 32 the three declared values wrap, and a row of 65536 columns of
+    /// 65536 colours came out as zero bytes, on which a row loop never advances.
+    /// </remarks>
+    private static int PredictedRowLength(int columns, int colors, int bitsPerComponent, string sourceName)
+    {
+        var bits = (long)columns * colors * bitsPerComponent;
+
+        if (bits <= 0 || bits > MaximumPredictedRowBytes * 8L)
+        {
+            throw new PdfUnsupportedFeatureException(
+                sourceName,
+                "Predictor",
+                "the predicted row is larger than the engine decodes.");
+        }
+
+        return (int)((bits + 7) / 8);
+    }
+
     /// <summary>Receives one undone row of a predicted payload.</summary>
     /// <param name="row">The row, which is pooled and valid only for the duration of the call.</param>
     internal delegate void RowHandler(ReadOnlySpan<byte> row);
@@ -337,17 +362,7 @@ internal static partial class PdfFilters
             this.colors = colors;
             this.sourceName = sourceName;
 
-            var bits = (long)columns * colors * bitsPerComponent;
-
-            if (bits <= 0 || bits > MaximumPredictedRowBytes * 8L)
-            {
-                throw new PdfUnsupportedFeatureException(
-                    sourceName,
-                    "Predictor",
-                    "the predicted row is larger than the engine decodes.");
-            }
-
-            rowLength = (int)((bits + 7) / 8);
+            rowLength = PredictedRowLength(columns, colors, bitsPerComponent, sourceName);
             bytesPerPixel = Math.Max(1, colors * bitsPerComponent / 8);
             stride = tiff ? rowLength : rowLength + 1;
 

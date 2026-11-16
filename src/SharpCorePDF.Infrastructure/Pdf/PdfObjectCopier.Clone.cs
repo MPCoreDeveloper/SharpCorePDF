@@ -13,7 +13,7 @@ internal sealed partial class PdfObjectCopier
         null or PdfNull => PdfNull.Instance,
         PdfBoolean boolean => PdfBoolean.From(boolean.Value),
         PdfInteger integer => new PdfInteger(integer.Value),
-        PdfReal real => new PdfReal(real.Value),
+        PdfReal real => new PdfReal(real.Value, real.Original),
         PdfName name => new PdfName(name.Value),
         PdfString text => new PdfString(text.Bytes, text.IsHexadecimal),
         PdfReference reference => new PdfReference(Reserve(reference.ObjectNumber), 0),

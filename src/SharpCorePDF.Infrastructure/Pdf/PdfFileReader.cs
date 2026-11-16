@@ -20,6 +20,7 @@ internal sealed partial class PdfFileReader
     private readonly HashSet<long> loadedObjectStreams = [];
     private readonly HashSet<long> resolvingObjectStreams = [];
     private readonly HashSet<long> resolvingLengths = [];
+    private int lengthResolutionDepth;
     private PageTreeWalk? pageTree;
     private PdfDictionary? catalog;
 
@@ -186,8 +187,29 @@ internal sealed partial class PdfFileReader
 
     /// <summary>Resolves an indirect reference.</summary>
     /// <param name="reference">The reference.</param>
-    /// <returns>The object, or <see langword="null"/>.</returns>
-    public PdfObject? Resolve(PdfReference? reference) => reference is null ? null : Resolve(reference.ObjectNumber);
+    /// <returns>
+    /// The object, or <see langword="null"/> — also for a generation other than the one the table lists for
+    /// the number, which names an object that no longer exists (ISO 32000-1, 7.3.10).
+    /// </returns>
+    /// <remarks>
+    /// Only an entry of the table states a generation: an object in an object stream has generation zero by
+    /// definition, and the entry of a compressed object holds its index there instead, so it is not compared.
+    /// </remarks>
+    public PdfObject? Resolve(PdfReference? reference)
+    {
+        if (reference is null)
+        {
+            return null;
+        }
+
+        if (CrossReferenceTable.Get(reference.ObjectNumber) is { Type: XrefEntryType.Uncompressed } entry
+            && entry.Generation != reference.Generation)
+        {
+            return null;
+        }
+
+        return Resolve(reference.ObjectNumber);
+    }
 
     /// <summary>Resolves a value that may be a reference, leaving anything else as it is.</summary>
     /// <param name="value">The value.</param>

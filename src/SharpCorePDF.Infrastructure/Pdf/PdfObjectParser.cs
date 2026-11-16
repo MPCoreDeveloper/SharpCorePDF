@@ -128,13 +128,47 @@ internal sealed partial class PdfObjectParser
             PdfTokenType.ArrayOpen => ParseArray(depth),
             PdfTokenType.DictionaryOpen => ParseDictionaryOrStream(depth),
             PdfTokenType.Number when token.IsInteger => ParseIntegerOrReference(token),
-            PdfTokenType.Number => new PdfReal(token.RealValue),
+            PdfTokenType.Number => new PdfReal(token.RealValue, OriginalReal(token)),
             PdfTokenType.Name => new PdfName(token.Text),
             PdfTokenType.LiteralString => new PdfString(DecryptString(token.Bytes ?? []), false),
             PdfTokenType.HexString => new PdfString(DecryptString(token.Bytes ?? []), true),
             PdfTokenType.Keyword => ParseKeyword(token),
             _ => PdfNull.Instance,
         };
+    }
+
+    /// <summary>Keeps the bytes of a real when they are a well-formed PDF real, so a copy writes it back unchanged.</summary>
+    /// <param name="token">The number token.</param>
+    /// <returns>The bytes, or <see langword="null"/> for a form PDF does not define, which is written normalised.</returns>
+    /// <remarks>
+    /// PDF defines a real as an optional sign, digits and at most one period (ISO 32000-1 §7.3.3); it has no
+    /// exponent. A token outside that form — an exponent, a second sign — was read leniently, and is written in
+    /// the form PDF defines rather than repeated.
+    /// </remarks>
+    private byte[]? OriginalReal(PdfToken token)
+    {
+        var text = lexer.Data.AsSpan(token.Start, token.End - token.Start);
+        var body = text.Length > 0 && text[0] is (byte)'+' or (byte)'-' ? text[1..] : text;
+        var periods = 0;
+        var digits = 0;
+
+        foreach (var value in body)
+        {
+            if (value == (byte)'.')
+            {
+                periods++;
+            }
+            else if (value is >= (byte)'0' and <= (byte)'9')
+            {
+                digits++;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        return digits > 0 && periods <= 1 && body.Length <= 64 ? text.ToArray() : null;
     }
 
     /// <summary>Decrypts the bytes of a string, when the parser was told how to.</summary>
