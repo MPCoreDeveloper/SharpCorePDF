@@ -136,6 +136,45 @@ public sealed class PdfIncrementalWriterTests
         Assert.Contains(ending, Encoding.Latin1.GetString(edited), StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A revision appended to a document whose newest section is a cross-reference stream ends in a stream
+    /// too, chained to the source's, listing itself, and every page of the result reads; a classic table used
+    /// to be appended to such a document, a chain ISO 32000-1 does not describe.
+    /// </summary>
+    [Fact]
+    public async Task Appends_a_cross_reference_stream_to_a_document_that_uses_them()
+    {
+        var source = File.ReadAllBytes(TestAssets.Modern);
+        var (_, edited) = await ApplyAsync(source, Incremental(PdfEditPlan.Create().SetMetadata(new PdfMetadata { Title = "streamed" })));
+
+        var offset = StartXref(edited);
+        var revision = Encoding.Latin1.GetString(edited, source.Length, edited.Length - source.Length);
+        var reader = new PdfFileReader(edited, "edited.pdf", Options);
+        var section = Assert.IsType<PdfStream>(reader.Resolve(reader.CrossReferenceTable.Trailer.GetInteger("Size")!.Value - 1));
+
+        Assert.Equal(source, edited[..source.Length]);
+        Assert.True(offset > source.Length);
+        Assert.DoesNotContain("\nxref\n", revision, StringComparison.Ordinal);
+        Assert.DoesNotContain("trailer", revision, StringComparison.Ordinal);
+        Assert.Equal("XRef", section.Dictionary.GetName("Type"));
+        Assert.Equal(StartXref(source), section.Dictionary.GetInteger("Prev"));
+        Assert.Equal(0, Assert.IsType<PdfInteger>(Assert.IsType<PdfArray>(section.Dictionary.Get("Index")).Items[0]).Value);
+        Assert.True(reader.CrossReferenceTable.NewestSectionIsStream);
+        Assert.False(reader.CrossReferenceTable.WasReconstructed);
+        Assert.Equal("streamed", (await new PdfDocumentReader(Options).ReadAsync("edited.pdf", new MemoryStream(edited), null, Token)).Metadata.Title);
+    }
+
+    /// <summary>A revision appended to a document with a classic table keeps writing a classic table.</summary>
+    [Fact]
+    public async Task Appends_a_classic_table_to_a_document_that_uses_one()
+    {
+        var source = ThreePages();
+        var (_, edited) = await ApplyAsync(source, Incremental(PdfEditPlan.Create().DeletePage(2)));
+
+        Assert.False(new PdfFileReader(source, "source.pdf", Options).CrossReferenceTable.NewestSectionIsStream);
+        Assert.False(new PdfFileReader(edited, "edited.pdf", Options).CrossReferenceTable.NewestSectionIsStream);
+    }
+
     /// <summary>The offsets of the revision are absolute in a destination that can seek.</summary>
     [Fact]
     public async Task Counts_offsets_from_the_start_of_a_seekable_destination()

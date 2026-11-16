@@ -85,12 +85,17 @@ internal static class FieldAppearance
             .Set("BBox", AppearanceStreams.ToArray(box))
             .SetName("Filter", "FlateDecode");
 
+        // Stated even when empty, as an annotation's appearance does: a form XObject without /Resources leaves
+        // a reader to borrow the page's, a PDF 1.1 fallback the Arlington model of PDF 1.7 and later no longer
+        // allows. A button that draws no text has no font to name, and is the case that was left without.
+        var resources = new PdfDictionary();
+
         if (fontObjectNumber != 0)
         {
-            dictionary.Set(
-                "Resources",
-                new PdfDictionary().Set("Font", new PdfDictionary().Set(FontName, new PdfReference(fontObjectNumber, 0))));
+            resources.Set("Font", new PdfDictionary().Set(FontName, new PdfReference(fontObjectNumber, 0)));
         }
+
+        dictionary.Set("Resources", resources);
 
         return new PdfStream(dictionary, Authoring.EmbeddedImage.Compress(operators));
     }

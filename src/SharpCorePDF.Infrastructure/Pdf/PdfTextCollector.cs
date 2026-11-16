@@ -42,6 +42,7 @@ internal sealed class PdfTextCollector
     private List<PdfGlyph> sink = [];
     private readonly HashSet<string> reported = new(StringComparer.Ordinal);
     private readonly HashSet<long> formsInProgress = [];
+    private readonly PdfFormBudget formBudget;
 
     /// <summary>Initializes a new instance of the <see cref="PdfTextCollector"/> class.</summary>
     /// <param name="reader">The document.</param>
@@ -63,6 +64,8 @@ internal sealed class PdfTextCollector
         this.pageNumber = pageNumber;
         this.warnings = warnings;
         this.fontCache = fontCache;
+        formBudget = new PdfFormBudget(reader.Options.MaxFormPaintsPerPage);
+        formBudget.StartPage(pageNumber);
     }
 
     /// <summary>Collects the glyphs a page's content draws.</summary>
@@ -373,6 +376,11 @@ internal sealed class PdfTextCollector
             return;
         }
 
+        if (!formBudget.TryPaint(warnings, reader.SourceName))
+        {
+            return;
+        }
+
         var reference = value as PdfReference;
 
         if (reference is not null && !formsInProgress.Add(reference.ObjectNumber))
@@ -382,13 +390,20 @@ internal sealed class PdfTextCollector
 
         try
         {
-            if (!TryDecodeContent(stream, out var formContent))
-            {
-                warnings.Add(new(
-                    PdfWarningKind.ContentStreamUnreadable,
-                    $"'{reader.SourceName}': the content stream of a form on page {pageNumber} could not be decoded, so its text is not reported."));
+            var objectNumber = reference?.ObjectNumber ?? 0;
 
-                return;
+            if (!formBudget.TryGetCached(objectNumber, out var formContent))
+            {
+                if (!TryDecodeContent(stream, reader.Options.MaxDecodedStreamBytes, out formContent))
+                {
+                    warnings.Add(new(
+                        PdfWarningKind.ContentStreamUnreadable,
+                        $"'{reader.SourceName}': the content stream of a form on page {pageNumber} could not be decoded, so its text is not reported."));
+
+                    return;
+                }
+
+                formBudget.Spend(objectNumber, formContent);
             }
 
             var formResources = reader.ResolveDictionary(stream.Dictionary.Get("Resources")) ?? resources;
@@ -432,13 +447,14 @@ internal sealed class PdfTextCollector
 
     /// <summary>Decodes the content stream of a form.</summary>
     /// <param name="stream">The stream.</param>
+    /// <param name="maxDecodedBytes">The largest number of bytes the stream may decode to.</param>
     /// <param name="content">The decoded bytes when decoding succeeded.</param>
     /// <returns><see langword="true"/> when the stream could be decoded.</returns>
-    private static bool TryDecodeContent(PdfStream stream, out byte[] content)
+    private static bool TryDecodeContent(PdfStream stream, long maxDecodedBytes, out byte[] content)
     {
         try
         {
-            content = PdfFilters.Decode(stream, "form content stream");
+            content = PdfFilters.Decode(stream, "form content stream", maxDecodedBytes);
             return true;
         }
         catch (Domain.Exceptions.PdfUnsupportedFeatureException)

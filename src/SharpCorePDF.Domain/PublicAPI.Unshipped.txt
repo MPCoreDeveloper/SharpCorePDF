@@ -1,1 +1,3 @@
 #nullable enable
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.PdfAFeatureRepaired = 68 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind
+SharpCorePDF.Domain.ValueObjects.PdfWarningKind.FormPaintLimitExceeded = 69 -> SharpCorePDF.Domain.ValueObjects.PdfWarningKind

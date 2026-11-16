@@ -318,6 +318,18 @@ public sealed partial class PdfEditEngine
             dictionary.Set("Contents", PdfString.FromText(contents));
         }
 
+        // A free text annotation must state its default appearance (ISO 32000-1, table 174): the font, size
+        // and colour a reader regenerating the appearance draws with, which are the ones the appearance stream
+        // this writer draws already uses.
+        if (annotation.Kind == PdfAnnotationKind.FreeText)
+        {
+            var style = annotation.TextStyle ?? PdfStandardTextStyle.Default;
+
+            dictionary.Set("DA", PdfString.FromText(string.Create(
+                System.Globalization.CultureInfo.InvariantCulture,
+                $"/{AppearanceStreams.FontName} {PdfNumberFormat.Format(style.Size)} Tf {PdfNumberFormat.Format(style.Color.Red / 255.0)} {PdfNumberFormat.Format(style.Color.Green / 255.0)} {PdfNumberFormat.Format(style.Color.Blue / 255.0)} rg")));
+        }
+
         if (annotation.Color is { } color)
         {
             dictionary.Set("C", ColorArray(color));

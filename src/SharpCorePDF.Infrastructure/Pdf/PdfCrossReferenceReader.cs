@@ -35,38 +35,46 @@ internal sealed partial class PdfCrossReferenceReader
     /// <exception cref="SharpCorePDF.Domain.Exceptions.PdfSourceFormatException">The table is damaged beyond repair.</exception>
     public PdfCrossReferenceTable Read()
     {
-        var pending = new Queue<(long Offset, bool IsNewest)>();
+        var pending = new Queue<(long Offset, bool IsNewest, HashSet<long>? FreedByTable)>();
         var visited = new HashSet<long>();
 
         if (FindStartXref() is { } start)
         {
             table.StartXrefOffset = start;
-            pending.Enqueue((start, true));
+            pending.Enqueue((start, true, null));
         }
 
         while (pending.Count > 0)
         {
-            var (offset, isNewest) = pending.Dequeue();
+            var (offset, isNewest, freedByTable) = pending.Dequeue();
 
             if (offset < 0 || offset >= data.Length || !visited.Add(offset))
             {
                 continue;
             }
 
-            var (previous, hybrid) = TryReadSection(offset, isNewest);
+            var (previous, hybrid, freed) = TryReadSection(offset, isNewest, freedByTable);
+
+            // ISO 32000-1 7.5.8.4 gives the order a lookup follows: the section's table, the stream its
+            // trailer names in /XRefStm, and only then the revision /Prev points at. The table keeps the
+            // entry it meets first, so the stream is queued ahead of the older revision.
+            if (hybrid is { } hybridOffset && hybridOffset > 0 && hybridOffset < data.Length)
+            {
+                pending.Enqueue((hybridOffset, false, freed ?? []));
+            }
 
             if (previous is { } previousOffset && previousOffset > 0 && previousOffset < data.Length)
             {
-                pending.Enqueue((previousOffset, false));
-            }
-
-            if (hybrid is { } hybridOffset && hybridOffset > 0 && hybridOffset < data.Length)
-            {
-                pending.Enqueue((hybridOffset, false));
+                pending.Enqueue((previousOffset, false, null));
             }
         }
 
-        if (table.Count == 0 || !table.Trailer.ContainsKey("Root"))
+        // A table that reads cleanly can still be wrong: bytes inserted or removed after it was written — a
+        // converted line ending, a prepended byte order mark — move every object, and each offset then lands
+        // in the middle of something else. Such a table is rebuilt like a table that did not parse.
+        if (table.Count == 0
+            || !table.Trailer.ContainsKey("Root")
+            || (options.ReconstructCrossReferenceOnFailure && !OffsetsLandOnObjects()))
         {
             Reconstruct();
         }
@@ -79,6 +87,56 @@ internal sealed partial class PdfCrossReferenceReader
         }
 
         return table;
+    }
+
+    /// <summary>
+    /// Determines whether the table's offsets land on the objects they name: the catalog's, and a sample of
+    /// the others, each has to point at the <c>n g obj</c> header of its own number.
+    /// </summary>
+    /// <returns><see langword="false"/> when the catalog's offset misses, or most of the sample does.</returns>
+    private bool OffsetsLandOnObjects()
+    {
+        const int Sample = 32;
+
+        if (table.Trailer.GetReference("Root") is { } root
+            && table.Get(root.ObjectNumber) is { Type: XrefEntryType.Uncompressed } rootEntry
+            && !HeaderNames(rootEntry))
+        {
+            return false;
+        }
+
+        var sampled = 0;
+        var missed = 0;
+
+        foreach (var entry in table.Entries.Values
+            .Where(entry => entry.Type == XrefEntryType.Uncompressed)
+            .OrderBy(entry => entry.ObjectNumber)
+            .Take(Sample))
+        {
+            sampled++;
+
+            if (!HeaderNames(entry))
+            {
+                missed++;
+            }
+        }
+
+        return missed * 2 <= sampled;
+    }
+
+    /// <summary>Determines whether an entry's offset is the header of the object it names.</summary>
+    /// <param name="entry">The entry.</param>
+    /// <returns><see langword="true"/> when the bytes at the offset are <c>n g obj</c> for its own number.</returns>
+    private bool HeaderNames(XrefEntry entry)
+    {
+        if (entry.Offset < 0 || entry.Offset >= data.Length)
+        {
+            return false;
+        }
+
+        var parser = new PdfObjectParser(data, sourceName, (int)entry.Offset, null, options.MaxNestingDepth);
+
+        return parser.TryReadIndirectHeader(out var objectNumber, out _) && objectNumber == entry.ObjectNumber;
     }
 
     private long? FindStartXref()
@@ -102,12 +160,21 @@ internal sealed partial class PdfCrossReferenceReader
         return lexer.TryReadInteger(out var offset) ? offset : null;
     }
 
-    private (long? Previous, long? Hybrid) TryReadSection(long offset, bool isNewest)
+    private (long? Previous, long? Hybrid, HashSet<long>? Freed) TryReadSection(long offset, bool isNewest, HashSet<long>? freedByTable)
     {
         var probe = new PdfLexer(data, (int)offset);
 
-        return probe.TryReadKeyword("xref")
-            ? ReadClassicTable((int)offset, isNewest)
-            : ReadCrossReferenceStream((int)offset, isNewest);
+        if (probe.TryReadKeyword("xref"))
+        {
+            return ReadClassicTable((int)offset, isNewest);
+        }
+
+        table.NewestSectionIsStream |= isNewest;
+
+        var (previous, hybrid) = ReadCrossReferenceStream((int)offset, isNewest, freedByTable);
+
+        // The stream a hybrid section names describes the objects of that section only; the chain of
+        // revisions runs through the table's /Prev, so the stream's own /Prev, when it states one, is not followed.
+        return freedByTable is null ? (previous, hybrid, null) : (null, null, null);
     }
 }

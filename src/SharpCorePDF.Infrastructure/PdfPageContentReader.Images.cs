@@ -153,6 +153,7 @@ public sealed partial class PdfPageContentReader
         private readonly List<ImageEntry> order = [];
         private readonly Dictionary<string, ImageEntry> entries = new(StringComparer.Ordinal);
         private readonly HashSet<long> formsInProgress = [];
+        private readonly PdfFormBudget formBudget;
         private int anonymous;
 
         /// <summary>Initializes a new instance of the <see cref="ImageWalker"/> class.</summary>
@@ -164,6 +165,7 @@ public sealed partial class PdfPageContentReader
             this.reader = reader;
             this.maxInlineBytes = maxInlineBytes;
             this.warnings = warnings;
+            formBudget = new PdfFormBudget(reader.Options.MaxFormPaintsPerPage);
         }
 
         /// <summary>Gets the identifier of the single image the walk is looking for, if any.</summary>
@@ -353,12 +355,33 @@ public sealed partial class PdfPageContentReader
                 return;
             }
 
+            // A page that paints forms without end is read up to a budget, and the images found before it are kept.
+            formBudget.StartPage(pageNumber);
+
+            if (!formBudget.TryPaint(warnings, reader.SourceName))
+            {
+                return;
+            }
+
             if (reference is not null && !formsInProgress.Add(reference.ObjectNumber))
             {
                 return;
             }
 
-            if (TryDecodeStream(stream, out var formContent))
+            var objectNumber = reference?.ObjectNumber ?? 0;
+            byte[]? formContent = null;
+
+            if (formBudget.TryGetCached(objectNumber, out var cached))
+            {
+                formContent = cached;
+            }
+            else if (TryDecodeStream(stream, reader.Options.MaxDecodedStreamBytes, out var fresh))
+            {
+                formBudget.Spend(objectNumber, fresh);
+                formContent = fresh;
+            }
+
+            if (formContent is not null)
             {
                 var formResources = reader.ResolveDictionary(stream.Dictionary.Get("Resources")) ?? resources;
                 var formMatrix = ReadMatrix(reader, stream.Dictionary.Get("Matrix")) ?? PdfMatrix.Identity;

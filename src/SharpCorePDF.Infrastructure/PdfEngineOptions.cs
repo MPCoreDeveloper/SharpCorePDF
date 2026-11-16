@@ -18,6 +18,38 @@ public sealed record PdfEngineOptions
     /// </summary>
     public long MaxSourceBytes { get; init; } = 512L * 1024 * 1024;
 
+    /// <summary>
+    /// Gets the largest number of bytes one filter of one stream may decode to. A stream that would decode
+    /// past it is refused with a <see cref="Domain.Exceptions.PdfSourceFormatException"/> instead of
+    /// exhausting the process.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="MaxSourceBytes"/> bounds what is read, not what it decodes to: Flate reaches about a
+    /// thousand to one, LZW four thousand and RunLength 128, so a one-megabyte document can ask for a
+    /// gigabyte. The default of 128 MiB is far above any real content stream, object stream or font program,
+    /// and low enough that refusing a stream at the limit — whose buffer doubles on the way there, on the
+    /// large-object heap, which the collector does not compact by default — stays reliably inside a 1 GiB
+    /// process when every read pass meets the same stream; the largest value accepted is the largest array
+    /// the runtime allows. An image is not refused by this limit — its samples are kept only
+    /// within <see cref="MaxInlineContentBytes"/> already — but every other stream the engine has to
+    /// materialise is: content, forms, object streams, cross-reference streams and font programs.
+    /// </remarks>
+    public long MaxDecodedStreamBytes { get; init; } = 128L * 1024 * 1024;
+
+    /// <summary>
+    /// Gets the largest number of times the content of one page may paint a form XObject, counted across every
+    /// level of forms inside forms. Past it the rest of the page is not read, and a
+    /// <see cref="Domain.ValueObjects.PdfWarningKind.FormPaintLimitExceeded"/> remark says so.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="MaxNestingDepth"/> and the guard against a form that paints itself bound how deep a page goes
+    /// and not how much it does: a form that paints the next form forty times, six levels down, is under both and
+    /// asks for four billion paints from a document of a few kilobytes. The default of 100,000 is far above what a
+    /// page that draws something needs. Alongside it, the forms of one page are read for at most 256 MiB of
+    /// decoded content, which bounds a page whose few paints are of very large forms.
+    /// </remarks>
+    public int MaxFormPaintsPerPage { get; init; } = 100_000;
+
     /// <summary>Gets the maximum nesting depth of dictionaries and arrays.</summary>
     public int MaxNestingDepth { get; init; } = 64;
 
@@ -72,6 +104,16 @@ public sealed record PdfEngineOptions
         if (MaxSourceBytes < 1024)
         {
             errors.Add($"MaxSourceBytes must be at least 1024, but is {MaxSourceBytes}.");
+        }
+
+        if (MaxDecodedStreamBytes < 1024 || MaxDecodedStreamBytes > Array.MaxLength)
+        {
+            errors.Add($"MaxDecodedStreamBytes must be between 1024 and {Array.MaxLength}, but is {MaxDecodedStreamBytes}.");
+        }
+
+        if (MaxFormPaintsPerPage < 1)
+        {
+            errors.Add($"MaxFormPaintsPerPage must be at least 1, but is {MaxFormPaintsPerPage}.");
         }
 
         if (MaxNestingDepth is < 4 or > 1024)

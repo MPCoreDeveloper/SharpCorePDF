@@ -35,6 +35,176 @@ public sealed class PdfJpegFilterTests
 
     private static string Fixture(string name) => Path.Combine(TestAssets.Folder, "jpeg", name);
 
+    /// <summary>
+    /// A scan that selects a Huffman table the decoder does not have — the selector is four bits, the tables
+    /// number four of each class — is refused, not used as an index past them.
+    /// </summary>
+    /// <param name="selectors">The table selector byte of the first scan component: DC in the high nibble, AC in the low.</param>
+    [Theory]
+    [InlineData(0x44)]
+    [InlineData(0x40)]
+    [InlineData(0x04)]
+    [InlineData(0xFF)]
+    public void Refuses_a_scan_that_selects_a_table_beyond_the_four_there_are(byte selectors)
+    {
+        var jpeg = (byte[])Rgb.Clone();
+        var scan = jpeg.AsSpan().IndexOf(new byte[] { 0xFF, 0xDA });
+
+        Assert.True(scan > 0, "the fixture has to carry a scan header");
+
+        // Marker, length (two bytes), component count, then the first component's id and its selectors.
+        jpeg[scan + 6] = selectors;
+
+        Assert.False(JpegDecoder.TryDecode(jpeg, 1 << 20, out var pixels, out _, out _, out _));
+        Assert.Null(pixels);
+    }
+
+    /// <summary>
+    /// A progressive scan whose spectral selection runs past coefficient 63, starts after it ends, or states a
+    /// successive approximation no 16-bit coefficient has is refused before it indexes the zig-zag table.
+    /// </summary>
+    /// <param name="field">Which field of the AC scan header is rewritten.</param>
+    /// <param name="value">The value it is rewritten to.</param>
+    [Theory]
+    [InlineData("end", 0xFF)]
+    [InlineData("end", 64)]
+    [InlineData("start-after-end", 0)]
+    [InlineData("approximation", 0xE0)]
+    [InlineData("approximation", 0x0E)]
+    public void Refuses_a_progressive_scan_outside_the_block(string field, int value)
+    {
+        var jpeg = (byte[])Progressive.Clone();
+        var position = 0;
+        var tail = -1;
+
+        // The first AC scan: a scan header whose spectral start is above zero.
+        while (tail < 0)
+        {
+            var scan = jpeg.AsSpan(position).IndexOf(new byte[] { 0xFF, 0xDA });
+
+            Assert.True(scan >= 0, "the fixture has to carry an AC scan");
+            scan += position;
+
+            var candidate = scan + 5 + (2 * jpeg[scan + 4]);
+
+            if (jpeg[candidate] > 0)
+            {
+                tail = candidate;
+            }
+
+            position = scan + 2;
+        }
+
+        switch (field)
+        {
+            case "end":
+                jpeg[tail + 1] = (byte)value;
+                break;
+
+            case "start-after-end":
+                jpeg[tail + 1] = (byte)value;
+                Assert.True(jpeg[tail] > value, "the scan has to start after the end it is given");
+                break;
+
+            default:
+                jpeg[tail + 2] = (byte)value;
+                break;
+        }
+
+        Assert.False(JpegDecoder.TryDecode(jpeg, 1 << 20, out var pixels, out _, out _, out _));
+        Assert.Null(pixels);
+    }
+
+    /// <summary>A budget of exactly the output's size keeps the pixels; one byte less measures them.</summary>
+    [Fact]
+    public void Keeps_pixels_that_fit_the_budget_exactly()
+    {
+        Assert.True(JpegDecoder.TryDecode(Rgb, 1 << 20, out var all, out _, out var width, out var height));
+
+        var exact = width * height * 3;
+
+        Assert.Equal(exact, all!.Length);
+        Assert.True(JpegDecoder.TryDecode(Rgb, exact, out var kept, out _, out _, out _));
+        Assert.Equal(all, kept);
+        Assert.True(JpegDecoder.TryDecode(Rgb, exact - 1, out var measured, out _, out _, out _));
+        Assert.Null(measured);
+    }
+
+    /// <summary>An image above the budget is measured with the format its components state.</summary>
+    /// <param name="fixture">The fixture.</param>
+    /// <param name="expected">The format it decodes to.</param>
+    [Theory]
+    [InlineData("jpeg-progressive-gray.jpg", "Gray8")]
+    [InlineData("jpeg-cmyk.jpg", "Cmyk32")]
+    [InlineData("jpeg-444.jpg", "Rgb24")]
+    public void Measures_the_format_of_an_image_above_the_budget(string fixture, string expected)
+    {
+        Assert.True(JpegDecoder.TryDecode(File.ReadAllBytes(Fixture(fixture)), 16, out var pixels, out var format, out _, out _));
+        Assert.Null(pixels);
+        Assert.Equal(expected, format);
+    }
+
+    /// <summary>
+    /// A frame whose output fits a budget of <see cref="int.MaxValue"/> while its coefficient grid does not fit
+    /// an array — 46,340 squared samples is just under the budget, at four bytes a coefficient it is eight
+    /// gigabytes — is refused before anything is allocated, instead of overflowing the size in 32 bits.
+    /// </summary>
+    [Fact]
+    public void Refuses_a_frame_whose_working_buffers_cannot_fit_an_array()
+    {
+        var jpeg = (byte[])ProgressiveGray.Clone();
+        var frame = jpeg.AsSpan().IndexOf(new byte[] { 0xFF, 0xC2 });
+
+        Assert.True(frame > 0, "the fixture has to carry the frame header the test rewrites");
+
+        jpeg[frame + 5] = 46_340 >> 8;
+        jpeg[frame + 6] = 46_340 & 0xFF;
+        jpeg[frame + 7] = 46_340 >> 8;
+        jpeg[frame + 8] = 46_340 & 0xFF;
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var decoded = JpegDecoder.TryDecode(jpeg, int.MaxValue, out var pixels, out _, out _, out _);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.False(decoded);
+        Assert.Null(pixels);
+        Assert.True(allocated < 1 << 20, $"refusing the frame allocated {allocated} bytes");
+    }
+
+    /// <summary>
+    /// A frame header that claims 65,535 x 65,535 samples is measured from the header alone, with no pixels,
+    /// as any image above the budget is. The width and the height are two numbers in the file, and the
+    /// sample planes — four bytes a coefficient for a progressive image — were otherwise allocated before
+    /// the output was found too large to keep.
+    /// </summary>
+    /// <param name="progressive">Whether the progressive fixture is used rather than the baseline one.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Measures_a_frame_too_large_for_the_budget_without_allocating_it(bool progressive)
+    {
+        var jpeg = (byte[])(progressive ? Progressive : Rgb).Clone();
+        var frame = jpeg.AsSpan().IndexOf(progressive ? [0xFF, 0xC2] : [0xFF, 0xC0]);
+
+        Assert.True(frame > 0, "the fixture has to carry the frame header the test rewrites");
+
+        // Marker, length (two bytes), precision, then height and width, each a 16-bit big-endian number.
+        jpeg[frame + 5] = 0xFF;
+        jpeg[frame + 6] = 0xFF;
+        jpeg[frame + 7] = 0xFF;
+        jpeg[frame + 8] = 0xFF;
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var measured = JpegDecoder.TryDecode(jpeg, 1 << 20, out var pixels, out var format, out var width, out var height);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.True(measured);
+        Assert.Null(pixels);
+        Assert.Equal("Rgb24", format);
+        Assert.Equal((65_535, 65_535), (width, height));
+        Assert.True(allocated < 1 << 20, $"refusing the frame allocated {allocated} bytes");
+    }
+
     /// <summary>A 4:4:4 RGB JPEG decodes to the bytes Pillow decodes from the same file.</summary>
     [Fact]
     public void Decodes_a_baseline_rgb_jpeg_within_two_levels()

@@ -110,7 +110,10 @@ public sealed class PdfAWriter : IPdfDocumentAWriter
                 $"the document has no page tree, so it cannot be written for {PdfAProfileRules.Name(profile)}.");
         }
 
-        var requirements = PdfARequirements.Analyze(reader, profile);
+        // The intent the source already states is kept when the caller supplies none: the document was prepared
+        // for that condition, and writing sRGB over it would contradict content painted in its colour space.
+        var outputIntent = effective.OutputIntent ?? ReadSourceOutputIntent(reader);
+        var requirements = PdfARequirements.Analyze(reader, profile, outputIntent?.NumberOfComponents ?? 3);
 
         if (requirements.Unsatisfied.Count > 0)
         {
@@ -134,7 +137,7 @@ public sealed class PdfAWriter : IPdfDocumentAWriter
             ModificationDate = effective.ModificationDate,
             Producer = effective.Producer,
             DocumentId = effective.DocumentId,
-            OutputIntent = effective.OutputIntent,
+            OutputIntent = outputIntent,
             AssociatedFileRelationship = effective.AssociatedFileRelationship,
         });
 
@@ -154,5 +157,54 @@ public sealed class PdfAWriter : IPdfDocumentAWriter
             BytesWritten = edited.BytesWritten,
             Warnings = edited.Warnings,
         };
+    }
+
+    /// <summary>Reads the PDF/A output intent a source states, when it states a usable one.</summary>
+    /// <param name="reader">The source document.</param>
+    /// <returns>The intent, or <see langword="null"/> when the source has none or its profile is not a usable ICC profile.</returns>
+    private static PdfOutputIntent? ReadSourceOutputIntent(PdfFileReader reader)
+    {
+        foreach (var item in reader.ResolveArray(reader.Catalog?.Get("OutputIntents"))?.Items ?? [])
+        {
+            if (reader.ResolveDictionary(item) is not { } intent
+                || !string.Equals(intent.GetName("S"), "GTS_PDFA1", StringComparison.Ordinal)
+                || reader.Resolve(intent.Get("DestOutputProfile")) is not PdfStream profile)
+            {
+                continue;
+            }
+
+            byte[] icc;
+
+            try
+            {
+                icc = PdfFilters.Decode(profile, reader.SourceName, reader.Options.MaxDecodedStreamBytes);
+            }
+            catch (PdfSourceFormatException)
+            {
+                continue;
+            }
+            catch (PdfUnsupportedFeatureException)
+            {
+                continue;
+            }
+
+            var candidate = new PdfOutputIntent
+            {
+                IccProfile = icc,
+                NumberOfComponents = (int)(profile.Dictionary.GetInteger("N") ?? 0),
+                OutputConditionIdentifier = intent.GetText("OutputConditionIdentifier") ?? "Custom",
+                OutputCondition = intent.GetText("OutputCondition"),
+                Info = intent.GetText("Info"),
+                RegistryName = intent.GetText("RegistryName"),
+            };
+
+            // The same checks a caller's profile has to pass: the header, the signature and the component count.
+            if (candidate.Validate().Count == 0)
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 }

@@ -1,7 +1,11 @@
 using System.IO.Compression;
 using System.Text;
 using SharpCorePDF.Domain.Exceptions;
+using SharpCorePDF.Application.Services;
+using SharpCorePDF.Domain.ValueObjects;
+using SharpCorePDF.Infrastructure;
 using SharpCorePDF.Infrastructure.Pdf;
+using SharpCorePDF.Infrastructure.Sources;
 
 namespace SharpCorePDF.Tests;
 
@@ -142,6 +146,98 @@ public sealed class PdfFilterTests
 
         Assert.True(PdfFilters.TryInflate(RawDeflate(text), out var raw));
         Assert.Equal(text, raw);
+    }
+
+    /// <summary>
+    /// A Flate stream that decodes past the limit is refused rather than inflated: zeros deflate about a
+    /// thousand to one, so the input limit alone lets a small document ask for a gigabyte.
+    /// </summary>
+    [Fact]
+    public void Refuses_a_flate_stream_that_decodes_past_the_limit()
+    {
+        var bomb = Deflate(new byte[2 * 1024 * 1024]);
+
+        Assert.True(bomb.Length < 16 * 1024, "the fixture has to be small for the test to say anything");
+
+        var error = Assert.Throws<PdfSourceFormatException>(() => PdfFilters.Inflate(bomb, "bomb.pdf", 1024 * 1024));
+
+        Assert.Contains("MaxDecodedStreamBytes", error.Message, StringComparison.Ordinal);
+        Assert.Equal(2 * 1024 * 1024, PdfFilters.Inflate(bomb, "bomb.pdf", 2 * 1024 * 1024).Length);
+        Assert.True(PdfFilters.TryInflate(Deflate(new byte[1024]), out var small));
+        Assert.Equal(1024, small.Length);
+    }
+
+    /// <summary>An LZW stream is held to the same limit: one 12-bit code can stand for 4,096 bytes.</summary>
+    [Fact]
+    public void Refuses_an_lzw_stream_that_decodes_past_the_limit()
+    {
+        var encoded = TestLzw.Encode(new byte[100_000]);
+
+        var error = Assert.Throws<PdfSourceFormatException>(() => PdfFilters.ApplyLzw(encoded, null, "lzw.pdf", 99_999));
+
+        Assert.Contains("MaxDecodedStreamBytes", error.Message, StringComparison.Ordinal);
+        Assert.Contains("LZW", error.Message, StringComparison.Ordinal);
+        Assert.Equal(100_000, PdfFilters.ApplyLzw(encoded, null, "lzw.pdf", 100_000).Length);
+    }
+
+    /// <summary>A RunLength stream is held to the limit too: two bytes stand for 128.</summary>
+    [Fact]
+    public void Refuses_a_run_length_stream_that_decodes_past_the_limit()
+    {
+        var runs = Enumerable.Repeat(new byte[] { 0x81, 0x00 }, 1000).SelectMany(run => run).ToArray();
+
+        var error = Assert.Throws<PdfSourceFormatException>(() => PdfFilters.DecodeRunLength(runs, "runs.pdf", 127_999));
+
+        Assert.Contains("MaxDecodedStreamBytes", error.Message, StringComparison.Ordinal);
+        Assert.Contains("RunLength", error.Message, StringComparison.Ordinal);
+        Assert.Equal(128_000, PdfFilters.DecodeRunLength(runs, "runs.pdf", 128_000).Length);
+    }
+
+    /// <summary>Literal runs are held to the limit on the same exact boundary as repeated ones.</summary>
+    [Fact]
+    public void Refuses_literal_runs_that_decode_past_the_limit()
+    {
+        byte[] run = [0x7F, .. Enumerable.Range(0, 128).Select(value => (byte)value)];
+        var runs = Enumerable.Repeat(run, 100).SelectMany(bytes => bytes).ToArray();
+
+        var error = Assert.Throws<PdfSourceFormatException>(() => PdfFilters.DecodeRunLength(runs, "runs.pdf", 12_799));
+
+        Assert.Contains("RunLength", error.Message, StringComparison.Ordinal);
+        Assert.Equal(12_800, PdfFilters.DecodeRunLength(runs, "runs.pdf", 12_800).Length);
+    }
+
+    /// <summary>
+    /// A page whose content stream decodes past the limit is reported as unreadable, the way any other
+    /// undecodable content is, and the read finishes: the limit turns a bomb into a warning.
+    /// </summary>
+    [Fact]
+    public async Task Reports_a_content_stream_past_the_limit_as_unreadable_instead_of_inflating_it()
+    {
+        var builder = new PdfBuilder();
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+
+        builder.Add("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R >>");
+        builder.AddStream("/Filter /FlateDecode", PdfBuilder.Compress(new byte[1024 * 1024]));
+        builder.Set(catalog, "<< /Type /Catalog /Pages 2 0 R >>");
+        builder.Set(pages, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        var document = builder.Build(catalog);
+
+        var limited = new PdfContentReaderService(
+            new PdfPageContentReader(PdfEngineOptions.Default with { MaxDecodedStreamBytes = 64 * 1024 }));
+        var text = await limited.ReadTextAsync(
+            new PdfByteArraySource(document, "bomb.pdf"),
+            PageRange.All,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains(text.Warnings, warning => warning.Kind == PdfWarningKind.ContentStreamUnreadable);
+
+        var unlimited = await new PdfContentReaderService(new PdfPageContentReader()).ReadTextAsync(
+            new PdfByteArraySource(document, "bomb.pdf"),
+            PageRange.All,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain(unlimited.Warnings, warning => warning.Kind == PdfWarningKind.ContentStreamUnreadable);
     }
 
     /// <summary>Flate data that cannot be decompressed is refused and reported as a damaged source.</summary>

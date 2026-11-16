@@ -136,7 +136,7 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
         {
             // The analysis is what keeps a refusal honest: a document that cannot be made conformant is
             // stopped here, before the writer exists and before a byte reaches the destination.
-            var requirements = PdfARequirements.Analyze(reader, archival);
+            var requirements = PdfARequirements.Analyze(reader, archival, plan.Output.OutputIntent?.NumberOfComponents ?? 3);
 
             if (requirements.Unsatisfied.Count > 0)
             {
@@ -152,6 +152,11 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
                 warnings.Add(new(
                     PdfWarningKind.PdfAFeatureRemoved,
                     $"'{sourceName}': {removal} was removed because {PdfAProfileRules.Name(archival)} forbids it."));
+            }
+
+            foreach (var repair in requirements.Repairable ?? [])
+            {
+                warnings.Add(new(PdfWarningKind.PdfAFeatureRepaired, $"'{sourceName}': {repair}"));
             }
         }
 
@@ -216,20 +221,48 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
             : null;
 
         var writer = revision?.Writer ?? new PdfWriter(capture ?? destination, version, options, security);
-        var catalogNumber = writer.AllocateObject();
-        var pagesNodeNumber = writer.AllocateObject();
+
+        // An appended revision updates the objects of the revision before it rather than writing a second
+        // copy of them: the catalog, the page tree, the pages and every object copied from the source keep
+        // their numbers, and an object that comes out exactly as the source already states it is left out.
+        var primary = revision is null ? null : reader;
+
+        if (primary is not null)
+        {
+            writer.SkipUnchanged((number, body) => IsUnchangedInSource(primary, number, body));
+        }
+
+        var catalogNumber = primary is not null && primary.RootObjectNumber > 0
+            ? checked((int)primary.RootObjectNumber)
+            : writer.AllocateObject();
+        var pagesNodeNumber = primary?.Catalog?.Get("Pages") is PdfReference pagesRoot
+            ? checked((int)pagesRoot.ObjectNumber)
+            : writer.AllocateObject();
 
         // Every document the plan reads has its own copier, because object numbers are only unique
         // inside one document. All copiers write into the same result, which is what makes an
         // imported page indistinguishable from a page that was already there.
-        sources.Attach(writer);
+        sources.Attach(writer, keepNumbersOf: primary);
+
+        if (primary is not null)
+        {
+            // The catalog and the information dictionary are written by the engine under their own numbers;
+            // a copy of the old ones, reached through a reference, would be a second object of the same
+            // number in the same revision.
+            sources.CopierOf(primary).Redirect(catalogNumber, catalogNumber);
+
+            if (SourceInformationNumber(primary) is { } informationNumber)
+            {
+                sources.CopierOf(primary).Redirect(informationNumber, informationNumber);
+            }
+        }
 
         foreach (var (source, copier) in sources.Copiers)
         {
             RedirectPageTree(source, copier, pagesNodeNumber);
         }
 
-        AllocatePageTargets(writer, layout);
+        AllocatePageTargets(writer, layout, primary);
 
         foreach (var (source, copier) in sources.Copiers)
         {
@@ -246,6 +279,13 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
         // The form is written before the pages: a page names the widgets that stand on it, and a
         // flattened field adds a stream and a resource the page dictionary has to carry.
         var acroForm = WriteForm(reader, sources.CopierOf(reader), writer, layout, form, warnings);
+
+        if (profile is { } archivalProfile)
+        {
+            // The rewrite that makes each annotation and field state what the profile requires has to be
+            // registered before the objects are copied: they are written when the pages name them.
+            PdfAAnnotationRules.Register(reader, sources.CopierOf(reader), archivalProfile);
+        }
 
         WritePages(sources, writer, pagesNodeNumber, layout, new AnnotationContext(writer, modificationDate), warnings);
 
@@ -279,8 +319,19 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
 
         // PDF/A-4 forbids the document information dictionary (a trailer /Info is allowed only beside a
         // catalog /PieceInfo, which this writer does not produce), so the packet is the only copy there.
-        var infoNumber = profile == PdfAProfile.PdfA4 ? (int?)null : WriteInformation(writer, metadata);
-        WriteTrailer(writer, catalogNumber, infoNumber, identifier, security, revision?.PreviousXref);
+        var existingInformation = primary is null ? null : SourceInformationNumber(primary);
+        var infoNumber = profile == PdfAProfile.PdfA4
+            ? (int?)null
+            : WriteInformation(writer, metadata, existingInformation);
+        WriteTrailer(
+            writer,
+            catalogNumber,
+            infoNumber,
+            identifier,
+            security,
+            revision?.PreviousXref,
+            primary is null ? null : PermanentIdentifier(primary),
+            primary?.CrossReferenceTable.NewestSectionIsStream == true);
 
         Verify(capture, layout, plan.Output.Encryption?.UserPassword, warnings);
 
@@ -327,7 +378,7 @@ public sealed partial class PdfEditEngine : IPdfEditEngine
             for (var index = 0; index < layout.Count; index++)
             {
                 var expected = layout[index].EffectiveRotation;
-                var actual = ReadRotation(reader.Pages[index]);
+                var actual = ReadRotation(reader, reader.Pages[index]);
 
                 if (actual != expected)
                 {

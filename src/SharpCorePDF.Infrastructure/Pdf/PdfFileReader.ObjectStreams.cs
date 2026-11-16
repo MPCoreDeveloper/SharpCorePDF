@@ -43,18 +43,24 @@ internal sealed partial class PdfFileReader
             }
 
             var dictionary = stream.Dictionary;
-            var count = (int)(dictionary.GetInteger("N") ?? 0);
-            var first = (int)(dictionary.GetInteger("First") ?? 0);
+            var declared = dictionary.GetInteger("N") ?? 0;
+            var first = dictionary.GetInteger("First") ?? 0;
 
-            if (count <= 0 || first < 0)
+            if (declared <= 0 || first < 0)
             {
                 return;
             }
 
-            var decoded = PdfFilters.Decode(stream, SourceName);
+            var decoded = PdfFilters.Decode(stream, SourceName, options.MaxDecodedStreamBytes);
+
+            // /N sizes two arrays, and it is a number the file states: 2^31 - 1 of them would ask for
+            // gigabytes from a stream of a few hundred bytes. Every pair of the header takes at least four
+            // bytes ("1 0 "), so the stream itself bounds how many objects it can describe, and the arrays
+            // are sized by that bound; a header that ends before /N says so below.
+            var count = (int)Math.Min(declared, (decoded.Length / 4L) + 1);
             var header = new PdfObjectParser(decoded, SourceName, 0, null, options.MaxNestingDepth);
             var numbers = new long[count];
-            var offsets = new int[count];
+            var offsets = new long[count];
 
             for (var index = 0; index < count; index++)
             {
@@ -62,12 +68,12 @@ internal sealed partial class PdfFileReader
                 {
                     warnings.Add(new(
                         PdfWarningKind.ObjectStreamTruncated,
-                        $"'{SourceName}': object stream {containerObjectNumber} declares {count} objects but its header ends early."));
+                        $"'{SourceName}': object stream {containerObjectNumber} declares {declared} objects but its header ends early."));
                     break;
                 }
 
                 numbers[index] = number;
-                offsets[index] = (int)offset;
+                offsets[index] = offset;
             }
 
             for (var index = 0; index < count; index++)
@@ -79,7 +85,17 @@ internal sealed partial class PdfFileReader
                     continue;
                 }
 
-                var parser = new PdfObjectParser(decoded, SourceName, position, null, options.MaxNestingDepth);
+                // The table decides where an object is. A stream still holds the copies it held when it was
+                // written — an object a later revision rewrote in the file body, or deleted — and only the
+                // numbers the table places in this stream are taken from it, so neither answers for the
+                // newer state.
+                if (CrossReferenceTable.Get(numbers[index]) is not { Type: XrefEntryType.Compressed } placed
+                    || placed.Offset != containerObjectNumber)
+                {
+                    continue;
+                }
+
+                var parser = new PdfObjectParser(decoded, SourceName, (int)position, null, options.MaxNestingDepth);
                 fromObjectStreams[numbers[index]] = parser.ParseObject();
             }
         }

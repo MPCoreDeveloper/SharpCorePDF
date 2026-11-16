@@ -109,8 +109,28 @@ internal sealed class PdfReal : PdfObject
     /// <param name="value">The value.</param>
     public PdfReal(double value) => Value = value;
 
+    /// <summary>Initializes a new instance of the <see cref="PdfReal"/> class with the text a document wrote it as.</summary>
+    /// <param name="value">The value.</param>
+    /// <param name="original">The bytes of the number as the document states it, or <see langword="null"/>.</param>
+    public PdfReal(double value, byte[]? original)
+    {
+        Value = value;
+        Original = original;
+    }
+
     /// <summary>Gets the value.</summary>
     public double Value { get; }
+
+    /// <summary>
+    /// Gets the bytes the number was read from, when it was read from a document and they are a well-formed
+    /// PDF real; <see langword="null"/> for a number the engine computed.
+    /// </summary>
+    /// <remarks>
+    /// A merge or an edit copies a dictionary by writing it again, so a real it did not change is written from
+    /// these bytes: formatting the parsed value instead rounded it to five decimals, and a Type 3 font matrix of
+    /// <c>0.000012</c> came out as <c>0.00001</c>.
+    /// </remarks>
+    public byte[]? Original { get; }
 
     /// <inheritdoc />
     public override PdfObjectKind Kind => PdfObjectKind.Number;
@@ -119,7 +139,10 @@ internal sealed class PdfReal : PdfObject
     public override string ToString() => PdfNumberFormat.Format(Value);
 }
 
-/// <summary>Formats numbers the way PDF expects them: invariant, shortest round-trippable form.</summary>
+/// <summary>
+/// Formats a number the engine computed the way PDF expects it: invariant, without an exponent, and to five
+/// decimal places. A number read from a document is written from its own text instead (<see cref="PdfReal.Original"/>).
+/// </summary>
 internal static class PdfNumberFormat
 {
     /// <summary>Formats a real number.</summary>

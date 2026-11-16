@@ -84,7 +84,11 @@ byte-identical, which is what a test that compares files needs.
   `PdfAConversionOptions.OutputIntent` instead: the bytes, the component count and the condition it names are
   written as given, and the library does not convert the pages into that colour space. The intent is checked
   as an ICC profile first — declared length, the `acsp` signature, and a data colour space that agrees with
-  the component count — because a broken profile produces a file that looks archival and is not.
+  the component count — because a broken profile produces a file that looks archival and is not. When the
+  caller supplies none and the source already states a usable `GTS_PDFA1` output intent — one that passes the
+  same checks — that intent is kept: the document was prepared for that condition, and an sRGB intent written
+  over it would contradict content painted in its colour space. A source with none, or one whose profile fails
+  the checks, gets the sRGB intent.
 - **`/NeedAppearances false`** on the form, when the source has one: a conformance reader must be able to
   paint the form without building appearances itself.
 - **An association for every embedded file**, when the profile is PDF/A-3b: the catalog carries an `/AF`
@@ -110,7 +114,16 @@ Two different things can stand between a source and a profile, and they are trea
 | A catalog open action that runs JavaScript | The document opens without running anything. |
 | The `/NeedAppearances` flag | The appearances must be in the file, not built by the reader. |
 | Custom document information entries | They have no XMP property without an extension schema. |
-| The XMP packet and output intent of the source | Replaced by the ones the profile requires. |
+| The XMP packet of the source, and its output intent when the checks above fail it | Replaced by the ones the profile requires. |
+| The `/A` and `/AA` actions of a form widget, and the actions of a form field | The profile does not let a form carry an action; the form is read without running anything. |
+| The XFA form of the document | A reader of an archival copy cannot be asked to run a program to build the form; the widgets carry their appearances. |
+
+**Set right, with a warning of kind `PdfAFeatureRepaired`**: an entry the profile requires that the source left
+out, where setting it changes nothing a viewer shows.
+
+| Set right | Why it is safe |
+| --- | --- |
+| The Print bit of an annotation's `/F` flags, or the whole entry when it is missing | The annotation is shown as it was; it prints as well. Parts 2, 3 and 4 do not ask it of a popup, part 1 does. |
 
 **Refused, with `IsWritten = false` and a named requirement**: things that cannot be repaired without
 changing what a page looks like, or that are data.
@@ -124,7 +137,13 @@ changing what a page looks like, or that are data.
 | Embedded files for 1b, 2b and 4 | Only PDF/A-3 allows attachments; PDF/A-4f would, and is not offered. |
 | Optional content for 1b | PDF 1.4 has no layers. |
 | An annotation without an appearance stream (except `Link` and `Popup`) | A viewer would have to invent the content. |
-| A JavaScript, `Launch`, `Sound`, `Movie`, `Rendition`, `ImportData` or `SubmitForm` action | The profile forbids the action itself, not just its startup use. |
+| A `JavaScript`, `Launch`, `Sound`, `Movie`, `Rendition`, `ImportData`, `ResetForm`, `Hide`, `SetOCGState`, `Trans`, `GoTo3DView`, `SetState` or `NoOp` action | The profile forbids the action itself, not just its startup use. A link, a bookmark, a page, the catalog and every action that one names in `/Next` are looked at; `SubmitForm` is permitted by every part. |
+| A named action other than `NextPage`, `PrevPage`, `FirstPage` and `LastPage` | The other named actions are viewer commands. |
+| An annotation hidden by its flags (`Invisible`, `Hidden`, `NoView`, and for parts 2 to 4 `ToggleNoView`) | Clearing the flag would put on the page something nobody saw. |
+| An annotation of a type the profile does not list — `3D`, `Sound`, `Screen`, `Movie`, and for part 4 `RichMedia` and `FileAttachment` | The profile's list is the one the reference validator applies. |
+| Content that paints in `DeviceCMYK`, or in `DeviceRGB` under a non-RGB intent, with no matching output intent and no `Default` colour space | A device space means nothing alone. The writer states one intent, sRGB unless the source's or the caller's is a different one; supply a CMYK `OutputIntent` for CMYK content. A `Separation` or `DeviceN` space counts through its alternate, and so does the colour space of a transparency group. A page this library authors paints in `DeviceRGB` unless the author states another colour, so authoring for a CMYK or gray intent means painting in that space. |
+| An operator ISO 32000 does not define, even between `BX` and `EX` | The profile forbids it, and the writer does not know what it was meant to do. |
+| An extended graphics state with `/HTP`, `/TR`, a `/TR2` other than `Default`, a halftone that is not type 1 or 5 or that is named, or a blend mode ISO 32000-1 does not define | Each is a rendering instruction the profile does not allow, and removing it changes the page. |
 | An external file stream (`/F`) | The document must contain what it displays. |
 
 A refusal writes nothing to the destination, so a caller that ignores `IsWritten` does not get a file it
@@ -137,6 +156,17 @@ the font 'Helvetica' is not embedded; a PDF/A document must carry the program of
 
 Every conversion that does write adds a `PdfAProfileWritten` warning naming the profile and stating that
 conformance is established by an external validator.
+
+### What this analysis is, and how far it reaches
+
+The analysis looks for the features this writer cannot repair. It is not a validator and it does not
+read every rule of ISO 19005: a document with a violation it does not look for is written, and the
+`PdfAProfileWritten` warning says conformance is established elsewhere. How far that reaches is measured, not
+claimed. `docs/validation.md` records the result of converting the veraPDF test corpus — documents that each break
+one clause, and documents that each pass one — and judging every result with veraPDF 1.30.4, with the counts
+per profile and the clauses that remain: colour-space consistency between `Separation` arrays, font width and
+encoding rules, and a few more. `robustness.yml` repeats the measurement weekly and fails when the number of
+conversions veraPDF rejects rises.
 
 ## Archival edits
 

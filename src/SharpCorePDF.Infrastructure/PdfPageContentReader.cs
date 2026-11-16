@@ -142,7 +142,7 @@ public sealed partial class PdfPageContentReader : IPdfPageContentReader
     private static double? ReadNumber(PdfFileReader reader, PdfObject? value) => value switch
     {
         PdfInteger integer => integer.Value,
-        PdfReal real => real.Value,
+        PdfReal real when double.IsFinite(real.Value) => real.Value,
         PdfReference reference => ReadNumber(reader, reader.Resolve(reference)),
         _ => null,
     };

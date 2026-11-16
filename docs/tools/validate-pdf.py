@@ -7,6 +7,9 @@ Checks that qpdf raises no problems, that every page can be read, that every con
 image can be decoded, and that no object in the file is unreachable or dangling. For an encrypted
 document the check needs the password, which is what proves that another implementation derives the
 same key this repository's writer derived.
+
+--known-defect <file-name> expects that one file to fail because of a defect that is recorded and not yet
+fixed. It is strict: the run also fails when the file passes, so the flag is removed with the fix.
 """
 
 import sys
@@ -151,9 +154,34 @@ def main():
         password = arguments[index + 1]
         del arguments[index : index + 2]
 
+    known = set()
+
+    while "--known-defect" in arguments:
+        index = arguments.index("--known-defect")
+        known.add(arguments[index + 1])
+        del arguments[index : index + 2]
+
     exit_code = 0
+    seen = set()
+
     for argument in arguments:
-        exit_code += check(Path(argument), password)
+        path = Path(argument)
+        failures = check(path, password)
+
+        if path.name in known:
+            seen.add(path.name)
+
+            if failures:
+                print(f"  known defect: {path.name} still fails, as recorded")
+            else:
+                exit_code += 1
+                print(f"  FAILED: {path.name} is listed as a known defect but passes; remove --known-defect {path.name}")
+        else:
+            exit_code += failures
+
+    for name in sorted(known - seen):
+        exit_code += 1
+        print(f"FAILED: --known-defect {name} names no file that was checked")
 
     sys.exit(0 if exit_code == 0 else 1)
 

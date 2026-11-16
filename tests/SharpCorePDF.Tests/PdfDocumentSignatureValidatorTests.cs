@@ -25,6 +25,36 @@ public sealed class PdfDocumentSignatureValidatorTests
         Assert.Empty(await SigningFixtures.ValidateAsync(SigningFixtures.BuildDocument()));
     }
 
+    /// <summary>
+    /// A form whose every level lists the next level twice has two to the power of its depth paths to the bottom, and
+    /// the walk that looked for signatures followed all of them: forty levels under the depth limit never finished,
+    /// a hang the <c>document</c> fuzz target found. Each field is read once.
+    /// </summary>
+    [Fact]
+    public async Task Finishes_looking_for_signatures_in_a_form_whose_levels_each_list_the_next_twice()
+    {
+        const int levels = 40;
+        var builder = new PdfBuilder();
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+
+        builder.Add("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>");
+
+        for (var level = 0; level < levels; level++)
+        {
+            var next = 5 + level;
+            builder.Add(level == levels - 1 ? "<< /T (leaf) >>" : $"<< /T (f) /Kids [{next} 0 R {next} 0 R] >>");
+        }
+
+        builder.Set(catalog, "<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [4 0 R] >> >>");
+        builder.Set(pages, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+
+        var validations = await Task.Run(() => SigningFixtures.ValidateAsync(builder.Build(catalog)))
+            .WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        Assert.Empty(validations);
+    }
+
     /// <summary>The checked-in unsigned fixture carries no signature either.</summary>
     [Fact]
     public async Task Reports_nothing_for_an_unsigned_fixture()

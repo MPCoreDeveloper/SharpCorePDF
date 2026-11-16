@@ -24,17 +24,32 @@ internal sealed class PooledByteBuffer : IDisposable
 {
     private const int MinimumCapacity = 16;
 
+    /// <summary>
+    /// The largest array a decode buffer takes from the pool. Above it the array is allocated and left to the
+    /// collector, because the shared pool keeps what is returned to it: a document that inflates a stream to
+    /// the decode limit in every read pass would otherwise leave hundreds of megabytes parked in the pool,
+    /// and the next pass would allocate beside them.
+    /// </summary>
+    private const int MaximumPooledDecodeLength = 16 * 1024 * 1024;
+
     private byte[] array;
     private int length;
+    private readonly bool poolLargeArrays;
     private bool returned;
 
     /// <summary>Initializes a new instance of the <see cref="PooledByteBuffer"/> class.</summary>
     /// <param name="initialCapacity">The number of bytes to rent up front.</param>
-    public PooledByteBuffer(int initialCapacity = 256)
+    /// <param name="poolLargeArrays">
+    /// Whether arrays above 16 MiB go through the pool too. The read of a source keeps them pooled, because
+    /// reusing the one buffer a document is read into is what keeps a large read at one allocation; a decode
+    /// buffer does not, because its size is whatever a stream inflates to and the pool would keep it.
+    /// </param>
+    public PooledByteBuffer(int initialCapacity = 256, bool poolLargeArrays = true)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(initialCapacity);
 
-        array = ArrayPool<byte>.Shared.Rent(Math.Max(initialCapacity, MinimumCapacity));
+        this.poolLargeArrays = poolLargeArrays;
+        array = Rent(Math.Max(initialCapacity, MinimumCapacity));
     }
 
     /// <summary>Gets the number of bytes that have been written.</summary>
@@ -112,7 +127,7 @@ internal sealed class PooledByteBuffer : IDisposable
         }
 
         returned = true;
-        ArrayPool<byte>.Shared.Return(array);
+        Return(array);
         array = [];
         length = 0;
     }
@@ -124,14 +139,36 @@ internal sealed class PooledByteBuffer : IDisposable
             return;
         }
 
-        Grow(length + sizeHint);
+        Grow((long)length + sizeHint);
     }
 
-    private void Grow(int minimumCapacity)
+    private void Grow(long minimumCapacity)
     {
-        var grown = ArrayPool<byte>.Shared.Rent(Math.Max(minimumCapacity, array.Length * 2));
+        // Doubling is computed in 64 bits and clamped to the largest array the runtime allows, so a buffer
+        // past a gigabyte grows to the limit instead of to a negative size; a request beyond the limit is
+        // refused. The decode limits keep every caller below it, so this is a guard and not a path.
+        if (minimumCapacity > Array.MaxLength)
+        {
+            throw new InvalidOperationException($"A buffer of {minimumCapacity} bytes is larger than the runtime allows.");
+        }
+
+        var capacity = (int)Math.Min(Math.Max(minimumCapacity, 2L * array.Length), Array.MaxLength);
+        var grown = Rent(capacity);
         array.AsSpan(0, length).CopyTo(grown);
-        ArrayPool<byte>.Shared.Return(array);
+        Return(array);
         array = grown;
+    }
+
+    private byte[] Rent(int length) =>
+        poolLargeArrays || length <= MaximumPooledDecodeLength
+            ? ArrayPool<byte>.Shared.Rent(length)
+            : GC.AllocateUninitializedArray<byte>(length);
+
+    private void Return(byte[] rented)
+    {
+        if (poolLargeArrays || rented.Length <= MaximumPooledDecodeLength)
+        {
+            ArrayPool<byte>.Shared.Return(rented);
+        }
     }
 }

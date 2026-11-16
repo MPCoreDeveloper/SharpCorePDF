@@ -260,6 +260,28 @@ public sealed partial class PdfMergeEngineTests
         Assert.Equal(3, (await ReadAsync(second, MergedUserPassword)).PageCount);
     }
 
+    /// <summary>
+    /// AESV2 is AES-128 whatever key length its crypt filter declares, so a file that declares five bytes still
+    /// opens with its password: the key used to be cut to the declared length, which no AES-128 producer used.
+    /// </summary>
+    [Fact]
+    public async Task Opens_an_aesv2_document_whose_crypt_filter_declares_a_short_key()
+    {
+        var bytes = await MergeEncryptedAsync(Encryption(PdfEncryptionAlgorithm.AesWith128BitKey));
+        var text = Encoding.Latin1.GetString(bytes);
+        var declared = text.IndexOf("/AESV2 /Length 16", StringComparison.Ordinal);
+
+        Assert.True(declared >= 0);
+
+        // The same number of bytes, so every offset of the file stays where it was.
+        Encoding.Latin1.GetBytes("/AESV2 /Length 5 ").CopyTo(bytes, declared);
+
+        var info = await ReadAsync(bytes, MergedUserPassword);
+
+        Assert.True(info.IsReadable);
+        Assert.Equal(3, info.PageCount);
+    }
+
     /// <summary>Merges an encrypted source and a plain one into a result with the encryption asked for.</summary>
     /// <param name="encryption">The encryption to write the result with.</param>
     /// <param name="modificationDate">The moment to stamp the result with, when it has to be reproducible.</param>

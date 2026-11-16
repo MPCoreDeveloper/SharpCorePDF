@@ -1,0 +1,277 @@
+# Robustness: what the engine does with documents nobody here wrote, and with documents built to break it.
+#
+# validation.yml checks what the library writes, on every push. This workflow checks what it reads, weekly,
+# because its inputs are large and slow: coverage-guided fuzzing of every decoder and of the document parser,
+# two public corpora of real and deliberately broken files, and the PDF/A conversion measured against the
+# veraPDF test corpus with veraPDF as the judge. None of it gates a pull request; a red run is a defect report.
+#
+#   fuzz        SharpFuzz instruments the three engine assemblies and libFuzzer drives one target per job
+#               (tools/SharpCorePDF.Validation, FuzzTargets.cs). A PdfException is the contract's refusal and
+#               not a finding; any other exception, a stack overflow or the memory limit is, and the input
+#               that caused it is uploaded. Reproduce one with:
+#                 dotnet run --project tools/SharpCorePDF.Validation -- replay <target> <crash-file>
+#   corpora     corpus-robustness.py over the veraPDF corpus and the pdf.js test corpus, one process per
+#               file, under a time limit and a hard managed-heap limit. Fault, crash and timeout fail the run.
+#   preflight   validate-preflight-corpus.py: every PDF/A file of the veraPDF corpus converted for its profile
+#               and the result judged by veraPDF. Report-only until its first run sets the baseline.
+#
+# Every external input is pinned: the libFuzzer driver by tag and SHA-256, SharpFuzz in
+# .config/dotnet-tools.json, the corpora by commit, veraPDF by version (the same one compliance.yml pins).
+
+name: Robustness
+
+on:
+  schedule:
+    - cron: '0 3 * * 2'
+  workflow_dispatch:
+    inputs:
+      fuzz-minutes:
+        description: 'Minutes of fuzzing per target'
+        required: false
+        default: '30'
+
+permissions:
+  contents: read
+
+env:
+  LIBFUZZER_DOTNET_TAG: 'v2025.05.02.0904'
+  LIBFUZZER_DOTNET_SHA256: 'c2c2a90d94c409a4af339a0d4f244e0442c5a5d249be0f1252ba07871f285958'
+  VERAPDF_CORPUS_COMMIT: 'bb75f4f0073d9350dfd058c0162a367e6fadf25e'
+  PDFJS_TAG: 'v6.4.299'
+  PDFJS_COMMIT: 'd0991a0d53f3bb3a7307e3b83f279c1d117aafb3'
+  VERAPDF_VERSION: '1.30.4'
+  VERAPDF_INSTALL: ${{ github.workspace }}/.verapdf
+
+jobs:
+  fuzz:
+    name: Fuzz ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [ document, dct, ccitt, lzw, flate, runlength ]
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install the .NET SDKs
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: |
+            11.0.x
+            10.0.x
+
+      - name: Install SharpFuzz and the libFuzzer driver
+        run: |
+          set -euo pipefail
+          dotnet tool restore
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            --output "$RUNNER_TEMP/libfuzzer-dotnet" \
+            "https://github.com/Metalnem/libfuzzer-dotnet/releases/download/${LIBFUZZER_DOTNET_TAG}/libfuzzer-dotnet-ubuntu"
+          echo "${LIBFUZZER_DOTNET_SHA256}  $RUNNER_TEMP/libfuzzer-dotnet" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/libfuzzer-dotnet"
+
+      # Two builds: an instrumented one for libFuzzer, and a plain one for the seeds and for replaying what
+      # libFuzzer finds, because instrumented code throws outside the fuzzer (see Program.cs).
+      - name: Build, then instrument the engine
+        run: |
+          set -euo pipefail
+          dotnet publish ./tools/SharpCorePDF.Validation -c Release -o "$RUNNER_TEMP/plain"
+          dotnet publish ./tools/SharpCorePDF.Validation -c Release -o "$RUNNER_TEMP/fuzz"
+          for layer in Domain Application Infrastructure; do
+            dotnet sharpfuzz "$RUNNER_TEMP/fuzz/SharpCorePDF.$layer.dll"
+          done
+
+      - name: Seed the corpus
+        run: |
+          set -euo pipefail
+          tool="$RUNNER_TEMP/plain/SharpCorePDF.Validation.dll"
+          seeds="$RUNNER_TEMP/seeds"
+          assets=tests/SharpCorePDF.Tests/Assets
+          case "${{ matrix.target }}" in
+            document)  dotnet "$tool" seed document "$seeds" "$assets/parity/corpus" "$assets/parity/labelled" "$assets/parity/forms" ;;
+            dct)       dotnet "$tool" seed dct "$seeds" "$assets"/jpeg/*.jpg ;;
+            ccitt)     dotnet "$tool" seed ccitt "$seeds" "$assets/ccitt/ccitt-g3.bin" "$assets/ccitt/ccitt-g4.bin" ;;
+            *)         mkdir -p "$seeds" && printf '\x03\x00\x00\x3f\x3f' > "$seeds/empty" ;;
+          esac
+          dotnet "$tool" replay "${{ matrix.target }}" "$seeds"
+
+      - name: Fuzz
+        env:
+          SCPDF_FUZZ_TARGET: ${{ matrix.target }}
+          MINUTES: ${{ github.event.inputs.fuzz-minutes || '30' }}
+        run: |
+          set -uo pipefail
+          mkdir -p artifacts/crashes
+          "$RUNNER_TEMP/libfuzzer-dotnet" \
+            --target_path=dotnet --target_arg="$RUNNER_TEMP/fuzz/SharpCorePDF.Validation.dll" \
+            -max_total_time=$(( MINUTES * 60 )) -timeout=30 -rss_limit_mb=4096 -max_len=262144 \
+            -artifact_prefix=artifacts/crashes/ -print_final_stats=1 \
+            "$RUNNER_TEMP/seeds"
+          status=$?
+          ls -la artifacts/crashes
+          if [ -n "$(ls -A artifacts/crashes)" ]; then
+            echo "::error::libFuzzer saved $(ls artifacts/crashes | wc -l) input(s) that broke the ${{ matrix.target }} target"
+            exit 1
+          fi
+          exit $status
+
+      - name: Upload what broke the engine
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuzz-crashes-${{ matrix.target }}
+          path: artifacts/crashes
+          if-no-files-found: ignore
+          retention-days: 30
+
+  corpora:
+    name: Public corpora
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install the .NET SDKs
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: |
+            11.0.x
+            10.0.x
+
+      - name: Fetch the corpora
+        run: |
+          set -euo pipefail
+          # The veraPDF corpus is small enough to clone without blobs and check out at the pinned commit; pdf.js
+          # is not, so it is cloned one commit deep at its tag and the commit is checked against the pin.
+          git clone -q --filter=blob:none --sparse https://github.com/veraPDF/veraPDF-corpus.git "$RUNNER_TEMP/verapdf-corpus"
+          git -C "$RUNNER_TEMP/verapdf-corpus" sparse-checkout set PDF_A-1b PDF_A-2b PDF_A-4 "ISO 32000-1" "ISO 32000-2" "Isartor test files"
+          git -C "$RUNNER_TEMP/verapdf-corpus" -c advice.detachedHead=false checkout -q "$VERAPDF_CORPUS_COMMIT"
+
+          git clone -q --depth 1 --branch "$PDFJS_TAG" --filter=blob:none --sparse https://github.com/mozilla/pdf.js.git "$RUNNER_TEMP/pdfjs"
+          git -C "$RUNNER_TEMP/pdfjs" sparse-checkout set test/pdfs
+          test "$(git -C "$RUNNER_TEMP/pdfjs" rev-parse HEAD)" = "$PDFJS_COMMIT"
+
+          find "$RUNNER_TEMP/verapdf-corpus" "$RUNNER_TEMP/pdfjs" -name '*.pdf' | wc -l
+
+      - name: Build the probe
+        run: dotnet build ./tools/SharpCorePDF.Validation -c Release
+
+      - name: Read every document
+        run: |
+          python3 docs/tools/corpus-robustness.py \
+            --probe ./tools/SharpCorePDF.Validation/bin/Release/net11.0/SharpCorePDF.Validation.dll \
+            --timeout 60 --heap-limit-mb 1024 --report artifacts/corpora.json \
+            "$RUNNER_TEMP/verapdf-corpus" "$RUNNER_TEMP/pdfjs/test/pdfs"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: corpora
+          path: artifacts/corpora.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  preflight:
+    name: PDF/A conversion against the veraPDF corpus
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install the .NET SDKs
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          dotnet-version: |
+            11.0.x
+            10.0.x
+
+      - name: Set up the JDK veraPDF runs on
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Cache the veraPDF installer
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/verapdf
+          key: verapdf-${{ env.VERAPDF_VERSION }}-installer
+
+      # The same installation compliance.yml performs, so both workflows judge with the same validator.
+      - name: Install veraPDF
+        run: |
+          set -euo pipefail
+          band="${VERAPDF_VERSION%.*}"
+          archive="$HOME/.cache/verapdf/verapdf-greenfield-${VERAPDF_VERSION}-installer.zip"
+          mkdir -p "$(dirname "$archive")"
+          if [ ! -f "$archive" ]; then
+            curl --fail --silent --show-error --location \
+              --proto '=https' --proto-redir '=https' --tlsv1.2 \
+              --output "$archive" \
+              "https://software.verapdf.org/releases/${band}/verapdf-greenfield-${VERAPDF_VERSION}-installer.zip"
+          fi
+          rm -rf "$VERAPDF_INSTALL" "$RUNNER_TEMP/verapdf"
+          mkdir -p "$VERAPDF_INSTALL"
+          unzip -q "$archive" -d "$RUNNER_TEMP/verapdf"
+          printf '%s\n' \
+            '<?xml version="1.0" encoding="UTF-8"?>' \
+            '<AutomatedInstallation langpack="eng">' \
+            '  <com.izforge.izpack.panels.htmlhello.HTMLHelloPanel id="welcome" />' \
+            '  <com.izforge.izpack.panels.target.TargetPanel id="install_dir">' \
+            "    <installpath>${VERAPDF_INSTALL}</installpath>" \
+            '  </com.izforge.izpack.panels.target.TargetPanel>' \
+            '  <com.izforge.izpack.panels.packs.PacksPanel id="sdk_pack_select">' \
+            '    <pack index="0" name="veraPDF GUI" selected="false" />' \
+            '    <pack index="1" name="veraPDF CLI" selected="true" />' \
+            '    <pack index="2" name="veraPDF Documentation" selected="false" />' \
+            '    <pack index="3" name="veraPDF Sample Plugins" selected="false" />' \
+            '  </com.izforge.izpack.panels.packs.PacksPanel>' \
+            '  <com.izforge.izpack.panels.install.InstallPanel id="install" />' \
+            '  <com.izforge.izpack.panels.finish.FinishPanel id="finish" />' \
+            '</AutomatedInstallation>' \
+            > "$RUNNER_TEMP/auto-install.xml"
+          rm -f "/tmp/iz-veraPDF Software.tmp" "${TMPDIR:-/tmp}/iz-veraPDF Software.tmp"
+          bash "$RUNNER_TEMP/verapdf/verapdf-greenfield-${VERAPDF_VERSION}/verapdf-install" "$RUNNER_TEMP/auto-install.xml"
+          if [ ! -x "$VERAPDF_INSTALL/verapdf" ]; then
+            printf '%s\n' '#!/usr/bin/env bash' \
+              "exec java -jar \"$VERAPDF_INSTALL\"/bin/cli-*.jar \"\$@\"" \
+              > "$VERAPDF_INSTALL/verapdf"
+            chmod +x "$VERAPDF_INSTALL/verapdf"
+          fi
+          "$VERAPDF_INSTALL/verapdf" --version
+
+      - name: Fetch the veraPDF corpus
+        run: |
+          set -euo pipefail
+          git clone -q --filter=blob:none --sparse https://github.com/veraPDF/veraPDF-corpus.git "$RUNNER_TEMP/verapdf-corpus"
+          git -C "$RUNNER_TEMP/verapdf-corpus" sparse-checkout set PDF_A-1b PDF_A-2b PDF_A-2u PDF_A-3b PDF_A-4
+          git -C "$RUNNER_TEMP/verapdf-corpus" -c advice.detachedHead=false checkout -q "$VERAPDF_CORPUS_COMMIT"
+
+      - name: Build the probe
+        run: dotnet build ./tools/SharpCorePDF.Validation -c Release
+
+      - name: Convert and judge
+        run: |
+          python3 docs/tools/validate-preflight-corpus.py \
+            --corpus "$RUNNER_TEMP/verapdf-corpus" \
+            --probe ./tools/SharpCorePDF.Validation/bin/Release/net11.0/SharpCorePDF.Validation.dll \
+            --verapdf "$VERAPDF_INSTALL/verapdf" \
+            --max-false-success 229             --report artifacts/preflight.json
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: preflight
+          path: artifacts/preflight.json
+          if-no-files-found: warn
+          retention-days: 30

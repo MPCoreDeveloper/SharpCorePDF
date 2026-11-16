@@ -8,15 +8,18 @@ namespace SharpCorePDF.Domain.ReadModels;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <see cref="IsWritten"/> is the honest answer to "may I ship this file as an archival master". It is
-/// <see langword="false"/> when the writer knows the profile is not satisfied — an unembedded font, a
-/// transparency the profile forbids, an attachment — and in that case the caller's destination was
-/// left untouched and <see cref="UnsatisfiedRequirements"/> names every reason.
+/// <see cref="IsWritten"/> is <see langword="false"/> when the writer found something in the source that the
+/// profile forbids and that it cannot make right — an unembedded font, a transparency the profile forbids,
+/// an attachment, content in a colour space the output intent does not cover — and in that case the caller's
+/// destination was left untouched and <see cref="UnsatisfiedRequirements"/> names every reason.
 /// </para>
 /// <para>
 /// <see cref="IsWritten"/> being <see langword="true"/> means the structures the profile requires were
-/// written, not that a validator has accepted the file. veraPDF remains the external authority, and
-/// the library makes no conformance claim of its own.
+/// written and the analysis found none of what it looks for. It does not mean a validator has accepted the file:
+/// the analysis is not a validator and does not read every rule of ISO 19005, so a source with a violation it does
+/// not look for is written with that violation. veraPDF remains the external authority, and the library makes
+/// no conformance claim of its own; how far the analysis reaches is measured against the veraPDF test corpus in
+/// <c>docs/validation.md</c>.
 /// </para>
 /// </remarks>
 public sealed record PdfAConversionResult

@@ -240,6 +240,56 @@ public sealed partial class PdfDocumentEditorTests
         Assert.Contains(" Tf", operators, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A free text annotation states the default appearance ISO 32000-1 requires of it — the font, the size and
+    /// the colour its appearance stream draws with — and that stream states resources of its own, as a form
+    /// XObject must under the Arlington model; neither was written before.
+    /// </summary>
+    [Fact]
+    public async Task States_the_default_appearance_and_resources_of_a_free_text_annotation()
+    {
+        var edited = await Editor.ApplyToArrayAsync(
+            new PdfByteArraySource(ThreePages(), "three-pages.pdf"),
+            PdfEditPlan.Create().AddAnnotation(
+                1,
+                PdfAnnotations.FreeText(
+                    new PdfRectangle(72, 500, 320, 530),
+                    "Reviewed",
+                    new PdfStandardTextStyle(StandardFont.Helvetica, 10, PdfColor.FromRgb(255, 128, 51)))),
+            cancellationToken: Token);
+
+        var reader = Read(edited);
+        var annots = reader.ResolveArray(reader.Pages[0].Dictionary.Get("Annots"));
+        var annotation = reader.ResolveDictionary(annots?.Items[0]);
+        var appearance = Assert.IsType<PdfStream>(reader.Resolve(reader.ResolveDictionary(annotation?.Get("AP"))?.Get("N")));
+        var defaultAppearance = Assert.IsType<PdfString>(annotation?.Get("DA"));
+
+        Assert.Equal("/Helv 10 Tf 1 0.50196 0.2 rg", Encoding.ASCII.GetString(defaultAppearance.Bytes));
+        Assert.IsType<PdfDictionary>(reader.Resolve(appearance.Dictionary.Get("Resources")));
+    }
+
+    /// <summary>
+    /// An appearance that needs no font and no graphics state still states its resources, empty, so a reader
+    /// never borrows the page's.
+    /// </summary>
+    [Fact]
+    public async Task States_resources_on_an_appearance_that_needs_none()
+    {
+        var edited = await Editor.ApplyToArrayAsync(
+            new PdfByteArraySource(ThreePages(), "three-pages.pdf"),
+            PdfEditPlan.Create().AddAnnotation(
+                1,
+                PdfAnnotations.Highlight([new PdfRectangle(72, 300, 200, 312)], PdfColor.FromRgb(255, 224, 130))),
+            cancellationToken: Token);
+
+        var reader = Read(edited);
+        var annots = reader.ResolveArray(reader.Pages[0].Dictionary.Get("Annots"));
+        var annotation = reader.ResolveDictionary(annots?.Items[0]);
+        var appearance = Assert.IsType<PdfStream>(reader.Resolve(reader.ResolveDictionary(annotation?.Get("AP"))?.Get("N")));
+
+        Assert.IsType<PdfDictionary>(reader.Resolve(appearance.Dictionary.Get("Resources")));
+    }
+
     /// <summary>An annotation that states its own appearance is drawn with those operators and no others.</summary>
     [Fact]
     public async Task Writes_the_operators_of_a_supplied_annotation_appearance()

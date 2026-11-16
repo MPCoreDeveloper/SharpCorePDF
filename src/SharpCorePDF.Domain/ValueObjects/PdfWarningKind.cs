@@ -405,4 +405,17 @@ public enum PdfWarningKind
     /// the document and not a failure to read it.
     /// </summary>
     FontDescriptorMissing,
+
+    /// <summary>
+    /// An entry the PDF/A profile requires was missing or incomplete and was set right in the written copy, for
+    /// example the Print bit of an annotation's flags, and the caller was told which one.
+    /// </summary>
+    PdfAFeatureRepaired,
+
+    /// <summary>
+    /// The content of a page paints form XObjects more often than <c>PdfEngineOptions.MaxFormPaintsPerPage</c>
+    /// allows, or reads more decoded form content than the page's budget, so the rest of the page was not read.
+    /// What was read before the limit is reported.
+    /// </summary>
+    FormPaintLimitExceeded,
 }

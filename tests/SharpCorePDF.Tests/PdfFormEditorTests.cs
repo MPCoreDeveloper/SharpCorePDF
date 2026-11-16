@@ -97,6 +97,45 @@ public sealed partial class PdfFormEditorTests
         Assert.Equal(4, ((PdfArray)form.Get("Fields")!).Count);
     }
 
+    /// <summary>
+    /// Every appearance the engine draws for a field states <c>/Resources</c>, including the ones that draw no
+    /// text and so name no font: a check box has none to name, and a form XObject without the entry leaves a
+    /// reader to borrow the page's, a PDF 1.1 fallback the Arlington model of later versions no longer allows.
+    /// </summary>
+    [Fact]
+    public async Task States_resources_on_the_appearance_of_a_button_that_draws_no_text()
+    {
+        var (edited, _) = await ApplyAsync(
+            BlankPage(),
+            PdfEditPlan.Create().SetForm(PdfForm.Create(
+                PdfFormFields.CheckBox(1, "agree", new PdfRectangle(72, 600, 88, 616), isChecked: true),
+                PdfFormFields.Text(1, "person.name", new PdfRectangle(72, 640, 300, 664), "Ada Lovelace"))));
+
+        var reader = Reader(edited);
+        var streams = new List<PdfStream>();
+
+        // The widgets a viewer paints are the annotations of the page.
+        foreach (var item in reader.ResolveArray(reader.Pages[0].Dictionary.Get("Annots"))!.Items)
+        {
+            var appearance = reader.ResolveDictionary(reader.ResolveDictionary(item)!.Get("AP"))!;
+
+            switch (reader.Resolve(appearance.Get("N")))
+            {
+                case PdfStream stream:
+                    streams.Add(stream);
+                    break;
+
+                case PdfDictionary states:
+                    streams.AddRange(states.Entries.Select(entry => reader.Resolve(entry.Value)).OfType<PdfStream>());
+                    break;
+            }
+        }
+
+        // The check box states its on and off appearances, and the text field its one: three streams.
+        Assert.Equal(3, streams.Count);
+        Assert.All(streams, stream => Assert.NotNull(reader.ResolveDictionary(stream.Dictionary.Get("Resources"))));
+    }
+
     /// <summary>A field the document carries is filled where it stands, and the rest is untouched.</summary>
     [Fact]
     public async Task Fills_a_field_the_document_already_carries()

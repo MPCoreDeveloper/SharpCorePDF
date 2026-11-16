@@ -108,6 +108,52 @@ public sealed partial class PdfEditEngine
         return false;
     }
 
+    /// <summary>
+    /// Determines whether an object is exactly what the revision an update is appended to already states under
+    /// the same number, by writing both the way the writer would and comparing the bytes.
+    /// </summary>
+    /// <param name="source">The document the revision is appended to.</param>
+    /// <param name="objectNumber">The number the object is about to be written under.</param>
+    /// <param name="body">The body about to be written.</param>
+    /// <returns><see langword="true"/> when writing it would restate the source unchanged.</returns>
+    private static bool IsUnchangedInSource(PdfFileReader source, int objectNumber, PdfObject body)
+    {
+        if (objectNumber > source.CrossReferenceTable.HighestObjectNumber || source.Resolve(objectNumber) is not { } original)
+        {
+            return false;
+        }
+
+        return Serialize(original).AsSpan().SequenceEqual(Serialize(body));
+    }
+
+    private static byte[] Serialize(PdfObject value)
+    {
+        using var stream = new MemoryStream();
+        var output = new PdfOutputBuffer(stream);
+
+        PdfSerializer.Write(value, output);
+        output.Flush();
+
+        return stream.ToArray();
+    }
+
+    /// <summary>Gets the number of the source's document information dictionary, when it is an object of its own.</summary>
+    /// <param name="source">The document the revision is appended to.</param>
+    /// <returns>The object number, or <see langword="null"/>.</returns>
+    private static int? SourceInformationNumber(PdfFileReader source) =>
+        source.CrossReferenceTable.Trailer.Get("Info") is PdfReference information
+            ? checked((int)information.ObjectNumber)
+            : null;
+
+    /// <summary>
+    /// Gets the first element of the source's <c>/ID</c>, which ISO 32000-1 §14.4 makes permanent: it "shall
+    /// not change when the file is incrementally updated".
+    /// </summary>
+    /// <param name="source">The document the revision is appended to.</param>
+    /// <returns>The identifier, or <see langword="null"/> when the source states none.</returns>
+    private static PdfString? PermanentIdentifier(PdfFileReader source) =>
+        source.CrossReferenceTable.Trailer.Get("ID") is PdfArray { Items: [PdfString permanent, ..] } ? permanent : null;
+
     /// <summary>Copies the source into the destination and opens the writer of the appended revision.</summary>
     /// <param name="destination">The stream the result is written to.</param>
     /// <param name="reader">The document being edited.</param>

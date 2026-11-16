@@ -1,1 +1,5 @@
 #nullable enable
+SharpCorePDF.Infrastructure.PdfEngineOptions.MaxDecodedStreamBytes.get -> long
+SharpCorePDF.Infrastructure.PdfEngineOptions.MaxDecodedStreamBytes.init -> void
+SharpCorePDF.Infrastructure.PdfEngineOptions.MaxFormPaintsPerPage.get -> int
+SharpCorePDF.Infrastructure.PdfEngineOptions.MaxFormPaintsPerPage.init -> void

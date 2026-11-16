@@ -245,8 +245,8 @@ public sealed class PdfATests
     /// <remarks>
     /// The header here is synthetic — a Gray profile with no colour conversion data — because what the test
     /// pins is that the writer takes the count and the registry from the intent instead of substituting its
-    /// own sRGB answers. Whether such a profile is a good idea for a page painted in device RGB is the
-    /// validator's question, and Chapter 24 of the manual says so.
+    /// own sRGB answers. The page is painted in gray, which a gray intent covers; a page painted in device RGB
+    /// under it is refused, as the next test pins.
     /// </remarks>
     [Fact]
     public async Task Writes_the_registry_and_the_component_count_the_caller_states()
@@ -260,7 +260,7 @@ public sealed class PdfATests
         };
 
         var (result, output) = await ConvertAsync(
-            Authored(),
+            GrayPage(),
             PdfAProfile.PdfA2B,
             options: Options() with { OutputIntent = intent });
 
@@ -277,6 +277,45 @@ public sealed class PdfATests
         var icc = Assert.IsType<PdfStream>(document.Resolve(written.Get("DestOutputProfile")));
 
         Assert.Equal(1, icc.Dictionary.GetInteger("N"));
+    }
+
+    /// <summary>
+    /// A page painted in device RGB is refused under an intent that is not RGB. The two contradict — the standard
+    /// allows a device space only where the document says what it stands for — and the reference validator rejects
+    /// the file, so writing it would hand the caller an archival master that is not one.
+    /// </summary>
+    [Fact]
+    public async Task Refuses_a_page_painted_in_device_rgb_under_an_intent_that_is_not_rgb()
+    {
+        var intent = new PdfOutputIntent
+        {
+            IccProfile = IccHeader("GRAY"),
+            NumberOfComponents = 1,
+            OutputConditionIdentifier = "gray condition",
+        };
+
+        var (result, _) = await ConvertAsync(
+            Authored(),
+            PdfAProfile.PdfA2B,
+            options: Options() with { OutputIntent = intent });
+
+        Assert.False(result.IsWritten);
+        Assert.Contains(result.UnsatisfiedRequirements, requirement => requirement.Contains("DeviceRGB", StringComparison.Ordinal));
+    }
+
+    /// <summary>Builds a page painted only in gray, with no text and so no font to embed.</summary>
+    private static byte[] GrayPage()
+    {
+        var builder = new PdfBuilder();
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+
+        builder.Add("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R >>");
+        builder.AddStream(string.Empty, "0.5 g 10 10 50 50 re f"u8.ToArray());
+        builder.Set(catalog, "<< /Type /Catalog /Pages 2 0 R >>");
+        builder.Set(pages, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+
+        return builder.Build(catalog);
     }
 
     /// <summary>Refuses data that is not an ICC profile before a byte of the result is written.</summary>

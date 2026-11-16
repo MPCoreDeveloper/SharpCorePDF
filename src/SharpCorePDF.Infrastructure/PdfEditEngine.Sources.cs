@@ -221,16 +221,24 @@ internal sealed class EditSources
 
     /// <summary>Creates the copier of every document.</summary>
     /// <param name="writer">The writer of the result.</param>
+    /// <param name="keepNumbersOf">The document an incremental update is appended to, whose copier keeps the numbers of its objects, or <see langword="null"/>.</param>
     /// <remarks>
     /// Object numbers are only unique inside one document, so every document gets a copier of its own.
     /// All of them write into the same result, which is what makes a copied page indistinguishable
     /// from a page that was already there.
     /// </remarks>
-    public void Attach(PdfWriter writer)
+    public void Attach(PdfWriter writer, PdfFileReader? keepNumbersOf = null)
     {
         foreach (var reader in readers)
         {
             copiers[reader] = new PdfObjectCopier(reader, writer);
+
+            // Only the document a revision is appended to shares its numbers with the result; a document
+            // the edit imports from has numbers of its own, which would collide with them.
+            if (reader == keepNumbersOf)
+            {
+                copiers[reader].KeepObjectNumbers();
+            }
         }
     }
 

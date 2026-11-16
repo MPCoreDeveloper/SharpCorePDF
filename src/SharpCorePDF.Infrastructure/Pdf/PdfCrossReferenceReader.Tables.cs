@@ -10,27 +10,31 @@ namespace SharpCorePDF.Infrastructure.Pdf;
 /// </remarks>
 internal sealed partial class PdfCrossReferenceReader
 {
-    private (long? Previous, long? Hybrid) ReadClassicTable(int offset, bool isNewest)
+    private (long? Previous, long? Hybrid, HashSet<long>? Freed) ReadClassicTable(int offset, bool isNewest)
     {
         var parser = new PdfObjectParser(data, sourceName, offset, null, options.MaxNestingDepth);
+        var freed = new HashSet<long>();
         parser.TryReadKeyword("xref");
-        ReadSubsections(parser);
+        ReadSubsections(parser, freed);
 
         if (!parser.TryReadKeyword("trailer") || parser.ParseObject() is not PdfDictionary trailer)
         {
-            return (null, null);
+            return (null, null, null);
         }
 
         var previous = trailer.GetInteger("Prev");
         var hybrid = trailer.GetInteger("XRefStm");
         table.MergeTrailer(trailer, onlyMissingKeys: !isNewest);
 
-        return (previous, hybrid);
+        // The numbers this table frees are the ones a hybrid section's stream may describe: a hybrid file lists
+        // the objects it keeps in object streams as free here, so a reader that knows no streams skips them.
+        return (previous, hybrid, hybrid is null ? null : freed);
     }
 
     /// <summary>Reads the subsections of the table, which are as many as the file wrote.</summary>
     /// <param name="parser">The parser positioned at the first subsection.</param>
-    private void ReadSubsections(PdfObjectParser parser)
+    /// <param name="freed">The set that receives the numbers the table lists as free.</param>
+    private void ReadSubsections(PdfObjectParser parser, HashSet<long> freed)
     {
         while (true)
         {
@@ -42,7 +46,7 @@ internal sealed partial class PdfCrossReferenceReader
                 return;
             }
 
-            if (!ReadSubsectionEntries(parser, first, count))
+            if (!ReadSubsectionEntries(parser, first, count, freed))
             {
                 return;
             }
@@ -76,8 +80,9 @@ internal sealed partial class PdfCrossReferenceReader
     /// <param name="parser">The parser to read from.</param>
     /// <param name="first">The object number the subsection starts at.</param>
     /// <param name="count">The number of entries the subsection announces.</param>
+    /// <param name="freed">The set that receives the numbers the table lists as free.</param>
     /// <returns><see langword="true"/> when every announced entry was read.</returns>
-    private bool ReadSubsectionEntries(PdfObjectParser parser, long first, int count)
+    private bool ReadSubsectionEntries(PdfObjectParser parser, long first, int count, HashSet<long> freed)
     {
         for (var index = 0; index < count; index++)
         {
@@ -93,6 +98,11 @@ internal sealed partial class PdfCrossReferenceReader
                 entryOffset,
                 generation,
                 inUse ? XrefEntryType.Uncompressed : XrefEntryType.Free));
+
+            if (!inUse)
+            {
+                freed.Add(first + index);
+            }
         }
 
         return true;

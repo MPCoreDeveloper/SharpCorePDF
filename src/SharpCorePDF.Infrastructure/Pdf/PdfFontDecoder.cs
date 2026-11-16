@@ -313,7 +313,7 @@ internal static class PdfFontDecoder
 
         try
         {
-            data = PdfFilters.Decode(stream, reader.SourceName);
+            data = PdfFilters.Decode(stream, reader.SourceName, reader.Options.MaxDecodedStreamBytes);
         }
         catch (PdfUnsupportedFeatureException)
         {

@@ -3,12 +3,14 @@ using SharpCorePDF.Infrastructure.Pdf;
 
 namespace SharpCorePDF.Infrastructure.Authoring;
 
-/// <summary>What one analysis of a source found: what must be refused, and what may be removed.</summary>
+/// <summary>What one analysis of a source found: what must be refused, what may be removed, and what is set right.</summary>
 /// <param name="Unsatisfied">The requirements the profile states that the document does not meet.</param>
 /// <param name="Removable">The features the writer removes, each with the reason it is allowed to.</param>
+/// <param name="Repairable">The entries the writer sets right, each stated as the sentence the caller is told.</param>
 internal sealed record PdfARequirementReport(
     IReadOnlyList<string> Unsatisfied,
-    IReadOnlyList<string> Removable);
+    IReadOnlyList<string> Removable,
+    IReadOnlyList<string>? Repairable = null);
 
 /// <summary>
 /// Decides whether a source document can be written for a PDF/A profile, before a single byte of the
@@ -30,9 +32,26 @@ internal sealed record PdfARequirementReport(
 /// </remarks>
 internal static class PdfARequirements
 {
-    /// <summary>The action types ISO 19005 forbids in every part.</summary>
-    private static readonly HashSet<string> ForbiddenActions =
-        new(StringComparer.Ordinal) { "JavaScript", "Launch", "Sound", "Movie", "Rendition", "ImportData", "SubmitForm" };
+    /// <summary>The action types ISO 19005 forbids, as the reference validator applies them to each part.</summary>
+    /// <remarks>
+    /// Part 1 forbids Launch, Sound, Movie, ResetForm, ImportData, JavaScript and Hide; parts 2 and 3 add Rendition,
+    /// SetOCGState, Trans and GoTo3DView, which part 1 has no such action for; the deprecated SetState and NoOp are
+    /// forbidden throughout. SubmitForm is permitted by every part.
+    /// </remarks>
+    private static readonly HashSet<string> ForbiddenActions = new(StringComparer.Ordinal)
+    {
+        "JavaScript", "Launch", "Sound", "Movie", "Rendition", "ImportData", "ResetForm", "Hide", "SetOCGState",
+        "Trans", "GoTo3DView", "SetState", "NoOp",
+    };
+
+    /// <summary>The named actions every part permits; any other named action is forbidden.</summary>
+    private static readonly HashSet<string> StandardNamedActions = new(StringComparer.Ordinal)
+    {
+        "NextPage", "PrevPage", "FirstPage", "LastPage",
+    };
+
+    /// <summary>The longest chain of <c>/Next</c> actions the analysis follows.</summary>
+    private const int MaxActionChain = 64;
 
     /// <summary>The deepest chain of form XObjects the analysis follows.</summary>
     private const int MaxFormDepth = 32;
@@ -41,19 +60,22 @@ internal static class PdfARequirements
     /// <param name="reader">The source document.</param>
     /// <param name="profile">The profile it would be written for.</param>
     /// <returns>The requirements that are not met, and the features that will be removed.</returns>
-    public static PdfARequirementReport Analyze(PdfFileReader reader, PdfAProfile profile)
+    /// <param name="outputIntentComponents">The number of colour components of the output intent the result will state: three for the built-in sRGB.</param>
+    public static PdfARequirementReport Analyze(PdfFileReader reader, PdfAProfile profile, int outputIntentComponents = 3)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
         var unsatisfied = new List<string>();
         var removable = new List<string>();
+        var repairable = new List<string>();
         var fonts = new Dictionary<string, bool>(StringComparer.Ordinal);
         var filterProblems = new HashSet<string>(StringComparer.Ordinal);
 
         var catalog = reader.Catalog;
 
         CheckCatalog(reader, catalog, profile, unsatisfied, removable);
-        CheckPages(reader, profile, fonts, filterProblems, unsatisfied);
+        CheckPages(reader, profile, fonts, filterProblems, unsatisfied, removable, repairable);
+        PdfAContentChecks.Check(reader, profile, outputIntentComponents, unsatisfied);
 
         foreach (var entry in fonts.OrderBy(entry => entry.Key, StringComparer.Ordinal))
         {
@@ -71,7 +93,10 @@ internal static class PdfARequirements
 
         // The same font, form or annotation can be reachable from several pages; the caller is told
         // once per condition, not once per page that repeats it.
-        return new PdfARequirementReport([.. unsatisfied.Distinct(StringComparer.Ordinal)], removable);
+        return new PdfARequirementReport(
+            [.. unsatisfied.Distinct(StringComparer.Ordinal)],
+            [.. removable.Distinct(StringComparer.Ordinal)],
+            [.. repairable.Distinct(StringComparer.Ordinal)]);
     }
 
     /// <summary>Checks the catalog: its name trees, its open action and its optional content.</summary>
@@ -118,12 +143,15 @@ internal static class PdfARequirements
             {
                 removable.Add("the catalog open action, which runs JavaScript");
             }
-            else if (kind is not null && ForbiddenActions.Contains(kind))
+            else
             {
-                unsatisfied.Add(
-                    $"the catalog open action is a '{kind}' action, which {PdfAProfileRules.Name(profile)} forbids.");
+                // The open action names the one that runs after it, and a forbidden action is as often the
+                // second link as the first.
+                CheckAction(reader, catalog.Get("OpenAction"), "the catalog open action", profile, unsatisfied);
             }
         }
+
+        CheckOutlineActions(reader, reader.ResolveDictionary(catalog.Get("Outlines")), profile, unsatisfied);
 
         CheckActionDictionary(
             reader,
@@ -138,6 +166,87 @@ internal static class PdfARequirements
         {
             removable.Add("the /NeedAppearances flag of the form, which asks the reader to build appearances");
         }
+
+        if (form?.ContainsKey("XFA") == true)
+        {
+            removable.Add("the XFA form of the document, which a reader of the archival copy cannot be asked to run");
+        }
+
+        if (form is not null)
+        {
+            CheckFieldActions(reader, form.Get("Fields"), removable, depth: 0, visited: []);
+        }
+    }
+
+    /// <summary>Checks the action of every bookmark, which is a place the profile's action rules reach.</summary>
+    private static void CheckOutlineActions(
+        PdfFileReader reader,
+        PdfDictionary? outlines,
+        PdfAProfile profile,
+        List<string> unsatisfied)
+    {
+        // A bookmark names its first child and its next sibling; the walk is by identity so that an outline
+        // that leads back to itself ends, and it stops at a count no real document reaches.
+        const int MaxBookmarks = 100_000;
+
+        var seen = new HashSet<PdfDictionary>(ReferenceEqualityComparer.Instance);
+        var pending = new Stack<PdfDictionary>();
+
+        if (reader.ResolveDictionary(outlines?.Get("First")) is { } first)
+        {
+            pending.Push(first);
+        }
+
+        while (pending.Count > 0 && seen.Count < MaxBookmarks)
+        {
+            var node = pending.Pop();
+
+            if (!seen.Add(node))
+            {
+                continue;
+            }
+
+            CheckAction(reader, node.Get("A"), "a bookmark", profile, unsatisfied);
+
+            if (reader.ResolveDictionary(node.Get("Next")) is { } next)
+            {
+                pending.Push(next);
+            }
+
+            if (reader.ResolveDictionary(node.Get("First")) is { } child)
+            {
+                pending.Push(child);
+            }
+        }
+    }
+
+    /// <summary>Finds the fields of a form that carry an action, which the profile does not allow a field to hold.</summary>
+    private static void CheckFieldActions(
+        PdfFileReader reader,
+        PdfObject? fields,
+        List<string> removable,
+        int depth,
+        HashSet<PdfDictionary> visited)
+    {
+        if (depth > MaxFormDepth)
+        {
+            return;
+        }
+
+        foreach (var item in ReadArray(reader, fields))
+        {
+            if (reader.ResolveDictionary(item) is not { } field || !visited.Add(field))
+            {
+                continue;
+            }
+
+            if (field.ContainsKey("A") || field.ContainsKey("AA"))
+            {
+                removable.Add($"the action of the form field '{field.GetText("T") ?? "(unnamed)"}', which an archival document does not let a field carry");
+            }
+
+            CheckFieldActions(reader, field.Get("Kids"), removable, depth + 1, visited);
+        }
     }
 
     /// <summary>Checks every page, its resources, its content and its annotations.</summary>
@@ -146,12 +255,16 @@ internal static class PdfARequirements
     /// <param name="fonts">The fonts found so far, with whether each is embedded.</param>
     /// <param name="filterProblems">The list that receives the filters the profile forbids.</param>
     /// <param name="unsatisfied">The list that receives the requirements that are not met.</param>
+    /// <param name="removable">The list that receives the features the writer removes.</param>
+    /// <param name="repairable">The list that receives the entries the writer sets right.</param>
     private static void CheckPages(
         PdfFileReader reader,
         PdfAProfile profile,
         Dictionary<string, bool> fonts,
         HashSet<string> filterProblems,
-        List<string> unsatisfied)
+        List<string> unsatisfied,
+        List<string> removable,
+        List<string> repairable)
     {
         // A form XObject can be painted by several pages; its resources and its content are checked
         // once, because an object number is what a reference to it names.
@@ -169,6 +282,8 @@ internal static class PdfARequirements
 
             CheckResources(reader, resources, where, profile, fonts, filterProblems, unsatisfied, visited, depth: 0);
 
+            CheckActionDictionary(reader, reader.ResolveDictionary(page.Dictionary.Get("AA")), where, profile, unsatisfied);
+
             if (PdfAProfileRules.ForbidsTransparency(profile))
             {
                 CheckTransparencyGroup(reader, page.Dictionary, where, unsatisfied);
@@ -176,7 +291,7 @@ internal static class PdfARequirements
 
             foreach (var annotation in ReadArray(reader, page.Dictionary.Get("Annots")))
             {
-                CheckAnnotation(reader, annotation, where, profile, fonts, filterProblems, unsatisfied, visited);
+                CheckAnnotation(reader, annotation, where, profile, fonts, filterProblems, unsatisfied, removable, repairable, visited);
             }
         }
     }
@@ -231,6 +346,14 @@ internal static class PdfARequirements
             }
         }
 
+        foreach (var entry in reader.ResolveDictionary(resources.Get("ExtGState"))?.Entries ?? [])
+        {
+            if (reader.ResolveDictionary(entry.Value) is { } state)
+            {
+                CheckGraphicsState(reader, state, $"the graphics state '{entry.Key}' used by {where}", profile, unsatisfied);
+            }
+        }
+
         if (reader.ResolveDictionary(resources.Get("ExtGState")) is { } states
             && PdfAProfileRules.ForbidsTransparency(profile))
         {
@@ -267,6 +390,57 @@ internal static class PdfARequirements
         }
     }
 
+    /// <summary>The blend modes ISO 32000-1 names; any other value of <c>/BM</c> is forbidden.</summary>
+    private static readonly HashSet<string> BlendModes = new(StringComparer.Ordinal)
+    {
+        "Normal", "Compatible", "Multiply", "Screen", "Overlay", "Darken", "Lighten", "ColorDodge", "ColorBurn",
+        "HardLight", "SoftLight", "Difference", "Exclusion",
+    };
+
+    /// <summary>Checks the keys of an extended graphics state that the profiles forbid: halftone phase, transfer functions, halftones, odd blend modes.</summary>
+    private static void CheckGraphicsState(
+        PdfFileReader reader,
+        PdfDictionary state,
+        string where,
+        PdfAProfile profile,
+        List<string> unsatisfied)
+    {
+        var profileName = PdfAProfileRules.Name(profile);
+
+        if (state.ContainsKey("HTP"))
+        {
+            unsatisfied.Add($"{where} states a halftone phase (/HTP), which {profileName} forbids.");
+        }
+
+        if (state.ContainsKey("TR"))
+        {
+            unsatisfied.Add($"{where} states a transfer function (/TR), which {profileName} forbids.");
+        }
+
+        if (state.Get("TR2") is { } transfer && transfer is not PdfName { Value: "Default" })
+        {
+            unsatisfied.Add($"{where} states a transfer function (/TR2) other than Default, which {profileName} forbids.");
+        }
+
+        if (reader.ResolveDictionary(state.Get("HT")) is { } halftone
+            && (halftone.GetInteger("HalftoneType") is not (1 or 5) || halftone.ContainsKey("HalftoneName")))
+        {
+            unsatisfied.Add($"{where} states a halftone of a kind, or with a name, that {profileName} forbids: only types 1 and 5, without /HalftoneName, are allowed.");
+        }
+
+        var modes = reader.Resolve(state.Get("BM")) switch
+        {
+            PdfName name => new[] { name.Value },
+            PdfArray array => array.Items.Select(item => (reader.Resolve(item) as PdfName)?.Value ?? string.Empty).ToArray(),
+            _ => [],
+        };
+
+        if (modes.Any(mode => !BlendModes.Contains(mode)))
+        {
+            unsatisfied.Add($"{where} states a blend mode ISO 32000-1 does not define, which {profileName} forbids.");
+        }
+    }
+
     /// <summary>Checks one annotation: its actions, its appearance and the resources of its appearance.</summary>
     /// <param name="reader">The source document.</param>
     /// <param name="value">The annotation, possibly as a reference.</param>
@@ -275,6 +449,8 @@ internal static class PdfARequirements
     /// <param name="fonts">The fonts found so far, with whether each is embedded.</param>
     /// <param name="filterProblems">The list that receives the filters the profile forbids.</param>
     /// <param name="unsatisfied">The list that receives the requirements that are not met.</param>
+    /// <param name="removable">The list that receives the features the writer removes.</param>
+    /// <param name="repairable">The list that receives the entries the writer sets right.</param>
     /// <param name="visited">The objects already inspected.</param>
     private static void CheckAnnotation(
         PdfFileReader reader,
@@ -284,6 +460,8 @@ internal static class PdfARequirements
         Dictionary<string, bool> fonts,
         HashSet<string> filterProblems,
         List<string> unsatisfied,
+        List<string> removable,
+        List<string> repairable,
         HashSet<long> visited)
     {
         if (reader.ResolveDictionary(value) is not { } annotation)
@@ -293,9 +471,36 @@ internal static class PdfARequirements
 
         var subtype = annotation.GetName("Subtype") ?? "annotation";
         var description = $"the {subtype} of {where}";
+        var profileName = PdfAProfileRules.Name(profile);
 
-        CheckAction(reader, annotation.Get("A"), description, profile, unsatisfied);
-        CheckActionDictionary(reader, reader.ResolveDictionary(annotation.Get("AA")), description, profile, unsatisfied);
+        if (annotation.GetName("Subtype") is { } type && !PdfAAnnotationRules.PermitsType(profile, type))
+        {
+            unsatisfied.Add($"{description} is of a type {profileName} does not permit.");
+        }
+
+        if (PdfAAnnotationRules.IsHidden(annotation, profile))
+        {
+            // Clearing a flag that hides the annotation would put on the page something nobody saw.
+            unsatisfied.Add($"{description} is hidden by its flags, which {profileName} forbids; the writer does not change what a viewer shows.");
+        }
+        else if (PdfAAnnotationRules.NeedsPrintFlag(annotation, profile))
+        {
+            repairable.Add($"the flags of {description} did not set the Print bit {profileName} requires; the writer set it.");
+        }
+
+        if (PdfAAnnotationRules.IsWidget(annotation))
+        {
+            // A widget carries no action in an archival document: the form is read without running anything.
+            if (annotation.ContainsKey("A") || annotation.ContainsKey("AA"))
+            {
+                removable.Add($"the action of {description}, which {profileName} does not let a widget carry");
+            }
+        }
+        else
+        {
+            CheckAction(reader, annotation.Get("A"), description, profile, unsatisfied);
+            CheckActionDictionary(reader, reader.ResolveDictionary(annotation.Get("AA")), description, profile, unsatisfied);
+        }
 
         if (annotation.Get("AP") is null)
         {
@@ -450,10 +655,51 @@ internal static class PdfARequirements
         PdfAProfile profile,
         List<string> unsatisfied)
     {
-        if (reader.ResolveDictionary(value)?.GetName("S") is { } kind && ForbiddenActions.Contains(kind))
+        // An action names the one that runs after it in /Next, as one action or an array of them, so a
+        // forbidden action is as often the second link of a chain as the first. The dictionaries are
+        // compared by identity: the reader hands back the same instance for the same object, which is what
+        // ends a chain that leads back to itself.
+        var seen = new HashSet<PdfDictionary>(ReferenceEqualityComparer.Instance);
+        var pending = new Stack<(PdfObject? Action, int Depth)>();
+
+        pending.Push((value, 0));
+
+        while (pending.Count > 0)
         {
-            unsatisfied.Add(
-                $"{where} carries a '{kind}' action, which {PdfAProfileRules.Name(profile)} forbids.");
+            var (current, depth) = pending.Pop();
+
+            if (depth > MaxActionChain || reader.ResolveDictionary(current) is not { } action || !seen.Add(action))
+            {
+                continue;
+            }
+
+            var kind = action.GetName("S");
+
+            if (kind is not null && ForbiddenActions.Contains(kind))
+            {
+                unsatisfied.Add($"{where} carries a '{kind}' action, which {PdfAProfileRules.Name(profile)} forbids.");
+            }
+            else if (string.Equals(kind, "Named", StringComparison.Ordinal)
+                && !StandardNamedActions.Contains(action.GetName("N") ?? string.Empty))
+            {
+                unsatisfied.Add(
+                    $"{where} carries the named action '{action.GetName("N") ?? "(none)"}', which {PdfAProfileRules.Name(profile)} forbids: only NextPage, PrevPage, FirstPage and LastPage are allowed.");
+            }
+
+            switch (reader.Resolve(action.Get("Next")))
+            {
+                case PdfDictionary next:
+                    pending.Push((next, depth + 1));
+                    break;
+
+                case PdfArray chain:
+                    foreach (var item in chain.Items)
+                    {
+                        pending.Push((item, depth + 1));
+                    }
+
+                    break;
+            }
         }
     }
 

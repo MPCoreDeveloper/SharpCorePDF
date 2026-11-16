@@ -92,11 +92,24 @@ internal sealed class PdfIncrementalWriter
 
     /// <summary>Writes the cross-reference section, the trailer and the closing <c>%%EOF</c>.</summary>
     /// <param name="trailer">The trailer dictionary, which must already carry <c>/Root</c> and <c>/Prev</c>.</param>
-    public void Complete(PdfDictionary trailer)
+    /// <param name="asStream">Whether the section is written as a cross-reference stream, the form the document it is appended to uses.</param>
+    public void Complete(PdfDictionary trailer, bool asStream = false)
     {
         ArgumentNullException.ThrowIfNull(trailer);
 
         var startXref = Length;
+
+        if (asStream)
+        {
+            PdfCrossReferenceStreamWriter.Write(
+                output,
+                startXref,
+                entries.Select(entry => (entry.Number, entry.Generation, entry.Offset)).ToArray(),
+                trailer,
+                freeHead: false);
+            return;
+        }
+
         output.Write("xref\n"u8);
         WriteSubsections();
 

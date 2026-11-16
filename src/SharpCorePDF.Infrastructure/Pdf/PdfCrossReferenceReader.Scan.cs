@@ -25,6 +25,7 @@ internal sealed partial class PdfCrossReferenceReader
         }
 
         var found = ScanForObjects();
+        IndexObjectStreams();
         var trailer = FindLastTrailer();
 
         if (trailer is not null)
@@ -136,7 +137,140 @@ internal sealed partial class PdfCrossReferenceReader
             index = index == 0 ? -1 : data.AsSpan(0, index).LastIndexOf("trailer"u8);
         }
 
-        return FindCatalogTrailer();
+        return FindCrossReferenceStreamTrailer() ?? FindCatalogTrailer();
+    }
+
+    /// <summary>
+    /// Registers the objects the object streams found by the scan hold. A PDF 1.5 file keeps most of its
+    /// objects — often its catalog and its pages — inside object streams, which a scan for <c>n g obj</c>
+    /// headers cannot see into, so without this a file whose cross-reference stream is lost has nothing left.
+    /// </summary>
+    /// <remarks>
+    /// An object the scan found on its own stays where the scan found it: entries are only added, never
+    /// replaced, because an object written uncompressed after an object stream is the newer of the two.
+    /// </remarks>
+    private void IndexObjectStreams()
+    {
+        foreach (var container in table.Entries.Values.Where(entry => entry.Type == XrefEntryType.Uncompressed).ToList())
+        {
+            if (!MentionsObjectStream(container.Offset)
+                || ParseAt(container.Offset) is not PdfStream { Dictionary: var dictionary } stream
+                || dictionary.GetName("Type") != "ObjStm")
+            {
+                continue;
+            }
+
+            byte[] decoded;
+
+            try
+            {
+                decoded = PdfFilters.Decode(stream, sourceName, options.MaxDecodedStreamBytes);
+            }
+            catch (PdfException)
+            {
+                continue;
+            }
+
+            var count = Math.Min(dictionary.GetInteger("N") ?? 0, (decoded.Length / 4L) + 1);
+            var header = new PdfObjectParser(decoded, sourceName, 0, null, options.MaxNestingDepth);
+
+            for (var index = 0; index < count; index++)
+            {
+                if (!header.TryReadInteger(out var objectNumber) || !header.TryReadInteger(out _))
+                {
+                    break;
+                }
+
+                if (objectNumber > 0)
+                {
+                    table.Add(new XrefEntry(objectNumber, container.ObjectNumber, index, XrefEntryType.Compressed));
+                }
+            }
+        }
+    }
+
+    /// <summary>Determines cheaply whether the object at an offset names itself an object stream.</summary>
+    /// <param name="offset">The offset of the object header.</param>
+    /// <returns><see langword="true"/> when <c>/ObjStm</c> appears in the first bytes of the object.</returns>
+    private bool MentionsObjectStream(long offset)
+    {
+        if (offset < 0 || offset >= data.Length)
+        {
+            return false;
+        }
+
+        var window = data.AsSpan((int)offset, (int)Math.Min(512, data.Length - offset));
+
+        return window.IndexOf("/ObjStm"u8) >= 0;
+    }
+
+    /// <summary>Determines whether an offset names a byte of the document.</summary>
+    /// <param name="offset">The offset.</param>
+    /// <returns><see langword="true"/> when the offset is inside the data.</returns>
+    /// <remarks>
+    /// Reconstruction keeps the entries of the table it is repairing beside the ones the scan found, and those
+    /// offsets are whatever the damaged table stated: past the end of the file, negative, or beyond the range
+    /// of an <see cref="int"/>, which wraps to a negative index when it is cast. A slice of the data needs
+    /// this check; a parser does not, because <see cref="PdfLexer"/> clamps the position it starts at.
+    /// </remarks>
+    private bool IsInside(long offset) => offset >= 0 && offset < data.Length;
+
+    /// <summary>Parses the object whose header is at an offset.</summary>
+    /// <param name="offset">The offset.</param>
+    /// <returns>The object, or <see langword="null"/>.</returns>
+    private PdfObject? ParseAt(long offset)
+    {
+        var parser = new PdfObjectParser(data, sourceName, (int)offset, null, options.MaxNestingDepth);
+
+        return parser.TryReadIndirectHeader(out _, out _) ? parser.ParseObject() : null;
+    }
+
+    /// <summary>
+    /// Takes the trailer entries from the last cross-reference stream the scan found: a PDF 1.5 file has no
+    /// <c>trailer</c> keyword, and its <c>/Root</c> lives in the stream's dictionary, which survives when the
+    /// stream's data does not.
+    /// </summary>
+    /// <returns>A trailer carrying <c>/Root</c>, or <see langword="null"/>.</returns>
+    private PdfDictionary? FindCrossReferenceStreamTrailer()
+    {
+        foreach (var offset in table.Entries.Values
+            .Where(entry => entry.Type == XrefEntryType.Uncompressed && IsInside(entry.Offset))
+            .Select(entry => entry.Offset)
+            .OrderByDescending(offset => offset))
+        {
+            var window = data.AsSpan((int)offset, (int)Math.Min(512, data.Length - offset));
+
+            if (window.IndexOf("/XRef"u8) < 0)
+            {
+                continue;
+            }
+
+            var dictionary = ParseAt(offset) switch
+            {
+                PdfStream stream => stream.Dictionary,
+                PdfDictionary plain => plain,
+                _ => null,
+            };
+
+            if (dictionary is null || dictionary.GetName("Type") != "XRef" || dictionary.GetReference("Root") is null)
+            {
+                continue;
+            }
+
+            var trailer = new PdfDictionary();
+
+            foreach (var key in new[] { "Root", "Info", "ID", "Encrypt" })
+            {
+                if (dictionary.Get(key) is { } value)
+                {
+                    trailer.Set(key, value);
+                }
+            }
+
+            return trailer;
+        }
+
+        return null;
     }
 
     /// <summary>Looks for a document catalog and uses it as the root of a synthetic trailer.</summary>

@@ -80,9 +80,13 @@ internal sealed class PdfOutputBuffer
     {
         Span<byte> scratch = stackalloc byte[32];
 
+        // Thirty-two bytes hold every value a page states; a larger magnitude — which only a document can
+        // supply, PDF readers being limited to about 3.4e38 — takes the allocating path instead of failing
+        // the write of the whole document.
         if (!PdfNumberFormat.TryFormat(value, scratch, out var written))
         {
-            throw new InvalidOperationException("The real number could not be formatted.");
+            Write(System.Text.Encoding.ASCII.GetBytes(PdfNumberFormat.Format(value)));
+            return;
         }
 
         Write(scratch[..written]);

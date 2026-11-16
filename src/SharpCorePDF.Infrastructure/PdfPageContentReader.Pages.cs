@@ -80,7 +80,9 @@ public sealed partial class PdfPageContentReader
         var box = reader.ResolveArray(page.Dictionary.Get("MediaBox"))
             ?? reader.ResolveArray(page.Inherited.Get("MediaBox"));
 
-        if (ReadRectangle(reader, box) is { } rectangle && rectangle.Width > 0d && rectangle.Height > 0d)
+        if (ReadRectangle(reader, box) is { } rectangle
+            && double.IsFinite(rectangle.Width) && rectangle.Width > 0d
+            && double.IsFinite(rectangle.Height) && rectangle.Height > 0d)
         {
             return PdfPageSize.FromPoints(rectangle.Width, rectangle.Height);
         }

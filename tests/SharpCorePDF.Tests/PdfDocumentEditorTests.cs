@@ -36,6 +36,34 @@ public sealed partial class PdfDocumentEditorTests
         .AddPage(PdfPageSize.Letter, page => page.DrawText("three", 72, 100, Helvetica, 12))
         .ToArray();
 
+    /// <summary>
+    /// A media box whose digits overflow a double reads as infinite, which is no size a page can have: the page is
+    /// read as having no box and edited as such, instead of the edit throwing — a crash the <c>document</c> fuzz
+    /// target found.
+    /// </summary>
+    [Fact]
+    public async Task Edits_a_page_whose_media_box_overflows()
+    {
+        var builder = new PdfBuilder();
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+        var huge = "1" + new string('0', 400);
+
+        builder.Add($"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {huge} {huge}] >>");
+        builder.Set(catalog, "<< /Type /Catalog /Pages 2 0 R >>");
+        builder.Set(pages, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+
+        var edited = await Editor.ApplyToArrayAsync(
+            new PdfByteArraySource(builder.Build(catalog), "overflow.pdf"),
+            PdfEditPlan.Create().SetMetadata(new PdfMetadata { Title = "edited" }),
+            cancellationToken: Token);
+
+        var info = await InspectAsync(edited);
+
+        Assert.Equal(1, info.PageCount);
+        Assert.Equal("edited", info.Metadata.Title);
+    }
+
     private static async Task<PdfDocumentInfo> InspectAsync(byte[] bytes) =>
         await Inspector.InspectAsync(new PdfByteArraySource(bytes, "edited.pdf"), cancellationToken: Token);
 

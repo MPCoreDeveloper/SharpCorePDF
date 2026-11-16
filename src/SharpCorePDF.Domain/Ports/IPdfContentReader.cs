@@ -190,10 +190,14 @@ public interface IPdfContentReader
     /// <returns>A task that completes when the bytes have been written.</returns>
     /// <remarks>
     /// The bounded route, with the same contract as <see cref="CopyImageDataAsync"/>: a pooled scratch
-    /// buffer, the destination flushed and left open.
+    /// buffer, the destination flushed and left open. A file whose specification embeds no stream — one that
+    /// only names a file outside the document, listed with a warning and a <c>ByteLength</c> of zero — writes
+    /// no bytes.
     /// </remarks>
     /// <exception cref="ArgumentNullException">An argument is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="destination"/> is not writable.</exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="destination"/> is not writable, or <paramref name="file"/> is not a file of the document.
+    /// </exception>
     /// <exception cref="Exceptions.PdfSourceFormatException">The content is not a readable PDF document.</exception>
     Task CopyEmbeddedFileDataAsync(
         IPdfContentSource source,

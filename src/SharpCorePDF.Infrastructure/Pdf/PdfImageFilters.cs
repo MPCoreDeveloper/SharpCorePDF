@@ -23,7 +23,7 @@ internal readonly record struct PdfPayload(
 /// </summary>
 /// <remarks>
 /// <para>
-/// <see cref="PdfFilters.Decode"/> answers a different question and answers it correctly: an object
+/// <see cref="PdfFilters.Decode(PdfStream, string, long)"/> answers a different question and answers it correctly: an object
 /// stream that cannot be inflated means a broken document, so it raises. An image is different — a
 /// <c>JPXDecode</c> scan is a perfectly valid document this library simply does not decode — so this
 /// class reports what it could not do and hands back the raw bytes (NFR-7.6, NFR-7.8).
@@ -154,14 +154,31 @@ internal static class PdfImageFilters
             // reach, because the two tests name the same predictor values.
             using var predictor = PdfFilters.CreatePredictorDecoder(decodeParameters, sourceName);
 
-            if (predictor is not null)
+            // A damaged stream is the document's fault, not the caller's, and the contract names it with a
+            // PdfSourceFormatException: the decompressor's own exception would reach the caller as a failure
+            // of the library. What was written before the damage stays written; the caller learns it is
+            // incomplete from the exception.
+            try
             {
-                await InflatePredictorToAsync(stream.Raw, predictor, destination, cancellationToken)
-                    .ConfigureAwait(false);
+                if (predictor is not null)
+                {
+                    await InflatePredictorToAsync(stream.Raw, predictor, destination, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                else
+                {
+                    await InflateToAsync(stream.Raw, destination, cancellationToken).ConfigureAwait(false);
+                }
             }
-            else
+            // The decompressor reports most damage as InvalidDataException and some as ZLibException, an
+            // IOException the runtime does not make public, so it is recognised by name: the destination's own
+            // IOException is the caller's, and is not turned into a verdict on the document.
+            catch (Exception exception) when (exception is InvalidDataException
+                || exception.GetType().FullName == "System.IO.Compression.ZLibException")
             {
-                await InflateToAsync(stream.Raw, destination, cancellationToken).ConfigureAwait(false);
+                throw new PdfSourceFormatException(
+                    sourceName,
+                    $"the Flate data of the payload is damaged and could not be decompressed for copying: {exception.Message}");
             }
 
             return;
@@ -361,7 +378,7 @@ internal static class PdfImageFilters
 
                 case "RunLengthDecode":
                 {
-                    var decoded = PdfFilters.DecodeRunLength(data);
+                    var decoded = PdfFilters.DecodeRunLength(data, sourceName, PdfFilters.DefaultMaxDecodedBytes);
 
                     length = decoded.Length;
                     bytes = Keep(decoded, cap);

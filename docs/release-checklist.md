@@ -13,8 +13,10 @@ symbols story" — so the gate reads without it, and nothing here depends on a d
 
 ## Where the repository stands, 2026-10-17
 
-The table below is the `1.0.0` baseline, kept as it was written. The current state is the most recent
-`G1–G9 at` section further down — `1.7.0` today, and `1.8.0` when it is cut.
+The table below is the `1.0.0` baseline, kept as it was written. `1.7.0` is the last version on nuget.org.
+`1.8.0` is prepared and not tagged, and the tree has moved on since: the section
+[`Since 1.8.0 was prepared`](#since-180-was-prepared-2026-11-16) says what a tag on it would now carry, which
+is not what the `1.8.0` section below describes.
 
 | Fact | State |
 | --- | --- |
@@ -625,6 +627,24 @@ What is deliberately not in this version, and is tracked rather than implied:
 - **P5 — PDF/A-2u/-3u and -4f/-4u.** Still a decision gate with a veraPDF evidence path to agree (issue #10).
 - **The image filters the reader passes through** — `DCTDecode`, `JPXDecode`, `JBIG2Decode`,
   `CCITTFaxDecode` and `RunLengthDecode` — remain `ImageFilterUnsupported`, the limit parity row 14 states.
+
+## Since `1.8.0` was prepared (2026-11-16)
+
+`1.8.0` is still not tagged — `v1.7.0` is the newest tag on `origin`, and the feed ends at `1.7.0` — and `main`
+has gained changes the `1.8.0` section above does not describe. Tagging the tree as it stands would publish
+them under that number, so the owner has two choices: cut `1.8.0` at the commit the section above names, or
+amend that section and the `1.8.0` changelog entry to say what the tree holds now. This record exists so the
+second choice can be made on facts instead of on a memory of 14 November.
+
+| Gate | What changed | Consequence for the tag |
+| --- | --- | --- |
+| G1 — the surface | `PublicAPI.Unshipped.txt` lists four members: `PdfEngineOptions.MaxDecodedStreamBytes` and `.MaxFormPaintsPerPage` (Infrastructure) and `PdfWarningKind.PdfAFeatureRepaired` and `.FormPaintLimitExceeded` (Domain); the Application, DependencyInjection and entry-point files are empty | the `1.8.0` section says `Unshipped` is back to `#nullable enable`, which is no longer true, and new members are a minor-version change under the repository's SemVer rule: the next version is `1.9.0`, not a `1.8.x` patch, unless `1.8.0` is cut at the earlier commit. Two of the four are enum members, so a caller that switches over `PdfWarningKind` without a default sees two kinds it has not met |
+| G3 — notes | `CHANGELOG.md` `[Unreleased]` holds the validation checks, the security and robustness fixes, and the four image-filter decoders (run-length, CCITT, baseline and progressive JPEG) | the `1.8.0` bullet that says those filters "remain `ImageFilterUnsupported`" is wrong for any commit after the decoders landed; move `[Unreleased]` under the version heading when it is cut, with the date |
+| G9 — the gate | the suite is **1,416 tests on each leg** (`net10.0` and `net11.0`), up from 1,229 | the figure in the `1.8.0` table is a record of that day, not a current claim |
+| CI | `validation.yml` and `robustness.yml` are new beside `ci.yml` and `compliance.yml`; `compliance.yml` cross-validates PDF/A-4 as well | a release commit should have all four green; `robustness.yml` runs weekly and on dispatch, not on a push, so its newest run is the evidence, not the run for the commit |
+| Constitution | amendment `2.0.1` (a statement of fact about Python tools in CI) is proposed and not ratified | it needs the maintainer's approval in the pull request that carries it; nothing a release depends on |
+
+`docs/validation.md` lists what the new checks found and what is fixed, and what is still open.
 
 ## `1.6.0` (2026-11-14, tagged and published)
 
