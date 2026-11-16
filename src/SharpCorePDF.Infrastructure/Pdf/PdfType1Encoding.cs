@@ -52,7 +52,7 @@ internal static class PdfType1Encoding
 
         try
         {
-            bytes = PdfFilters.Decode(program, reader.SourceName);
+            bytes = PdfFilters.Decode(program, reader.SourceName, reader.Options.MaxDecodedStreamBytes);
         }
         catch (PdfUnsupportedFeatureException)
         {

@@ -19,6 +19,7 @@ public sealed class PdfEngineOptionsTests
         var options = PdfEngineOptions.Default;
 
         Assert.Equal(512L * 1024 * 1024, options.MaxSourceBytes);
+        Assert.Equal(128L * 1024 * 1024, options.MaxDecodedStreamBytes);
         Assert.Equal(64, options.MaxNestingDepth);
         Assert.Equal(100_000, options.MaxPagesPerSource);
         Assert.True(options.ReconstructCrossReferenceOnFailure);
@@ -44,7 +45,16 @@ public sealed class PdfEngineOptionsTests
             (PdfEngineOptions.Default with { MaxPagesPerSource = 0 }).Validate(),
             error => error.Contains("MaxPagesPerSource", StringComparison.Ordinal));
 
+        Assert.Contains(
+            (PdfEngineOptions.Default with { MaxDecodedStreamBytes = 1023 }).Validate(),
+            error => error.Contains("MaxDecodedStreamBytes", StringComparison.Ordinal));
+        Assert.Contains(
+            (PdfEngineOptions.Default with { MaxDecodedStreamBytes = Array.MaxLength + 1L }).Validate(),
+            error => error.Contains("MaxDecodedStreamBytes", StringComparison.Ordinal));
+
         Assert.Empty((PdfEngineOptions.Default with { MaxSourceBytes = 1024 }).Validate());
+        Assert.Empty((PdfEngineOptions.Default with { MaxDecodedStreamBytes = 1024 }).Validate());
+        Assert.Empty((PdfEngineOptions.Default with { MaxDecodedStreamBytes = Array.MaxLength }).Validate());
         Assert.Empty((PdfEngineOptions.Default with { MaxNestingDepth = 1024 }).Validate());
         Assert.Empty((PdfEngineOptions.Default with { MaxPagesPerSource = 1 }).Validate());
     }

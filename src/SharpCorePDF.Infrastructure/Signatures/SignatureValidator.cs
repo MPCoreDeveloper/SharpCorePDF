@@ -258,7 +258,7 @@ internal static class SignatureValidator
                 $"The timestamp of '{field.FieldName}' is present but could not be read, so the moment it claims cannot be relied on."));
         }
 
-        if (reading.Usable && !reading.CoversWhole)
+        if (reading.Usable && reading.GapHoldsValue && !reading.CoversWhole)
         {
             var revisions = CountRevisions(reader.Data, reader.Data.LongLength);
 
@@ -278,6 +278,7 @@ internal static class SignatureValidator
     /// <param name="Range">The covered ranges.</param>
     /// <param name="HasRange">Whether the dictionary carries four usable numbers.</param>
     /// <param name="Usable">Whether the ranges are ordered and inside the document.</param>
+    /// <param name="GapHoldsValue">Whether the bytes the ranges leave out are exactly the signature value.</param>
     /// <param name="Contents">The DER structure of the signature value, without its padding.</param>
     /// <param name="Cms">The parsed signature, when it parsed.</param>
     /// <param name="Failure">Why the signature value could not be parsed, when it could not.</param>
@@ -287,6 +288,7 @@ internal static class SignatureValidator
         PdfByteRange Range,
         bool HasRange,
         bool Usable,
+        bool GapHoldsValue,
         byte[]? Contents,
         CmsSignature? Cms,
         Exception? Failure,
@@ -314,6 +316,7 @@ internal static class SignatureValidator
             && range.IsWellFormed
             && range.Length1 > 0
             && range.Offset2 + range.Length2 <= reader.Data.LongLength;
+        var gapHoldsValue = usable && GapHoldsContents(reader, dictionary, range);
         var contents = ReadContents(reader, dictionary);
         CmsSignature? cms = null;
         Exception? failure = null;
@@ -334,11 +337,70 @@ internal static class SignatureValidator
             range,
             hasRange,
             usable,
+            gapHoldsValue,
             contents,
             cms,
             failure,
-            usable && range.Covers(reader.Data.LongLength),
+            usable && gapHoldsValue && range.Covers(reader.Data.LongLength),
             usable ? CountRevisions(reader.Data, range.Offset2 + range.Length2) : 0);
+    }
+
+    /// <summary>
+    /// Determines whether the bytes the byte range leaves uncovered are exactly the signature value: one
+    /// hexadecimal string, delimiters included, and nothing else.
+    /// </summary>
+    /// <param name="reader">The opened document.</param>
+    /// <param name="dictionary">The signature dictionary.</param>
+    /// <param name="range">The byte range, already known to be ordered and inside the document.</param>
+    /// <returns><see langword="true"/> when the gap holds the value and nothing beside it.</returns>
+    /// <remarks>
+    /// The gap is never hashed, so anything in it is unsigned. A gap that closes the value early and carries
+    /// entries or objects of its own still leaves every signed byte intact and the digest matching — the
+    /// signature-wrapping attack — so the digest cannot be what catches it. A gap that is a single hex string
+    /// can only carry the value itself, and changing that breaks the digest. The value is also compared with
+    /// the <c>/Contents</c> the dictionary resolves to, so a dictionary that points its value somewhere else
+    /// cannot leave an unrelated string in the gap; a document whose strings were decrypted on the way in is
+    /// compared by shape only, because the parser hands over the decrypted form.
+    /// </remarks>
+    private static bool GapHoldsContents(PdfFileReader reader, PdfDictionary dictionary, PdfByteRange range)
+    {
+        var data = reader.Data;
+        var start = checked((int)(range.Offset1 + range.Length1));
+        var end = checked((int)range.Offset2);
+
+        if (end - start < 2 || data[start] != (byte)'<' || data[end - 1] != (byte)'>')
+        {
+            return false;
+        }
+
+        var inner = data.AsSpan(start + 1, end - start - 2);
+        var digits = new List<byte>(inner.Length);
+
+        foreach (var value in inner)
+        {
+            if (Uri.IsHexDigit((char)value))
+            {
+                digits.Add(value);
+            }
+            else if (!PdfLexer.IsWhitespace(value))
+            {
+                return false;
+            }
+        }
+
+        if (reader.Security is not null)
+        {
+            return true;
+        }
+
+        // An odd number of digits is completed with a zero, as the specification reads a hex string.
+        if (digits.Count % 2 == 1)
+        {
+            digits.Add((byte)'0');
+        }
+
+        return reader.Resolve(dictionary.Get("Contents")) is PdfString contents
+            && Convert.FromHexString(System.Text.Encoding.ASCII.GetString(digits.ToArray())).AsSpan().SequenceEqual(contents.Bytes);
     }
 
     /// <summary>Reads the four numbers of the byte range.</summary>
@@ -465,6 +527,15 @@ internal static class SignatureValidator
                 reading.HasRange
                     ? $"The signature '{fieldName}' covers {reading.Range}, which is not a pair of ordered ranges inside a document of {reader.Data.LongLength} bytes."
                     : $"The signature '{fieldName}' has no usable /ByteRange entry, so there is no way to tell which bytes it signs."));
+
+            return PdfSignatureIntegrity.Unknown;
+        }
+
+        if (!reading.GapHoldsValue)
+        {
+            problems.Add(new PdfSignatureProblem(
+                PdfSignatureProblemKind.MalformedByteRange,
+                $"The signature '{fieldName}' leaves bytes {reading.Range.Offset1 + reading.Range.Length1} to {reading.Range.Offset2} uncovered, and they are not exactly its /Contents value: bytes no signature covers would be read as part of the document."));
 
             return PdfSignatureIntegrity.Unknown;
         }

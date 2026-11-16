@@ -22,6 +22,52 @@ against an empty feed.
 
 ### Added
 
+- **Twelve independent validation checks, in CI.** `validation.yml` puts the example output and a new
+  validation corpus — written by `tools/SharpCorePDF.Validation`, with a manifest of the text, passwords,
+  permissions, revisions and signature coverage each document must have — through qpdf, three text
+  extractors, four readers of the RC4/AES encryption matrix (qpdf, MuPDF, pypdf, pdf.js), fontTools and OTS,
+  PDFium against MuPDF, pyHanko, the incremental-update invariants and four synthesized hostile documents.
+  `robustness.yml` runs weekly: libFuzzer over the parser and the DCT, CCITT, LZW, Flate and RunLength
+  decoders, the veraPDF and pdf.js corpora one process per file, and the PDF/A writer judged by veraPDF over
+  the veraPDF corpus. `compliance.yml` cross-validates PDF/A-4 too. No shipped package changes; nothing new
+  reaches a consumer. [`docs/validation.md`](docs/validation.md) records each check, how it was shown to fail
+  before it was trusted, and the defects below.
+
+- **`PdfEngineOptions.MaxDecodedStreamBytes`** (128 MiB by default) bounds what one stream may decode to.
+  `MaxSourceBytes` bounds the input only, and Flate reaches about a thousand to one.
+
+### Fixed
+
+- **Security: signature wrapping.** The validator required only that the byte range start at 0 and end at the
+  end of the file, so bytes written into the unsigned gap could close the signature value early and add
+  entries while the digest still matched, and the signature was reported valid and covering the whole
+  document. The gap must now be exactly one hexadecimal string equal to the dictionary's `/Contents`;
+  anything else is `MalformedByteRange`, integrity `Unknown`, and `CoversWholeDocument` false.
+- **Security: decompression bombs.** Flate, LZW and RunLength streams decoded without a limit, so a 1.1 MB
+  document took the process past 1 GiB. They now stop at `MaxDecodedStreamBytes`; buffer growth no longer
+  overflows past 1 GiB.
+- **Security: stack overflow.** A chain of streams whose `/Length` is the next stream was resolved by
+  recursion, and 60,000 links ended the process. The chain is followed no deeper than `MaxNestingDepth`;
+  past it the stream is found by its `endstream` keyword, as for a `/Length` cycle.
+- **Security: allocations sized by the file.** An object stream's `/N` sized two arrays before anything checked
+  it (513 bytes asked for 16 GiB), and a JPEG frame's 16-bit width and height sized the sample planes before
+  the caller's budget was consulted. `/N` is now bounded by what the stream can hold, a JPEG above the budget
+  is measured from its header without being decoded — the same answer as before, without the allocation —
+  and the working sizes are computed in 64 bits.
+
+### Known defects, found by the new checks and not yet fixed
+
+Each is reproduced, pinned by a skipped test or a strict `--known-defect` flag that fails the run once the
+defect is fixed, and listed in [`docs/validation.md`](docs/validation.md#known-defects).
+
+- An incremental update rewrites both elements of `/ID`, and appends a renumbered copy of the whole document
+  rather than the objects it changed — which also rewrites the signature dictionary after signing.
+- A merge copies a page that states no `/MediaBox` without one.
+- Hostile input: a JPEG scan's Huffman table selector is not range-checked.
+- Real-world input (the pdf.js test corpus): an empty name as a dictionary key stops a document opening, a
+  glyph with an upside-down box faults text extraction, and `PdfDate.TryParse` throws on an out-of-range
+  time-zone offset instead of answering false.
+
 - **Run-length images are decoded.** `RunLengthDecode` joins Flate, LZW and the two ASCII filters: a
   bilevel or scan-style image that declares it now yields its samples — and `Gray8`, `Rgb24` or `Cmyk32`
   pixels — rather than `ImageFilterUnsupported`, and a stream that ends without its end-of-data byte is

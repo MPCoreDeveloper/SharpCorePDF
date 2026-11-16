@@ -35,6 +35,96 @@ public sealed class PdfJpegFilterTests
 
     private static string Fixture(string name) => Path.Combine(TestAssets.Folder, "jpeg", name);
 
+    /// <summary>A budget of exactly the output's size keeps the pixels; one byte less measures them.</summary>
+    [Fact]
+    public void Keeps_pixels_that_fit_the_budget_exactly()
+    {
+        Assert.True(JpegDecoder.TryDecode(Rgb, 1 << 20, out var all, out _, out var width, out var height));
+
+        var exact = width * height * 3;
+
+        Assert.Equal(exact, all!.Length);
+        Assert.True(JpegDecoder.TryDecode(Rgb, exact, out var kept, out _, out _, out _));
+        Assert.Equal(all, kept);
+        Assert.True(JpegDecoder.TryDecode(Rgb, exact - 1, out var measured, out _, out _, out _));
+        Assert.Null(measured);
+    }
+
+    /// <summary>An image above the budget is measured with the format its components state.</summary>
+    /// <param name="fixture">The fixture.</param>
+    /// <param name="expected">The format it decodes to.</param>
+    [Theory]
+    [InlineData("jpeg-progressive-gray.jpg", "Gray8")]
+    [InlineData("jpeg-cmyk.jpg", "Cmyk32")]
+    [InlineData("jpeg-444.jpg", "Rgb24")]
+    public void Measures_the_format_of_an_image_above_the_budget(string fixture, string expected)
+    {
+        Assert.True(JpegDecoder.TryDecode(File.ReadAllBytes(Fixture(fixture)), 16, out var pixels, out var format, out _, out _));
+        Assert.Null(pixels);
+        Assert.Equal(expected, format);
+    }
+
+    /// <summary>
+    /// A frame whose output fits a budget of <see cref="int.MaxValue"/> while its coefficient grid does not fit
+    /// an array — 46,340 squared samples is just under the budget, at four bytes a coefficient it is eight
+    /// gigabytes — is refused before anything is allocated, instead of overflowing the size in 32 bits.
+    /// </summary>
+    [Fact]
+    public void Refuses_a_frame_whose_working_buffers_cannot_fit_an_array()
+    {
+        var jpeg = (byte[])ProgressiveGray.Clone();
+        var frame = jpeg.AsSpan().IndexOf(new byte[] { 0xFF, 0xC2 });
+
+        Assert.True(frame > 0, "the fixture has to carry the frame header the test rewrites");
+
+        jpeg[frame + 5] = 46_340 >> 8;
+        jpeg[frame + 6] = 46_340 & 0xFF;
+        jpeg[frame + 7] = 46_340 >> 8;
+        jpeg[frame + 8] = 46_340 & 0xFF;
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var decoded = JpegDecoder.TryDecode(jpeg, int.MaxValue, out var pixels, out _, out _, out _);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.False(decoded);
+        Assert.Null(pixels);
+        Assert.True(allocated < 1 << 20, $"refusing the frame allocated {allocated} bytes");
+    }
+
+    /// <summary>
+    /// A frame header that claims 65,535 x 65,535 samples is measured from the header alone, with no pixels,
+    /// as any image above the budget is. The width and the height are two numbers in the file, and the
+    /// sample planes — four bytes a coefficient for a progressive image — were otherwise allocated before
+    /// the output was found too large to keep.
+    /// </summary>
+    /// <param name="progressive">Whether the progressive fixture is used rather than the baseline one.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Measures_a_frame_too_large_for_the_budget_without_allocating_it(bool progressive)
+    {
+        var jpeg = (byte[])(progressive ? Progressive : Rgb).Clone();
+        var frame = jpeg.AsSpan().IndexOf(progressive ? [0xFF, 0xC2] : [0xFF, 0xC0]);
+
+        Assert.True(frame > 0, "the fixture has to carry the frame header the test rewrites");
+
+        // Marker, length (two bytes), precision, then height and width, each a 16-bit big-endian number.
+        jpeg[frame + 5] = 0xFF;
+        jpeg[frame + 6] = 0xFF;
+        jpeg[frame + 7] = 0xFF;
+        jpeg[frame + 8] = 0xFF;
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var measured = JpegDecoder.TryDecode(jpeg, 1 << 20, out var pixels, out var format, out var width, out var height);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.True(measured);
+        Assert.Null(pixels);
+        Assert.Equal("Rgb24", format);
+        Assert.Equal((65_535, 65_535), (width, height));
+        Assert.True(allocated < 1 << 20, $"refusing the frame allocated {allocated} bytes");
+    }
+
     /// <summary>A 4:4:4 RGB JPEG decodes to the bytes Pillow decodes from the same file.</summary>
     [Fact]
     public void Decodes_a_baseline_rgb_jpeg_within_two_levels()
