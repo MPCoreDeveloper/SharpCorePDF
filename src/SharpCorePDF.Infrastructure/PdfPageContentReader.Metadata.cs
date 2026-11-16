@@ -35,7 +35,7 @@ public sealed partial class PdfPageContentReader
             return new PdfXmpResult { Warnings = [.. reader.Warnings, .. warnings] };
         }
 
-        if (!TryDecodeStream(stream, out var packet))
+        if (!TryDecodeStream(stream, reader.Options.MaxDecodedStreamBytes, out var packet))
         {
             warnings.Add(new(
                 PdfWarningKind.XmpPacketMalformed,

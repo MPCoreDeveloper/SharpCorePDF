@@ -27,6 +27,7 @@ internal sealed partial class PdfObjectCopier
     private readonly HashSet<long> redirected = [];
     private readonly Queue<long> pending = [];
     private readonly HashSet<long> queued = [];
+    private bool keepNumbers;
 
     /// <summary>Initializes a new instance of the <see cref="PdfObjectCopier"/> class.</summary>
     /// <param name="source">The document to copy from.</param>
@@ -65,6 +66,13 @@ internal sealed partial class PdfObjectCopier
         overrides[sourceObjectNumber] = rewrite;
     }
 
+    /// <summary>
+    /// Makes every object this copier copies keep the number it has in its source, instead of being given a
+    /// new one: the copier of the document an incremental update is appended to, whose objects are the same
+    /// objects in both revisions.
+    /// </summary>
+    public void KeepObjectNumbers() => keepNumbers = true;
+
     /// <summary>Reserves a target object number for an object of the source and queues its body.</summary>
     /// <param name="sourceObjectNumber">The object number in the source document.</param>
     /// <returns>The object number in the merged document.</returns>
@@ -75,7 +83,7 @@ internal sealed partial class PdfObjectCopier
             return existing;
         }
 
-        var target = writer.AllocateObject();
+        var target = keepNumbers ? checked((int)sourceObjectNumber) : writer.AllocateObject();
         targets[sourceObjectNumber] = target;
         Queue(sourceObjectNumber);
         return target;

@@ -18,6 +18,139 @@ namespace SharpCorePDF.Tests;
 /// </remarks>
 public sealed class PdfReaderRecoveryTests
 {
+    /// <summary>
+    /// The bound on a chain of lengths leaves an ordinary indirect length alone, for every stream of a
+    /// document and not only the first ones: each stream's data holds an <c>endstream</c> line of its own,
+    /// so a length that was not resolved would cut the stream there instead of at its real end.
+    /// </summary>
+    [Fact]
+    public void Resolves_the_indirect_length_of_every_stream_of_a_document()
+    {
+        const int Streams = 100;
+        var data = "q\nendstream\nQ"u8.ToArray();
+        var builder = new PdfBuilder();
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+
+        builder.Add("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R >>");
+
+        // Objects 4, 6, 8 ... are the streams; 5, 7, 9 ... are their lengths.
+        for (var stream = 0; stream < Streams; stream++)
+        {
+            var body = Encoding.Latin1.GetBytes($"<< /Length {5 + (2 * stream)} 0 R >>\nstream\n")
+                .Concat(data)
+                .Concat("\nendstream"u8.ToArray())
+                .ToArray();
+
+            builder.Add(body);
+            builder.Add(data.Length.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        builder.Set(catalog, "<< /Type /Catalog /Pages 2 0 R >>");
+        builder.Set(pages, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+
+        var reader = new PdfFileReader(builder.Build(catalog), "lengths.pdf", PdfEngineOptions.Default);
+
+        for (var stream = 0; stream < Streams; stream++)
+        {
+            var resolved = Assert.IsType<PdfStream>(reader.Resolve(4 + (2 * stream)));
+
+            Assert.Equal(data, resolved.Raw.ToArray());
+        }
+    }
+
+    /// <summary>
+    /// An object stream that declares 2^31 - 1 objects in a header of one pair is read for the one pair it
+    /// holds. /N sized two arrays before anything compared it with the stream, so a few hundred bytes asked
+    /// for gigabytes; the stream now bounds the count, and the page inside it is found.
+    /// </summary>
+    [Fact]
+    public void Reads_an_object_stream_whose_count_its_header_cannot_hold()
+    {
+        var page = "3 0 << /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R >>"u8.ToArray();
+        var packed = PdfBuilder.Compress(page);
+        var output = new MemoryStream();
+        var offsets = new Dictionary<int, long>();
+
+        void Write(string text) => output.Write(Encoding.Latin1.GetBytes(text));
+
+        void Object(int number, string dictionary, byte[]? stream = null)
+        {
+            offsets[number] = output.Position;
+            Write($"{number} 0 obj\n{dictionary}\n");
+
+            if (stream is not null)
+            {
+                Write("stream\n");
+                output.Write(stream);
+                Write("\nendstream\n");
+            }
+
+            Write("endobj\n");
+        }
+
+        Write("%PDF-1.7\n");
+        Object(1, "<< /Type /Catalog /Pages 2 0 R >>");
+        Object(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+        Object(4, "<< /Length 3 >>", "q Q"u8.ToArray());
+        Object(5, $"<< /Type /ObjStm /N 2147483647 /First 4 /Filter /FlateDecode /Length {packed.Length} >>", packed);
+
+        offsets[6] = output.Position;
+        (int Kind, long Field, int Index)[] entries =
+        [
+            (0, 0, 65535), (1, offsets[1], 0), (1, offsets[2], 0), (2, 5, 0),
+            (1, offsets[4], 0), (1, offsets[5], 0), (1, offsets[6], 0),
+        ];
+        var table = entries
+            .SelectMany(entry => new[]
+            {
+                (byte)entry.Kind,
+                (byte)(entry.Field >> 24), (byte)(entry.Field >> 16), (byte)(entry.Field >> 8), (byte)entry.Field,
+                (byte)(entry.Index >> 8), (byte)entry.Index,
+            })
+            .ToArray();
+
+        Write($"6 0 obj\n<< /Type /XRef /Size 7 /W [1 4 2] /Root 1 0 R /Length {table.Length} >>\nstream\n");
+        output.Write(table);
+        Write($"\nendstream\nendobj\nstartxref\n{offsets[6]}\n%%EOF\n");
+
+        var reader = new PdfFileReader(output.ToArray(), "objstm.pdf", PdfEngineOptions.Default);
+
+        Assert.Single(reader.Pages);
+        Assert.Equal("Page", Assert.IsType<PdfDictionary>(reader.Resolve(3)).GetName("Type"));
+    }
+
+    /// <summary>
+    /// A stream whose <c>/Length</c> is another stream, whose length is another, sixty thousand deep, is
+    /// read by finding its <c>endstream</c>. Resolved link by link, the chain would overflow the stack, and a
+    /// stack overflow ends the process rather than throwing anything a caller could catch.
+    /// </summary>
+    [Fact]
+    public void Reads_a_stream_whose_length_is_a_chain_of_sixty_thousand_streams()
+    {
+        const int Chain = 60_000;
+        var builder = new PdfBuilder();
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+
+        builder.Add("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R >>");
+
+        for (var link = 0; link < Chain; link++)
+        {
+            builder.Add($"<< /Length {5 + link} 0 R >>\nstream\nq Q\nendstream");
+        }
+
+        builder.Add("3");
+        builder.Set(catalog, "<< /Type /Catalog /Pages 2 0 R >>");
+        builder.Set(pages, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+
+        var reader = new PdfFileReader(builder.Build(catalog), "chain.pdf", PdfEngineOptions.Default);
+        var content = Assert.IsType<PdfStream>(reader.Resolve(4));
+
+        Assert.Equal("q Q", Encoding.Latin1.GetString(content.Raw.Span));
+        Assert.Single(reader.Pages);
+    }
+
     /// <summary>A table that no longer parses is rebuilt, and the document is read completely.</summary>
     [Fact]
     public async Task Rebuilds_a_cross_reference_table_that_does_not_parse()

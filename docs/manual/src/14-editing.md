@@ -251,9 +251,17 @@ change the bytes of the content streams they show. The source can be encrypted a
 the `password` argument of `ApplyAsync`; the result is written in the clear, because output encryption
 is not part of this editing release.
 
-The writer produces a complete new document rather than an incremental update. That is what keeps
-earlier revisions and signatures out of a document whose pages have changed; it also means a copied
+By default the writer produces a complete new document rather than an incremental update. That is what
+keeps earlier revisions and signatures out of a document whose pages have changed; it also means a copied
 signature is not a signature of the edited document.
+
+With `PdfEditOutputOptions.UseIncrementalUpdate` the edit is appended to the source instead: every byte of
+the source stays where it was, and the revision carries only the objects the edit changed, under the numbers
+they already had — rotating one page redeclares that page and the few objects around it, and an object that
+would be written exactly as the source states it is left out. A signature over the source therefore still
+covers the revision it was made over, and a validator that looks at what changed after signing sees the
+edit and not a second copy of the document. The first element of the trailer `/ID` is kept, as ISO 32000-1
+§14.4 requires.
 
 ## Reading the result
 

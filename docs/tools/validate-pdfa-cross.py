@@ -12,12 +12,13 @@ stays the authority; this tool adds two independent readings of the same bytes.
                    validate-pdfa.py so the version guard and the verdict come from one place.
     PDFBox         Apache PDFBox preflight, which shares no code with veraPDF and none with this library.
                    PDFBox 3.0.8 implements PDF/A-1 only -- its Format enum has PDF_A1B and PDF_A1A -- so it
-                   votes on `1b` and, for `2b`/`3b`, is asked only to `parse` the file. That is the honest
+                   votes on `1b` and, for `2b`/`3b`/`4`, is asked only to `parse` the file. That is the honest
                    smaller claim: a different parser read the cross-reference table, the streams and the
                    filters. It is never reported as a conformance verdict.
     Ghostscript    `-sDEVICE=pdfwrite -dPDFA=<n>`, which makes a third implementation read the document and
                    write an archival one from what it understood. Like the PDFBox parse it is not a
                    verdict; it is evidence that the file is not only readable by the tool that wrote it.
+                   pdfwrite writes parts 1 to 3, so a part 4 (PDF 2.0) document is rewritten as part 2.
 
 A tool that is not installed is reported as `n/a` rather than silently skipped; --strict-tools turns that
 into a failure, which is what a continuous-integration run passes. Nothing is downloaded and no document
@@ -33,8 +34,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-PROFILES = ("1b", "2b", "2u", "3b", "3u")
-PDFBOX_MODES = {"1b": "1b", "2b": "parse", "2u": "parse", "3b": "parse", "3u": "parse"}
+PROFILES = ("1b", "2b", "2u", "3b", "3u", "4")
+PDFBOX_MODES = {"1b": "1b", "2b": "parse", "2u": "parse", "3b": "parse", "3u": "parse", "4": "parse"}
 JAVA_SOURCE = Path(__file__).with_name("pdfa-preflight") / "Preflight.java"
 
 
@@ -169,7 +170,9 @@ def check_ghostscript(
     file: Path, profile: str | None, executable: str
 ) -> tuple[bool | None, str, str]:
     """Rewrites the document as archival output, which is a reader test rather than a verdict."""
-    part = {"1b": "1", "2b": "2", "2u": "2", "3b": "3", "3u": "3"}.get(profile or "", "2")
+    # pdfwrite writes PDF/A parts 1 to 3 only, so a part 4 document is rewritten as part 2: the claim stays
+    # the same -- a third implementation read the PDF 2.0 file and understood it -- and is not a verdict.
+    part = {"1b": "1", "2b": "2", "2u": "2", "3b": "3", "3u": "3", "4": "2"}.get(profile or "", "2")
 
     with tempfile.TemporaryDirectory(prefix="pdfa-gs-") as folder:
         output = Path(folder) / "rewritten.pdf"

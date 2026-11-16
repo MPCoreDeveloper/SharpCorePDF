@@ -64,7 +64,7 @@ public sealed partial class PdfPageContentReader
 
         foreach (var stream in streams)
         {
-            if (TryDecodeStream(stream, out var decoded))
+            if (TryDecodeStream(stream, reader.Options.MaxDecodedStreamBytes, out var decoded))
             {
                 // The separator goes between the streams, not after the last one: a single stream is its
                 // own sequence, and an inline image that runs to the end of it must not gain a byte.
@@ -114,13 +114,14 @@ public sealed partial class PdfPageContentReader
 
     /// <summary>Decodes a stream whose filters are the ones a content stream may use.</summary>
     /// <param name="stream">The stream.</param>
+    /// <param name="maxDecodedBytes">The largest number of bytes the stream may decode to.</param>
     /// <param name="decoded">The decoded bytes when decoding succeeded.</param>
     /// <returns><see langword="true"/> when the stream could be decoded.</returns>
-    private static bool TryDecodeStream(PdfStream stream, out byte[] decoded)
+    private static bool TryDecodeStream(PdfStream stream, long maxDecodedBytes, out byte[] decoded)
     {
         try
         {
-            decoded = PdfFilters.Decode(stream, "content stream");
+            decoded = PdfFilters.Decode(stream, "content stream", maxDecodedBytes);
             return true;
         }
         catch (Domain.Exceptions.PdfUnsupportedFeatureException)

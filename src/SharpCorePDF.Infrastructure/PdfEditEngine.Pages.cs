@@ -290,11 +290,18 @@ public sealed partial class PdfEditEngine
     /// <summary>Reserves the object number of every page that is written.</summary>
     /// <param name="writer">The writer of the result.</param>
     /// <param name="layout">The pages in output order.</param>
-    private static void AllocatePageTargets(PdfWriter writer, List<EditedPage> layout)
+    /// <param name="keepNumbersOf">The document an incremental update is appended to, whose pages keep their numbers, or <see langword="null"/>.</param>
+    private static void AllocatePageTargets(PdfWriter writer, List<EditedPage> layout, PdfFileReader? keepNumbersOf)
     {
+        var kept = new HashSet<long>();
+
         foreach (var page in layout)
         {
-            page.TargetNumber = writer.AllocateObject();
+            // In an appended revision a page of the source stays the object it was; a second occurrence of the
+            // same page — a duplicate — is a new page and gets a number of its own.
+            page.TargetNumber = page.Reader == keepNumbersOf && kept.Add(page.Source.ObjectNumber)
+                ? checked((int)page.Source.ObjectNumber)
+                : writer.AllocateObject();
         }
     }
 

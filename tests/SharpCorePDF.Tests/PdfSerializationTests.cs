@@ -78,6 +78,28 @@ public sealed class PdfSerializationTests
         Assert.Equal("D:20260401120000Z", PdfDate.Format(new DateTimeOffset(2026, 4, 1, 12, 0, 0, TimeSpan.Zero)));
     }
 
+    /// <summary>
+    /// An offset no time zone has — past fourteen hours either way, which <see cref="DateTimeOffset"/> refuses
+    /// to hold — is read as no offset rather than thrown, so one malformed metadata date does not fail the
+    /// inspection of the document it is in. The offsets at the edge of the range are kept.
+    /// </summary>
+    /// <param name="text">The date as a document states it.</param>
+    /// <param name="offsetMinutes">The offset that is read.</param>
+    [Theory]
+    [InlineData("D:20260101000000+99'00'", 0)]
+    [InlineData("D:20260101000000+23'59'", 0)]
+    [InlineData("D:20260101000000+14'30'", 0)]
+    [InlineData("D:20260101000000-15'00'", 0)]
+    [InlineData("D:20260101000000+14'00'", 14 * 60)]
+    [InlineData("D:20260101000000-14'00'", -14 * 60)]
+    [InlineData("D:20260101000000+05'30'", 5 * 60 + 30)]
+    public void Reads_an_offset_no_time_zone_has_as_no_offset(string text, int offsetMinutes)
+    {
+        Assert.True(PdfDate.TryParse(text, out var value));
+        Assert.Equal(TimeSpan.FromMinutes(offsetMinutes), value.Offset);
+        Assert.Equal(new DateTime(2026, 1, 1, 0, 0, 0), value.DateTime);
+    }
+
     /// <summary>Text that is not a date at all is rejected instead of being invented.</summary>
     [Theory]
     [InlineData("")]

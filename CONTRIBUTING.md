@@ -58,7 +58,11 @@ uv run --with pikepdf python .\docs\tools\make-fixtures.py .\tests\SharpCorePDF.
 ```
 
 `validate-pdf.py` and the fixture generator are what a maintainer runs before believing a result, and
-quoting their output in a pull request is worth more than a description of it. `validate-pdfa.py` and
+quoting their output in a pull request is worth more than a description of it. `validate-pdf.py` and the
+other independent readers (text extraction, the encryption matrix, fonts, rendering, signatures and the
+incremental-update invariants) also run in `validation.yml`; [`docs/validation.md`](docs/validation.md) says
+how to run them locally. A change that fixes one of the defects listed there removes its `--known-defect`
+flag (or the skip on its test) in the same commit: the flags are strict, so the run fails until it does. `validate-pdfa.py` and
 `validate-pdfa-cross.py` also run in CI: `compliance.yml` writes the `archive-pdfa` documents, validates
 each one against the profile it was written for with the validator pinned, and then puts the same files
 through PDFBox preflight and Ghostscript, keeping the reports as an artifact. Running them locally against

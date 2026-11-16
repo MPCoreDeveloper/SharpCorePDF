@@ -693,10 +693,11 @@ public sealed partial class PdfEditEngine
     /// <summary>Writes the document information dictionary and returns its object number.</summary>
     /// <param name="writer">The writer of the result.</param>
     /// <param name="metadata">The document information of the result.</param>
+    /// <param name="existingNumber">The number the dictionary already has in the revision an update is appended to, or <see langword="null"/> to number it anew.</param>
     /// <returns>The object number of the document information dictionary.</returns>
-    private static int WriteInformation(PdfWriter writer, PdfMetadata metadata)
+    private static int WriteInformation(PdfWriter writer, PdfMetadata metadata, int? existingNumber = null)
     {
-        var number = writer.AllocateObject();
+        var number = existingNumber ?? writer.AllocateObject();
         var information = new PdfDictionary();
 
         information.Set("Title", Text(metadata.Title));
@@ -728,16 +729,18 @@ public sealed partial class PdfEditEngine
     /// <param name="writer">The writer of the result.</param>
     /// <param name="catalogNumber">The object number of the catalog.</param>
     /// <param name="infoNumber">The object number of the document information dictionary, or <see langword="null"/> when the profile forbids it.</param>
-    /// <param name="identifier">The identifier written as both elements of the <c>ID</c> entry.</param>
+    /// <param name="identifier">The identifier of this revision: the second element of the <c>ID</c> entry, and the first too unless a permanent one is given.</param>
     /// <param name="security">The encryption of the result, or <see langword="null"/> when it is written in the clear.</param>
     /// <param name="previousXref">The cross-reference section this revision chains to, or <see langword="null"/> for a complete document.</param>
+    /// <param name="permanentIdentifier">The first element of the source's <c>ID</c>, kept by an appended revision, or <see langword="null"/>.</param>
     private static void WriteTrailer(
         PdfWriter writer,
         int catalogNumber,
         int? infoNumber,
         PdfString identifier,
         PdfSecurityWriter? security,
-        long? previousXref)
+        long? previousXref,
+        PdfString? permanentIdentifier = null)
     {
         var trailer = new PdfDictionary();
         trailer.Set("Root", new PdfReference(catalogNumber, 0));
@@ -746,7 +749,9 @@ public sealed partial class PdfEditEngine
             trailer.Set("Info", new PdfReference(info, 0));
         }
 
-        trailer.Set("ID", new PdfArray(new PdfObject[] { identifier, identifier }));
+        // The first element is permanent: an appended revision keeps the one the document was created with,
+        // and only the second, which identifies this revision, is new.
+        trailer.Set("ID", new PdfArray(new PdfObject[] { permanentIdentifier ?? identifier, identifier }));
 
         if (previousXref is { } previous)
         {

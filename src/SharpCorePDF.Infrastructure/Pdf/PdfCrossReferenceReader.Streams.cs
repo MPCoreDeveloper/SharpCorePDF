@@ -33,7 +33,7 @@ internal sealed partial class PdfCrossReferenceReader
             table.Add(new XrefEntry(objectNumber, offset, generation, XrefEntryType.Uncompressed));
         }
 
-        var decoded = PdfFilters.Decode(stream, sourceName);
+        var decoded = PdfFilters.Decode(stream, sourceName, options.MaxDecodedStreamBytes);
         var widthType = 1;
         var widthField1 = 4;
         var widthField2 = 2;

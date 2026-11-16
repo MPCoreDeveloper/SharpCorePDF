@@ -70,13 +70,15 @@ public sealed record PdfGlyph
     /// <summary>
     /// Gets the area the glyph occupies, derived from the origin, the advance and the em box. The
     /// descender is taken as a fifth of the em and the ascender as four fifths, which is the proportion
-    /// most Latin fonts share and is stated here rather than read from the font program.
+    /// most Latin fonts share and is stated here rather than read from the font program. A negative font
+    /// size — a glyph drawn upside down, which a flipped text matrix or font matrix produces — puts the
+    /// descender above the ascender, so the box is taken between the two whichever way round they are.
     /// </summary>
     public PdfRectangle BoundingBox => new(
         X,
-        Y - (FontSize * 0.2d),
+        Math.Min(Y - (FontSize * 0.2d), Y + (FontSize * 0.8d)),
         X + Math.Max(0d, Width),
-        Y + (FontSize * 0.8d));
+        Math.Max(Y - (FontSize * 0.2d), Y + (FontSize * 0.8d)));
 
     /// <summary>Gets a value indicating whether the glyph paints no ink, such as a space or a tab.</summary>
     public bool IsWhitespace => string.IsNullOrWhiteSpace(Text);

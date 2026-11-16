@@ -13,6 +13,46 @@ namespace SharpCorePDF.Tests;
 /// </remarks>
 public sealed class PdfObjectModelTests
 {
+    /// <summary>
+    /// The empty name — a solidus on its own — is a key like any other: the dictionary keeps it and every
+    /// entry after it, and writing the dictionary back states it as a solidus again.
+    /// </summary>
+    [Fact]
+    public void Keeps_an_entry_whose_key_is_the_empty_name()
+    {
+        var parser = new PdfObjectParser(Encoding.Latin1.GetBytes("<< /A 1 / 2 /B 3 >>"), "empty-name.pdf", 0, null, 64);
+        var dictionary = Assert.IsType<PdfDictionary>(parser.ParseObject());
+
+        Assert.Equal(1L, dictionary.GetInteger("A"));
+        Assert.Equal(2L, dictionary.GetInteger(string.Empty));
+        Assert.Equal(3L, dictionary.GetInteger("B"));
+
+        using var stream = new MemoryStream();
+        var output = new PdfOutputBuffer(stream);
+        PdfSerializer.WriteDictionary(dictionary, output);
+        output.Flush();
+        var written = Encoding.Latin1.GetString(stream.ToArray());
+
+        Assert.Contains("/ 2", written, StringComparison.Ordinal);
+    }
+
+    /// <summary>A document whose page dictionary carries an empty-named entry opens and lists its page.</summary>
+    [Fact]
+    public void Opens_a_document_that_uses_the_empty_name_as_a_key()
+    {
+        var builder = new PdfBuilder();
+        var catalog = builder.Reserve();
+        var pages = builder.Reserve();
+
+        builder.Add("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] / (empty) >>");
+        builder.Set(catalog, "<< /Type /Catalog /Pages 2 0 R / 1 >>");
+        builder.Set(pages, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+
+        var reader = new PdfFileReader(builder.Build(catalog), "empty-name.pdf", SharpCorePDF.Infrastructure.PdfEngineOptions.Default);
+
+        Assert.Single(reader.Pages);
+    }
+
     /// <summary>The null object is one instance and writes itself as its keyword.</summary>
     [Fact]
     public void Exposes_the_null_object()

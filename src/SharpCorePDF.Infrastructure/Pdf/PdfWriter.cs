@@ -16,6 +16,7 @@ internal sealed class PdfWriter
     private readonly PdfSecurityWriter? security;
     private readonly Dictionary<int, long> offsets = [];
     private readonly long origin;
+    private Func<int, PdfObject, bool>? isUnchanged;
     private int lastObjectNumber;
 
     /// <summary>Initializes a new instance of the <see cref="PdfWriter"/> class.</summary>
@@ -95,6 +96,20 @@ internal sealed class PdfWriter
     /// <returns>The reserved object number.</returns>
     public int AllocateObject() => ++lastObjectNumber;
 
+    /// <summary>
+    /// Makes the writer leave out an object that would be written exactly as the revision it is appended to
+    /// already holds it under the same number.
+    /// </summary>
+    /// <param name="unchanged">Answers whether an object number and the body about to be written under it are
+    /// what the earlier revision already states.</param>
+    /// <remarks>
+    /// An incremental update is meant to carry what the edit changed. An object that is written again unchanged
+    /// costs its bytes and, worse, tells every reader that looks at what changed after a signature — pyHanko's
+    /// difference analysis, Acrobat's — that the object was modified after signing.
+    /// </remarks>
+    public void SkipUnchanged(Func<int, PdfObject, bool> unchanged) =>
+        isUnchanged = unchanged ?? throw new ArgumentNullException(nameof(unchanged));
+
     /// <summary>Gets the highest object number that has been allocated.</summary>
     public int HighestObjectNumber => lastObjectNumber;
 
@@ -103,6 +118,11 @@ internal sealed class PdfWriter
     /// <param name="body">The body of the object.</param>
     public void WriteObject(int objectNumber, PdfObject body)
     {
+        if (isUnchanged?.Invoke(objectNumber, body) == true)
+        {
+            return;
+        }
+
         offsets[objectNumber] = Length;
         output.WriteInteger(objectNumber);
         output.Write(" 0 obj\n"u8);

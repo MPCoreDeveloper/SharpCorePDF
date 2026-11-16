@@ -154,11 +154,31 @@ internal sealed class JpegDecoder
                         return false;
                     }
 
+                    if (IsAboveBudget(maxBytes, out format, out width, out height))
+                    {
+                        return format is not null;
+                    }
+
+                    if (!WorkingBuffersFit())
+                    {
+                        return false;
+                    }
+
                     break;
                 case 0xC2:
                     progressive = true;
 
                     if (!ParseFrame(segment))
+                    {
+                        return false;
+                    }
+
+                    if (IsAboveBudget(maxBytes, out format, out width, out height))
+                    {
+                        return format is not null;
+                    }
+
+                    if (!WorkingBuffersFit())
                     {
                         return false;
                     }
@@ -320,6 +340,64 @@ internal sealed class JpegDecoder
         return true;
     }
 
+    /// <summary>
+    /// Answers, from the frame header alone, for an image whose samples the caller would not keep: the
+    /// format and the size are measured and nothing is decoded.
+    /// </summary>
+    /// <param name="maxBytes">The largest pixel buffer the caller keeps.</param>
+    /// <param name="format">The pixel format the samples would state, or null for a component count the decoder has none for.</param>
+    /// <param name="measuredWidth">The width the frame states.</param>
+    /// <param name="measuredHeight">The height the frame states.</param>
+    /// <returns><see langword="true"/> when the output is above the budget and the answer is final.</returns>
+    /// <remarks>
+    /// The width and the height are two 16-bit numbers in the file: 65,535 squared is four gigasamples per
+    /// component, and the sample planes — and, for a progressive image, the coefficient grids at four bytes a
+    /// coefficient — were allocated and filled before the output was found too large to keep. The contract is
+    /// unchanged: such an image is measured and no pixels are returned. It is only no longer decoded first.
+    /// </remarks>
+    private bool IsAboveBudget(int maxBytes, out string? format, out int measuredWidth, out int measuredHeight)
+    {
+        format = null;
+        measuredWidth = 0;
+        measuredHeight = 0;
+
+        if ((long)width * height * components.Length <= maxBytes)
+        {
+            return false;
+        }
+
+        format = components.Length switch
+        {
+            1 => "Gray8",
+            3 => "Rgb24",
+            4 => "Cmyk32",
+            _ => null,
+        };
+        measuredWidth = width;
+        measuredHeight = height;
+        return true;
+    }
+
+    /// <summary>Determines whether the working buffers the frame asks for fit an array at all.</summary>
+    /// <returns><see langword="true"/> when every sample plane or coefficient grid fits.</returns>
+    /// <remarks>The sizes are computed in 64 bits: in 32 they wrap, and a wrapped size is a small allocation that the decoder then writes past.</remarks>
+    private bool WorkingBuffersFit()
+    {
+        var mcuColumns = (width + (8L * maxH) - 1) / (8L * maxH);
+        var mcuRows = (height + (8L * maxV) - 1) / (8L * maxV);
+        var perSample = progressive ? sizeof(int) : sizeof(byte);
+
+        foreach (var component in components)
+        {
+            if (mcuColumns * 8 * component.H * mcuRows * 8 * component.V * perSample > Array.MaxLength)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private bool ParseFrame(ReadOnlySpan<byte> segment)
     {
         if (segment.Length < 6 || segment[0] != 8)
@@ -395,6 +473,13 @@ internal sealed class JpegDecoder
                 return false;
             }
 
+            // A selector is four bits in the file and the decoder has four tables of each class: a selector
+            // above 3 would index past them, so it is a header this decoder cannot honour.
+            if (tables >> 4 > 3 || (tables & 15) > 3)
+            {
+                return false;
+            }
+
             component.DcTable = tables >> 4;
             component.AcTable = tables & 15;
             named[index] = component;
@@ -408,7 +493,11 @@ internal sealed class JpegDecoder
         scanHigh = segment[tail + 2] >> 4;
         scanLow = segment[tail + 2] & 15;
 
-        return true;
+        // The spectral selection names coefficients 0 to 63 of a block, start before end, and the successive
+        // approximation shifts no further than a 16-bit coefficient allows. A progressive scan indexes the
+        // zig-zag table with them, so a scan outside these bounds is refused rather than read past the
+        // table; a sequential scan states them too but decodes the whole block whatever they say.
+        return !progressive || (scanStart <= scanEnd && scanEnd <= 63 && scanHigh <= 13 && scanLow <= 13);
     }
 
     private void ParseAdobe(ReadOnlySpan<byte> segment)

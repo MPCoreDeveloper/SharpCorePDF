@@ -20,6 +20,7 @@ internal sealed partial class PdfFileReader
     private readonly HashSet<long> loadedObjectStreams = [];
     private readonly HashSet<long> resolvingObjectStreams = [];
     private readonly HashSet<long> resolvingLengths = [];
+    private int lengthResolutionDepth;
     private PageTreeWalk? pageTree;
     private PdfDictionary? catalog;
 
