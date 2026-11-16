@@ -252,7 +252,7 @@ public sealed partial class PdfEditEngine
             return;
         }
 
-        content.Write(PdfFilters.Decode(stream, reader.SourceName));
+        content.Write(PdfFilters.Decode(stream, reader.SourceName, reader.Options.MaxDecodedStreamBytes));
         content.WriteByte((byte)'\n');
     }
 

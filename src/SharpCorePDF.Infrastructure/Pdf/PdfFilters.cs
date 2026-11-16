@@ -27,7 +27,17 @@ internal static partial class PdfFilters
     /// <returns>The decoded bytes.</returns>
     /// <exception cref="PdfUnsupportedFeatureException">The stream uses a filter the engine does not implement.</exception>
     /// <exception cref="PdfSourceFormatException">A compressed stream could not be decompressed.</exception>
-    public static byte[] Decode(PdfStream stream, string sourceName)
+    public static byte[] Decode(PdfStream stream, string sourceName) =>
+        Decode(stream, sourceName, DefaultMaxDecodedBytes);
+
+    /// <summary>Decodes a stream, applying every filter it declares in order, under a limit on its decoded size.</summary>
+    /// <param name="stream">The stream to decode.</param>
+    /// <param name="sourceName">The name of the source, used in diagnostics.</param>
+    /// <param name="maxDecodedBytes">The largest number of bytes any one filter may decode to.</param>
+    /// <returns>The decoded bytes.</returns>
+    /// <exception cref="PdfUnsupportedFeatureException">The stream uses a filter the engine does not implement.</exception>
+    /// <exception cref="PdfSourceFormatException">A compressed stream could not be decompressed, or decodes past the limit.</exception>
+    public static byte[] Decode(PdfStream stream, string sourceName, long maxDecodedBytes)
     {
         ArgumentNullException.ThrowIfNull(stream);
 
@@ -51,8 +61,8 @@ internal static partial class PdfFilters
 
             decoded = name switch
             {
-                "FlateDecode" or "Fl" => ApplyFlate(current, parametersForFilter, sourceName),
-                "LZWDecode" or "LZW" => ApplyLzw(current, parametersForFilter, sourceName),
+                "FlateDecode" or "Fl" => ApplyFlate(current, parametersForFilter, sourceName, maxDecodedBytes),
+                "LZWDecode" or "LZW" => ApplyLzw(current, parametersForFilter, sourceName, maxDecodedBytes),
                 "ASCIIHexDecode" or "AHx" => DecodeAsciiHex(current),
                 "ASCII85Decode" or "A85" => DecodeAscii85(current),
                 _ => throw new PdfUnsupportedFeatureException(

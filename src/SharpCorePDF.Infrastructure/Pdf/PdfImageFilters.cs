@@ -23,7 +23,7 @@ internal readonly record struct PdfPayload(
 /// </summary>
 /// <remarks>
 /// <para>
-/// <see cref="PdfFilters.Decode"/> answers a different question and answers it correctly: an object
+/// <see cref="PdfFilters.Decode(PdfStream, string, long)"/> answers a different question and answers it correctly: an object
 /// stream that cannot be inflated means a broken document, so it raises. An image is different — a
 /// <c>JPXDecode</c> scan is a perfectly valid document this library simply does not decode — so this
 /// class reports what it could not do and hands back the raw bytes (NFR-7.6, NFR-7.8).
@@ -361,7 +361,7 @@ internal static class PdfImageFilters
 
                 case "RunLengthDecode":
                 {
-                    var decoded = PdfFilters.DecodeRunLength(data);
+                    var decoded = PdfFilters.DecodeRunLength(data, sourceName, PdfFilters.DefaultMaxDecodedBytes);
 
                     length = decoded.Length;
                     bytes = Keep(decoded, cap);

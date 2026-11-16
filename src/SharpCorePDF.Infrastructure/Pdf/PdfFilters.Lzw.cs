@@ -143,18 +143,31 @@ internal static partial class PdfFilters
     /// <param name="data">The compressed bytes.</param>
     /// <param name="parameters">The decode parameters of the filter, which state <c>EarlyChange</c>.</param>
     /// <param name="sourceName">The name of the source, used in diagnostics.</param>
+    /// <param name="maxDecodedBytes">The largest number of bytes the stream may decode to.</param>
     /// <returns>The decoded bytes.</returns>
-    /// <exception cref="PdfSourceFormatException">The stream is not a valid LZW stream.</exception>
+    /// <exception cref="PdfSourceFormatException">The stream is not a valid LZW stream, or decodes past the limit.</exception>
     internal static byte[] ApplyLzw(
         ReadOnlyMemory<byte> data,
         PdfDictionary? parameters,
-        string sourceName)
+        string sourceName,
+        long maxDecodedBytes)
     {
-        var output = new PooledByteBuffer();
+        var output = new PooledByteBuffer(poolLargeArrays: false);
 
         try
         {
-            if (!TryDecodeLzw(data.Span, ReadEarlyChange(parameters), output.Write, out _))
+            // A 12-bit code can stand for 4,096 bytes, so the input limit does not bound this buffer either.
+            void Write(ReadOnlySpan<byte> bytes)
+            {
+                if (output.Length + (long)bytes.Length > maxDecodedBytes)
+                {
+                    throw DecodedTooLarge(sourceName, "an LZW", maxDecodedBytes);
+                }
+
+                output.Write(bytes);
+            }
+
+            if (!TryDecodeLzw(data.Span, ReadEarlyChange(parameters), Write, out _))
             {
                 throw new PdfSourceFormatException(sourceName, "an LZW stream could not be decompressed.");
             }

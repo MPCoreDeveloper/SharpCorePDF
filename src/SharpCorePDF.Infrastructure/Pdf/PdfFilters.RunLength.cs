@@ -24,11 +24,21 @@ internal static partial class PdfFilters
     /// reaches past the end contributes the bytes that are there, and a repeated run with no value byte
     /// contributes nothing.
     /// </remarks>
-    public static byte[] DecodeRunLength(ReadOnlyMemory<byte> data)
+    public static byte[] DecodeRunLength(ReadOnlyMemory<byte> data) =>
+        DecodeRunLength(data, "a stream", DefaultMaxDecodedBytes);
+
+    /// <summary>Decodes a run-length encoded stream, refusing one that decodes past a limit.</summary>
+    /// <param name="data">The encoded bytes.</param>
+    /// <param name="sourceName">The name of the source, used in diagnostics.</param>
+    /// <param name="maxDecodedBytes">The largest number of bytes the stream may decode to.</param>
+    /// <returns>The decoded bytes.</returns>
+    /// <exception cref="Domain.Exceptions.PdfSourceFormatException">The stream decodes past the limit.</exception>
+    /// <remarks>Two bytes can stand for 128, so the limit on the input does not bound the output.</remarks>
+    public static byte[] DecodeRunLength(ReadOnlyMemory<byte> data, string sourceName, long maxDecodedBytes)
     {
         // The output is at least as large as the input for the literal case, and can be 128 times larger
         // for the repeat case, so the buffer starts at the input length and grows only when it must.
-        using var result = new PooledByteBuffer(data.Length);
+        using var result = new PooledByteBuffer(data.Length, poolLargeArrays: false);
         var span = data.Span;
         var index = 0;
 
@@ -48,6 +58,11 @@ internal static partial class PdfFilters
                 // end, which ends the loop. The explicit guard a survivor asked about is this comment.
                 var count = Math.Min(control + 1, span.Length - index);
 
+                if (result.Length + (long)count > maxDecodedBytes)
+                {
+                    throw DecodedTooLarge(sourceName, "a RunLength", maxDecodedBytes);
+                }
+
                 result.Write(span.Slice(index, count));
                 index += count;
                 continue;
@@ -58,6 +73,11 @@ internal static partial class PdfFilters
             if (index >= span.Length)
             {
                 break;
+            }
+
+            if (result.Length + (long)repeat > maxDecodedBytes)
+            {
+                throw DecodedTooLarge(sourceName, "a RunLength", maxDecodedBytes);
             }
 
             var value = span[index++];

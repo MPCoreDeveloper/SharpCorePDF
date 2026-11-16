@@ -133,8 +133,12 @@ internal static class PdfDate
             field++;
         }
 
-        var sign = rest[0] == '-' ? -1 : 1;
-        return sign * new TimeSpan(Math.Clamp(hours, 0, 23), Math.Clamp(minutes, 0, 59), 0);
+        // DateTimeOffset accepts offsets up to fourteen hours either way and throws beyond them, so an offset
+        // no time zone has is read as no offset — UTC, which is what the specification assumes when none is
+        // given — instead of failing the inspection of the whole document over one metadata string.
+        var offset = (rest[0] == '-' ? -1 : 1) * new TimeSpan(Math.Clamp(hours, 0, 23), Math.Clamp(minutes, 0, 59), 0);
+
+        return offset.Duration() > TimeSpan.FromHours(14) ? TimeSpan.Zero : offset;
     }
 
     /// <summary>Reads the next run of digits of a time zone offset, skipping what is not a digit.</summary>

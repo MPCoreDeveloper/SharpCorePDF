@@ -1,0 +1,20 @@
+# The independent implementations the validation checks run against, pinned so a check that passes today
+# passes tomorrow for a reason in this repository rather than in a validator release. Raise a pin on purpose,
+# in its own change, and read what the new version reports before believing it.
+#
+#   uv venv && uv pip install -r docs/tools/validation-requirements.txt
+#
+# pikepdf carries qpdf; pyHanko validates signatures; pypdf, pdfminer.six and PyMuPDF extract text and open
+# encrypted files; pypdfium2 (PDFium) and PyMuPDF (MuPDF) render; fontTools and opentype-sanitizer (OTS, the
+# sanitizer browsers run on web fonts) read the embedded font programs.
+pikepdf==10.18.1
+pyhanko==0.38.1
+pyhanko-certvalidator==0.33.0
+pypdf==7.1.0
+pdfminer.six==20260107
+pymupdf==2.1
+pypdfium2==5.15.2
+pillow==13.0.0
+numpy==2.5.5
+fonttools==4.68.0
+opentype-sanitizer==9.2.0

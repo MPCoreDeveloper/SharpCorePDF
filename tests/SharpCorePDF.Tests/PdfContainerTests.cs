@@ -72,10 +72,19 @@ public sealed class PdfContainerTests
         Assert.Same(PdfNull.Instance, dictionary.Get("B"));
     }
 
-    /// <summary>An entry without a key is a programmer error.</summary>
+    /// <summary>
+    /// An entry without a key is a programmer error, but the empty name is a key: a solidus on its own is a
+    /// name PDF allows (ISO 32000-1 §7.3.5), and documents in the wild use it.
+    /// </summary>
     [Fact]
-    public void Refuses_an_entry_without_a_key() =>
-        Assert.Throws<ArgumentException>(() => new PdfDictionary().Set(string.Empty, PdfNull.Instance));
+    public void Refuses_an_entry_without_a_key_and_keeps_one_whose_key_is_the_empty_name()
+    {
+        Assert.Throws<ArgumentNullException>(() => new PdfDictionary().Set(null!, PdfNull.Instance));
+
+        var dictionary = new PdfDictionary().Set(string.Empty, new PdfInteger(1));
+
+        Assert.Equal(1L, dictionary.GetInteger(string.Empty));
+    }
 
     /// <summary>The readers of a dictionary answer with the type they were asked for, or with nothing.</summary>
     [Fact]

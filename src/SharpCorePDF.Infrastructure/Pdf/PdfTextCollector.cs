@@ -382,7 +382,7 @@ internal sealed class PdfTextCollector
 
         try
         {
-            if (!TryDecodeContent(stream, out var formContent))
+            if (!TryDecodeContent(stream, reader.Options.MaxDecodedStreamBytes, out var formContent))
             {
                 warnings.Add(new(
                     PdfWarningKind.ContentStreamUnreadable,
@@ -432,13 +432,14 @@ internal sealed class PdfTextCollector
 
     /// <summary>Decodes the content stream of a form.</summary>
     /// <param name="stream">The stream.</param>
+    /// <param name="maxDecodedBytes">The largest number of bytes the stream may decode to.</param>
     /// <param name="content">The decoded bytes when decoding succeeded.</param>
     /// <returns><see langword="true"/> when the stream could be decoded.</returns>
-    private static bool TryDecodeContent(PdfStream stream, out byte[] content)
+    private static bool TryDecodeContent(PdfStream stream, long maxDecodedBytes, out byte[] content)
     {
         try
         {
-            content = PdfFilters.Decode(stream, "form content stream");
+            content = PdfFilters.Decode(stream, "form content stream", maxDecodedBytes);
             return true;
         }
         catch (Domain.Exceptions.PdfUnsupportedFeatureException)
