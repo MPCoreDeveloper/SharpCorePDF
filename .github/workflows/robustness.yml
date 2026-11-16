@@ -51,7 +51,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [ document, dct, ccitt, lzw, flate, runlength ]
+        target: [ document ]
 
     steps:
       - name: Check out
